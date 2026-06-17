@@ -35,7 +35,7 @@ Reuse o `job_id`/`path` do registro e siga. Só gere se `existe: false`.
 
 Para cada ref que ainda não tem `media_id` neste run:
 
-1. Cheque se já foi confirmada antes (chave = nome do arquivo):
+1. Cheque se já foi confirmada antes (chave estável = nome do arquivo sem extensão, ex. `mage1`):
    ```bash
    node scripts/pipeline-state.cjs media-get --root . --key mage1
    ```

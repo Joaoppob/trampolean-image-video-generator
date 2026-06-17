@@ -15,6 +15,7 @@ tmp/
 .pipeline-state.json
 output/.pipeline-state.json
 output/.review-cadence.json
+output/.jotaro-profile.json
 **/*.tmp
 
 # === Credenciais — NUNCA versionar (OAuth é por-usuário, em ~/.claude/) ===

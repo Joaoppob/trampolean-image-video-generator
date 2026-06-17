@@ -11,6 +11,11 @@ preflight nem a checagem da RAG: são invariantes do Jotaro.
 ## Passo 1: entenda o estado
 
 Antes de tudo, confira:
+- Perfil de uso:
+  ```bash
+  node scripts/jotaro-profile.cjs status --root .
+  ```
+  Se `modo_expert: true`, mantenha a condução mais curta, sem pular custo, RAG e revisão.
 - A cadência de revisão permite iniciar?
   ```bash
   node scripts/review-cadence.cjs status --root .
@@ -64,10 +69,19 @@ node scripts/review-cadence.cjs record-flow --root . --kind imagem --label "<res
 Se o retorno vier com `revisao_sugerida: true`, sugira rodar `/revisao` agora. Se o usuário
 não quiser, tudo bem, mas antes do próximo fluxo a revisão será obrigatória.
 
+Registre também o primeiro run concluído:
+
+```bash
+node scripts/jotaro-profile.cjs mark-run --root . --marca "<cliente-ou-marca>"
+```
+
+Se ainda não estiver em modo expert, ofereça ativar para reduzir explicações nos próximos
+fluxos.
+
 ## Lembretes
 
 - Custo: 2 créditos por imagem. No free, teto de 10 por dia.
 - Se for o primeiro uso, conduza devagar, explicando cada passo. Depois de um run completo,
-  ofereça o modo expert (pula as explicações).
+  registre no perfil e ofereça o modo expert (pula as explicações).
 - Você não gera o prompt na unha nem a imagem você mesmo: o `prompt-smith` monta, a skill
   `gera-imagem` executa. Você orquestra.

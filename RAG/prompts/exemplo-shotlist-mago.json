@@ -5,7 +5,7 @@
   "round": 1,
   "objetivo": "exemplo de shot-list: gate de consistencia de personagem por referencia (anchor + 3 refs)",
   "formato": "vertical 9:16 mobile/TikTok",
-  "duracao_total_seg": 30,
+  "duracao_total_seg": 24,
   "modelo": "nano_banana_pro (Higgsfield MCP — generate_image, refs role=image, sem create_character)",
   "referencias_obrigatorias": [
     "RAG/identidade-visual/mage1.png",
@@ -17,7 +17,7 @@
     {
       "n": 1,
       "tag": "hook",
-      "tempo_seg": "0-5",
+      "tempo_seg": "0-4",
       "intencao": "Hook visual: a vila esta sob ataque",
       "prompt": "Mobile game cartoon style, vertical 9:16 frame. Wide low-angle establishing shot of medieval cartoon village under attack at golden hour. Horde of stylized fantasy monsters advancing toward camera: blue gelatinous slime, small red dragon, green armored goblin with horns, pink toothed worm. Stone castle tower in background, light smoke on horizon, dramatic clouds. Hyper-casual mobile RPG aesthetic matching the visual style of the 3 reference wizard images, saturated colors, soft shadows, bold outlines. No wizard in this frame yet, focus on threat.",
       "salvar_em": "output/imagens/cena-01-hook.png"
@@ -25,7 +25,7 @@
     {
       "n": 2,
       "tag": "aparicao",
-      "tempo_seg": "5-10",
+      "tempo_seg": "4-8",
       "intencao": "Apresenta o personagem em pose heroica",
       "prompt": "Same wizard character from the 3 reference images: short stout elderly mage, long white beard, purple pointed hat with gold buckle, purple robe with lime-green trim, brown belt, wooden staff with purple crystal. Three-quarter front view, dynamic hero pose, cape flowing in wind, forest path background with distant stone castle tower, golden hour lighting, faint purple glow starting on staff crystal. Mobile cartoon RPG style, vertical 9:16, saturated colors, bold outlines.",
       "salvar_em": "output/imagens/cena-02-aparicao.png"
@@ -33,7 +33,7 @@
     {
       "n": 3,
       "tag": "tensao",
-      "tempo_seg": "10-15",
+      "tempo_seg": "8-12",
       "intencao": "Cria tensao: inimigos avancando, mago em desvantagem aparente",
       "prompt": "Low-angle dramatic action shot. Same wizard from reference images seen from behind in foreground (purple hat with gold buckle, shoulders of purple robe with lime-green trim visible, partial view of staff). Facing forward toward camera: blue slime, armored green goblin with horns, small red dragon advancing aggressively, mid-stride. Forest battleground floor, dust particles in air, tense atmosphere, dramatic backlight. Mobile cartoon RPG style, vertical 9:16, saturated colors.",
       "salvar_em": "output/imagens/cena-03-tensao.png"
@@ -41,7 +41,7 @@
     {
       "n": 4,
       "tag": "carga",
-      "tempo_seg": "15-20",
+      "tempo_seg": "12-16",
       "intencao": "Carga da magia, expectativa do disparo",
       "prompt": "Close-up three-quarter shot of same wizard character from reference images: short elderly mage with long white beard, purple pointed hat with gold buckle, purple robe with lime-green trim. Staff raised high above head with both hands, purple crystal at top of staff emitting intense radiant glow, golden sparkle particles gathering and swirling around the crystal. Wizard eyes glowing faintly amber, mouth chanting, cape billowing dramatically. Dark forest background, dramatic purple-magenta backlight. Mobile cartoon RPG style, vertical 9:16, supersaturated magic colors.",
       "salvar_em": "output/imagens/cena-04-carga.png"
@@ -49,7 +49,7 @@
     {
       "n": 5,
       "tag": "impacto",
-      "tempo_seg": "20-25",
+      "tempo_seg": "16-20",
       "intencao": "Payoff: o feitico explode e varre os inimigos",
       "prompt": "Wide action shot. Same wizard character from reference images mid-cast, both hands outstretched forward (staff in left hand pointing forward), massive purple-magenta magical vortex erupting outward from his hands, golden sparkle particles and magenta energy bolts swirling. Monsters (blue slime, green armored goblin, small red dragon) being swept backward through the air by the magic blast, impact effects, motion blur lines. Forest battleground, vortex lighting up the scene purple. Mobile cartoon RPG style, vertical 9:16, supersaturated colors, dramatic action pose matching reference image energy.",
       "salvar_em": "output/imagens/cena-05-impacto.png"
@@ -57,7 +57,7 @@
     {
       "n": 6,
       "tag": "cta-clean",
-      "tempo_seg": "25-30",
+      "tempo_seg": "20-24",
       "intencao": "Hero pose final limpa (texto CTA sera queimado via FFmpeg no Round 2)",
       "prompt": "Victorious hero pose, hero shot. Same wizard character from reference images standing tall facing camera in foreground (full body visible), staff planted on ground beside him pointing upward with purple crystal glowing softly. Saved medieval village and intact stone castle in background, sunrise sky with warm orange-pink gradient, peaceful golden glow, defeated monsters faintly visible far in distance. Triumphant atmosphere, gentle wind in cape. Mobile cartoon RPG style, vertical 9:16, saturated colors, bold outlines. IMPORTANT: no text overlay, no logo, no UI elements, clean hero shot composition with empty space at top and bottom for later text overlay.",
       "salvar_em": "output/imagens/cena-06-cta-clean.png"

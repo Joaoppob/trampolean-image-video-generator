@@ -2,7 +2,8 @@
 
 > Leitor primário: o agente `prompt-smith` e quem quiser entender como um reel se monta.
 > O exemplo vivo está em `exemplo-shotlist-mago.json`: um reel inteiro de 6 cenas do mago
-> Trace Defense, já montado, que passou no gate de consistência (6/6).
+> Trace Defense, já montado, que passou no gate de consistência (6/6). No free tier, cada
+> clipe de vídeo tem 4 segundos; por isso o exemplo de 6 cenas soma 24 segundos.
 
 ## O que é a shot-list
 
@@ -31,6 +32,7 @@ Cada item de `cenas` tem:
 - `intencao`: o que a cena precisa transmitir.
 - `prompt`: o texto que vai para o modelo de imagem.
 - `salvar_em`: onde a imagem gerada é guardada.
+- `tempo_seg`: janela narrativa baseada nos clipes reais de 4s do `veo3_1_lite`.
 
 E no fim, `gate_consistencia`, o critério de qualidade: o personagem precisa ser
 reconhecidamente o mesmo (chapéu, barba, manto, cajado) em 5 ou 6 das 6 cenas.
@@ -56,6 +58,7 @@ reconhecidamente o mesmo (chapéu, barba, manto, cajado) em 5 ou 6 das 6 cenas.
 4. O `prompt-smith` faz isso automaticamente quando você pede um reel. O exemplo serve de
    molde e de prova de que o formato funciona.
 
-Se a sua marca não é um jogo, os moldes 7 (detalhe de produto) e 8 (lifestyle) do HUB cobrem
-e-commerce, serviço e lifestyle. A curva muda, mas a lógica de anchor mais molde mais cena é
-a mesma.
+Se a sua marca não é um jogo, veja também `exemplo-shotlist-produto.json` e
+`exemplo-shotlist-servico.json`. Os moldes 7 (detalhe de produto) e 8 (lifestyle) do HUB
+cobrem e-commerce, serviço e lifestyle. A curva muda, mas a lógica de anchor mais molde mais
+cena é a mesma.

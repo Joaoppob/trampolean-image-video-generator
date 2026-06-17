@@ -14,8 +14,13 @@ o `/setup` (Passo 1) antes de tentar.
 
 ## O que fazer
 
-Rode a skill `higgsfield-preflight` em modo de conferência (sem um run associado, só para ler
-o saldo). A skill não dispara geração: disparo recusado ou conferência não cobram crédito.
+Leia o saldo direto pelos tools do Higgsfield, sem chamar geração:
+
+1. `mcp__higgsfield__balance` — saldo direto.
+2. Se não retornar, `mcp__higgsfield__show_plans_and_credits` — plano + créditos.
+
+Isso é diferente do preflight de um run. Preflight precisa de número de cenas e calcula custo;
+`/creditos` só consulta saldo/plano.
 
 Se a versão do Higgsfield conectada não expõe uma ferramenta de saldo, diga isso com
 honestidade: o saldo exato pode não ser legível por aqui. Nesse caso, explique o que dá para

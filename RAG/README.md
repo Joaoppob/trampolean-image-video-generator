@@ -38,12 +38,22 @@ funcionam:
 - `padroes-de-prompt.md`: os 8 moldes de cena reutilizáveis (o HUB).
 - `exemplos.md`: como ler e adaptar o exemplo pronto.
 - `exemplo-shotlist-mago.json`: um reel inteiro de 6 cenas já montado, como referência.
+- `exemplo-shotlist-produto.json`: exemplo para produto físico.
+- `exemplo-shotlist-servico.json`: exemplo para serviço ou SaaS.
+
+### `review/`
+Checklists que o Jotaro usa para revisar prompts, imagens, regeneração de cenas e o reel final.
+Eles evitam avaliação improvisada antes de gastar crédito de vídeo ou entregar o arquivo final.
+
+### Templates
+Use `marca-template.md` e `narrativa-template.md` quando for substituir o exemplo por uma
+marca nova.
 
 ## Como preencher para a sua marca
 
 1. Apague as três imagens do mago em `identidade-visual/` e coloque as suas.
-2. Reescreva `marca.md` com a sua marca (mantenha os títulos de seção).
-3. Reescreva `narrativa.md` com a sua história (mantenha os títulos de seção).
+2. Reescreva `marca.md` com a sua marca (use `marca-template.md` como base).
+3. Reescreva `narrativa.md` com a sua história (use `narrativa-template.md` como base).
 4. Deixe `prompts/` como está. É genérico, serve para qualquer marca.
 
 Pronto isso, é só conversar com o Jotaro: "gere um reel de 6 cenas para a minha marca".

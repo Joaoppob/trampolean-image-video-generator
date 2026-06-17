@@ -51,7 +51,8 @@ referência de formato.
 
 ## Contrato de saída
 
-Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json`:
+Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json` e do contrato formal
+`schemas/shotlist.schema.json`:
 
 ```json
 {
@@ -67,6 +68,11 @@ Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json`:
   "gate_consistencia": { "criterio": "...", "passa": "6/6 ou 5/6" }
 }
 ```
+
+Antes de devolver, confira os materiais de revisão:
+
+- `RAG/review/qualidade-prompt.md` para checar se cada prompt está forte o bastante.
+- `RAG/review/consistencia-personagem.md` para preservar anchor, refs e detalhes distintivos.
 
 ## Regras
 

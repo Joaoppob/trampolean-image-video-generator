@@ -8,7 +8,8 @@ const os = require('os');
 
 const ROOT = path.resolve(__dirname, '..');
 
-const REQUIRED_CORE_TOOLS = ['Skill', 'Read', 'Glob', 'Grep', 'Task', 'Write'];
+const REQUIRED_CORE_TOOLS = ['Skill', 'Read', 'Glob', 'Grep', 'Task'];
+const REQUIRED_SCOPED_TOOLS = ['Write(./output/**)'];
 
 const REQUIRED_HIGGSFIELD_TOOLS = [
   'mcp__higgsfield__balance',
@@ -153,6 +154,17 @@ function checkPreflight() {
   }
 }
 
+function checkValidateRag() {
+  const script = path.join(ROOT, 'scripts', 'validate-rag.cjs');
+  const r = spawnSync('node', [script, '--root', ROOT], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  if (r.status === 0) pass('RAG validation passes');
+  else fail('RAG validation passes', r.stdout || r.stderr);
+}
+
 function checkPipelineStateReadOnly() {
   const script = path.join(ROOT, 'scripts', 'pipeline-state.cjs');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-verify-'));
@@ -171,6 +183,44 @@ function checkPipelineStateReadOnly() {
     }
   } catch (e) {
     fail('pipeline-state get is read-only', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function checkJotaroProfile() {
+  const script = path.join(ROOT, 'scripts', 'jotaro-profile.cjs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-profile-'));
+  function call(args) {
+    const r = spawnSync('node', [script, ...args, '--root', tmp], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+    return JSON.parse(r.stdout);
+  }
+
+  try {
+    const initial = call(['status']);
+    if (initial.primeiro_run_concluido === false && initial.modo_expert === false) {
+      pass('jotaro profile initial status is guided');
+    } else {
+      fail('jotaro profile initial status is guided', JSON.stringify(initial));
+    }
+
+    const marked = call(['mark-run', '--marca', 'teste']);
+    if (marked.primeiro_run_concluido === true && marked.ultima_marca_usada === 'teste') {
+      pass('jotaro profile mark-run persists brand');
+    } else {
+      fail('jotaro profile mark-run persists brand', JSON.stringify(marked));
+    }
+
+    const expert = call(['expert-on']);
+    if (expert.modo_expert === true) pass('jotaro profile expert mode can be enabled');
+    else fail('jotaro profile expert mode can be enabled', JSON.stringify(expert));
+  } catch (e) {
+    fail('jotaro profile command sequence', e.message);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -244,6 +294,12 @@ function checkRbacContracts() {
     if (allowed.has(tool)) pass(`settings allows ${tool}`);
     else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
   }
+  for (const tool of REQUIRED_SCOPED_TOOLS) {
+    if (allowed.has(tool)) pass(`settings allows ${tool}`);
+    else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
+  }
+  if (allowed.has('Write')) fail('settings does not allow global Write', 'global Write expands write surface');
+  else pass('settings does not allow global Write');
   for (const tool of REQUIRED_HIGGSFIELD_TOOLS) {
     if (allowed.has(tool)) pass(`settings allows ${tool}`);
     else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
@@ -275,6 +331,101 @@ function checkRbacContracts() {
   }
 }
 
+function checkSchemas() {
+  const schemaDir = path.join(ROOT, 'schemas');
+  const required = [
+    'identity.schema.json',
+    'shotlist.schema.json',
+    'pipeline-state.schema.json',
+    'jotaro-profile.schema.json',
+  ];
+  for (const name of required) {
+    const file = path.join(schemaDir, name);
+    if (!fs.existsSync(file)) {
+      fail(`schema exists ${name}`, 'missing');
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (parsed.$schema && parsed.title) pass(`schema valid JSON ${name}`);
+      else fail(`schema valid JSON ${name}`, 'missing $schema or title');
+    } catch (e) {
+      fail(`schema valid JSON ${name}`, e.message);
+    }
+  }
+}
+
+function parseTempo(value) {
+  const m = String(value || '').match(/^(\d+)-(\d+)$/);
+  if (!m) return null;
+  return { start: Number(m[1]), end: Number(m[2]) };
+}
+
+function checkShotlists() {
+  const dir = path.join(ROOT, 'RAG', 'prompts');
+  const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
+  for (const file of files) {
+    const name = rel(file);
+    let json;
+    try {
+      json = JSON.parse(fs.readFileSync(file, 'utf8'));
+      pass(`shot-list parses ${name}`);
+    } catch (e) {
+      fail(`shot-list parses ${name}`, e.message);
+      continue;
+    }
+
+    const requiredTop = [
+      'campanha',
+      'cliente',
+      'formato',
+      'duracao_total_seg',
+      'modelo',
+      'referencias_obrigatorias',
+      'anchor_personagem',
+      'cenas',
+      'gate_consistencia',
+    ];
+    for (const key of requiredTop) {
+      if (Object.prototype.hasOwnProperty.call(json, key)) pass(`shot-list ${name} has ${key}`);
+      else fail(`shot-list ${name} has ${key}`, 'missing');
+    }
+
+    const refs = Array.isArray(json.referencias_obrigatorias) ? json.referencias_obrigatorias : [];
+    if (refs.length >= 1 && refs.every((r) => /^RAG\/identidade-visual\/[^/]+\.(png|jpg|jpeg|webp)$/i.test(r))) {
+      pass(`shot-list refs relative ${name}`);
+    } else {
+      fail(`shot-list refs relative ${name}`, JSON.stringify(refs));
+    }
+
+    if (!Array.isArray(json.cenas) || json.cenas.length === 0) {
+      fail(`shot-list scenes nonempty ${name}`, 'missing cenas');
+      continue;
+    }
+    pass(`shot-list scenes nonempty ${name}`);
+
+    let expectedStart = 0;
+    let tempoOk = true;
+    for (let i = 0; i < json.cenas.length; i++) {
+      const cena = json.cenas[i];
+      const tempo = parseTempo(cena.tempo_seg);
+      if (!tempo || tempo.start !== expectedStart || tempo.end - tempo.start !== 4) {
+        tempoOk = false;
+      } else {
+        expectedStart = tempo.end;
+      }
+      if (!/^output\/imagens\/[^/]+\.png$/.test(String(cena.salvar_em || ''))) {
+        fail(`shot-list save path valid ${name} cena ${i + 1}`, cena.salvar_em);
+      }
+      if (!/9:16/.test(String(cena.prompt || ''))) {
+        fail(`shot-list prompt mentions 9:16 ${name} cena ${i + 1}`, cena.prompt);
+      }
+    }
+    if (tempoOk && json.duracao_total_seg === expectedStart) pass(`shot-list timing coherent ${name}`);
+    else fail(`shot-list timing coherent ${name}`, `duration=${json.duracao_total_seg} expected=${expectedStart}`);
+  }
+}
+
 function checkDocs() {
   const allText = walk(ROOT, (p) => /\.(md|json|cjs)$/.test(p))
     .filter((p) => rel(p) !== 'scripts/verify.cjs')
@@ -290,6 +441,21 @@ function checkDocs() {
   if (!results.some((r) => r.name.startsWith('no stale external fallback') && !r.ok)) {
     pass('no stale external fallback references');
   }
+
+  const rbac = fs.readFileSync(path.join(ROOT, '.claude', 'rbac.md'), 'utf8');
+  if (/\bmkdir\b/.test(rbac)) fail('rbac matches settings bash surface', 'mkdir still documented');
+  else pass('rbac matches settings bash surface');
+
+  const creditos = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'creditos.md'), 'utf8');
+  if (/higgsfield-preflight/i.test(creditos) || /sem um run associado/i.test(creditos)) {
+    fail('/creditos is separated from preflight', 'still references preflight as saldo mode');
+  } else {
+    pass('/creditos is separated from preflight');
+  }
+
+  const editorSkill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'editor-video', 'SKILL.md'), 'utf8');
+  if (/abordagem A/i.test(editorSkill)) fail('editor-video docs have no dead approach label');
+  else pass('editor-video docs have no dead approach label');
 }
 
 function checkPipelineStateDedup() {
@@ -318,10 +484,14 @@ function checkPipelineStateDedup() {
 checkCjsSyntax();
 checkHook();
 checkPreflight();
+checkValidateRag();
 checkPipelineStateReadOnly();
 checkPipelineStateDedup();
+checkJotaroProfile();
 checkReviewCadence();
 checkRbacContracts();
+checkSchemas();
+checkShotlists();
 checkDocs();
 
 const failed = results.filter((r) => !r.ok);

@@ -49,7 +49,7 @@ node .claude/skills/editor-video/scripts/concat-reel.cjs \
 
 1. **Check FFmpeg** (de novo) — para se ausente.
 2. Valida que todos os clipes existem (lista os que faltam).
-3. Monta o **filter_complex pra N clipes** (abordagem A, defensiva): cada entrada
+3. Monta o **filter_complex pra N clipes**: cada entrada
    `scale=1080:1920:force_original_aspect_ratio=decrease,pad=...,setsar=1,fps=24`,
    depois `concat=n=N:v=1:a=0` (`a=0` porque os clipes Veo free são mudos).
 4. Se tem `--legenda`: encadeia um `drawtext` após o concat, com a fonte bold do OS

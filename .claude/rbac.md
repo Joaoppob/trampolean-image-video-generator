@@ -19,7 +19,7 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 ## jotaro (orquestrador)
 
 - **escopo:** criação de imagem/vídeo neste gerador — nada além.
-- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, curl, node, mkdir, where, which)`,
+- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, curl, node, where, which)`,
   `Task`, `Skill`, `mcp__higgsfield__*`.
 - **pode_spawnar:** `[rag, prompt-smith]`.
 - **contrato_entrada:** pedido do usuário em linguagem natural.

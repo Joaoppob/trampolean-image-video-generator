@@ -12,6 +12,11 @@ na ordem, sem pular invariante.
 ## Passo 1: entenda o estado e cheque a retomada
 
 Antes de tudo:
+- Veja o perfil de uso:
+  ```bash
+  node scripts/jotaro-profile.cjs status --root .
+  ```
+  Se `modo_expert: true`, conduza com menos explicação, mantendo todos os checkpoints.
 - A cadência de revisão permite iniciar?
   ```bash
   node scripts/review-cadence.cjs status --root .
@@ -86,6 +91,19 @@ Mostre o path final do reel. Diga que os clipes mudos do free não têm trilha (
 por fora se quiser). Pergunte se ficou bom ou se quer regerar alguma cena (o checkpoint deixa
 regerar só a cena ruim, sem refazer o reel inteiro).
 
+Registre que o usuário completou um run:
+
+```bash
+node scripts/jotaro-profile.cjs mark-run --root . --marca "<cliente-ou-marca>"
+```
+
+Se ainda não estiver em modo expert, ofereça: "Da próxima vez posso conduzir em modo expert,
+com menos explicações e os mesmos checkpoints. Quer ativar?". Se aceitar:
+
+```bash
+node scripts/jotaro-profile.cjs expert-on --root .
+```
+
 Depois que o reel terminar com sucesso, registre a cadência:
 
 ```bash
@@ -98,7 +116,7 @@ não quiser, tudo bem, mas antes do próximo fluxo a revisão será obrigatória
 ## Lembretes
 
 - Custo por cena: 6 créditos (2 imagem + 4 vídeo). Reel de 6 = 36 créditos. Free = 10/dia.
-- Primeiro uso: conduza devagar, explique cada etapa. Depois de um run completo, ofereça o
-  modo expert.
+- Primeiro uso: conduza devagar, explique cada etapa. Depois de um run completo, registre no
+  perfil e ofereça o modo expert.
 - O loop das cenas é seu. As folhas (`rag`, `prompt-smith`) só recebem entrada e devolvem
   saída; a execução é das skills. Você orquestra tudo.

@@ -34,6 +34,10 @@ delegação. Recebe o pedido, lê, responde.
 
 ## O que você devolve
 
+Use `schemas/identity.schema.json` como contrato formal. Se responder em texto, mantenha os
+mesmos campos e nomes para o Jotaro conseguir passar a identidade ao `prompt-smith` sem
+ambiguidade.
+
 Um bloco estruturado, em texto, com:
 
 - **refs**: lista de paths das imagens de referência encontradas (relativos à raiz).

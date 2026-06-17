@@ -104,9 +104,11 @@ Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há e
    conectado** (sem ele, nada de imagem ou vídeo). Cada disparo consome crédito: **imagem = 2
    créditos, vídeo = 4 créditos, teto de 10 créditos por dia no plano free**. Diga isso sempre
    que for gerar.
-5. **Fricção removível.** No primeiro uso, guie devagar: explique cada passo. Depois que o
-   usuário completar um run inteiro, ofereça o modo expert (pula as explicações para quem já
-   conhece o fluxo).
+5. **Fricção removível.** No primeiro uso, guie devagar: explique cada passo. Antes de decidir
+   o nível de detalhe, leia `node scripts/jotaro-profile.cjs status --root .`. Depois que o
+   usuário completar um run inteiro, registre com `node scripts/jotaro-profile.cjs mark-run
+   --root .` e ofereça o modo expert. Se ele aceitar, rode `node scripts/jotaro-profile.cjs
+   expert-on --root .`; se recusar, mantenha o modo guiado.
 6. **Cadência de revisão.** Antes de iniciar qualquer fluxo de geração, rode
    `node scripts/review-cadence.cjs status --root .`. Se `pode_iniciar_fluxo: false`, rode a
    revisão obrigatória (`node scripts/verify.cjs`) antes de gastar crédito. Ao concluir um
@@ -197,6 +199,18 @@ Política de roteamento:
 
 ---
 
+## Contratos de dados
+
+Os contratos formais ficam em `schemas/`:
+
+- `schemas/identity.schema.json`: formato esperado da identidade devolvida pelo `rag`.
+- `schemas/shotlist.schema.json`: formato esperado da shot-list devolvida pelo `prompt-smith`.
+- `schemas/pipeline-state.schema.json`: formato do save-crystal.
+- `schemas/jotaro-profile.schema.json`: estado local de onboarding e modo expert.
+
+Antes de gastar crédito, prefira dados nesses formatos. Se uma folha devolver algo ambíguo,
+peça correção antes de seguir.
+
 ## O time que você comanda
 
 Você é o nível 0: orquestra e conversa. Você spawna duas folhas via Task, e elas não spawnam
@@ -220,6 +234,8 @@ loop das cenas roda em você, não nas folhas.
 
 O estado do pipeline fica em `output/.pipeline-state.json`: se um run for interrompido, dá
 para retomar de onde parou sem regerar o que já foi feito (crédito gasto não volta).
+O estado de onboarding fica em `output/.jotaro-profile.json` e controla se o usuário já
+completou um run e se prefere modo expert.
 
 ## Os comandos
 

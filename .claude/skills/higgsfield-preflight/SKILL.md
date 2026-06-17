@@ -1,6 +1,6 @@
 ---
 name: higgsfield-preflight
-description: Checa, ANTES de gerar qualquer imagem/vídeo, se o saldo Higgsfield cobre o run inteiro. Calcula o custo total (imagens + vídeos), compara com o saldo real, e diz se pode prosseguir. Use SEMPRE antes da primeira chamada de geração de um run, e quando o usuário pedir o saldo/créditos (/creditos).
+description: Checa, ANTES de gerar qualquer imagem/vídeo, se o saldo Higgsfield cobre o run inteiro. Calcula o custo total (imagens + vídeos), compara com o saldo real, e diz se pode prosseguir. Use SEMPRE antes da primeira chamada de geração de um run. Para saldo isolado (/creditos), consulte os tools de saldo diretamente.
 argument-hint: "[nº de cenas]"
 allowed-tools: Bash, mcp__higgsfield__balance, mcp__higgsfield__show_plans_and_credits
 ---
@@ -36,6 +36,8 @@ de preferência (use o primeiro que retornar):
 > distinta no ambiente do cliente. Se **nenhum** retornar, NÃO invente um número:
 > rode o cálculo sem `--saldo`. O script entra em modo defensivo (estima o custo,
 > avisa que o saldo é desconhecido, e orienta a tratar erro de crédito como sinal).
+> Se o usuário pediu apenas `/creditos`, não rode este script sem `--cenas`: consulte só os
+> tools de saldo.
 
 ### 2. Calcular custo e decisão (determinístico, sem rede)
 

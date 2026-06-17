@@ -37,7 +37,9 @@ RAG/identidade-visual/
 
 São as imagens de referência: o que mantém a cara igual em todas as cenas. Depois, descreva
 sua marca em `RAG/marca.md` e sua história em `RAG/narrativa.md` (há um exemplo pronto lá, o
-mago do jogo Trace Defense, troque pelo seu). Detalhes em `RAG/README.md`.
+mago do jogo Trace Defense, troque pelo seu). Use `RAG/marca-template.md` e
+`RAG/narrativa-template.md` como base quando for colocar outra marca. Detalhes em
+`RAG/README.md`.
 
 ## Como gerar
 
@@ -71,33 +73,72 @@ crédito. Isso evita seguir gerando com hook, permissões ou helpers quebrados.
 
 ```mermaid
 flowchart TD
-  U["Usuário"] --> J["Jotaro<br/>orquestrador e guia"]
+  U([Usuário]) --> J{{Jotaro<br/>orquestrador e guia}}
 
-  J --> S{"Pedido"}
+  J --> S{Pedido}
   S -->|"setup ou dúvida"| HELP["Comandos de ajuda<br/>setup, duvidas, comofazer, creditos"]
   S -->|"imagem"| IMG_FLOW["Fluxo de imagem"]
   S -->|"reel completo"| VID_FLOW["Fluxo de vídeo"]
 
-  IMG_FLOW --> C1["Cadência de revisão<br/>status antes de gerar"]
-  VID_FLOW --> C1
+  IMG_FLOW --> PROF[("output/.jotaro-profile.json<br/>modo guiado ou expert")]
+  VID_FLOW --> PROF
+  PROF --> C1{"Cadência de revisão<br/>pode iniciar?"}
   C1 -->|"2 fluxos sem revisão"| REV["/revisao<br/>verify + reset do contador"]
-  C1 -->|"ok"| RAG["rag<br/>lê identidade em RAG"]
+  C1 -->|"ok"| RAG_READY{"RAG pronta?<br/>refs + marca + narrativa"}
+  RAG_READY -->|"não"| RAG_FIX["RAG templates<br/>marca + narrativa"]
+  RAG_READY -->|"sim"| RAG[/rag<br/>lê identidade em RAG/]
 
-  RAG --> PS["prompt-smith<br/>monta shot-list e prompts"]
-  PS --> GI["skill gera-imagem<br/>Higgsfield nano_banana_pro"]
+  RAG --> ID_SCHEMA[("schemas/identity.schema.json")]
+  ID_SCHEMA --> PS[/prompt-smith<br/>monta shot-list e prompts/]
+  PS --> SHOT_SCHEMA[("schemas/shotlist.schema.json")]
+  SHOT_SCHEMA --> REVIEW["RAG/review<br/>checklists de qualidade"]
+  REVIEW --> GI[[skill gera-imagem<br/>Higgsfield nano_banana_pro]]
   GI --> HF[("Higgsfield MCP")]
 
-  VID_FLOW --> GV["skill gera-video<br/>Higgsfield veo3_1_lite"]
   GI --> GV
   GV --> HF
-  GV --> ED["skill editor-video<br/>FFmpeg 1080x1920"]
-  ED --> OUT["output/reels<br/>reel final"]
+  GV --> ED[[skill editor-video<br/>FFmpeg 1080x1920]]
+  ED --> OUT([output/reels<br/>reel final])
 
-  GI --> STATE["output/.pipeline-state.json<br/>save-crystal"]
+  GI --> STATE[("output/.pipeline-state.json<br/>save-crystal")]
   GV --> STATE
-  IMG_FLOW --> RC["output/.review-cadence.json<br/>contador local"]
+  IMG_FLOW --> RC[("output/.review-cadence.json<br/>contador local")]
   VID_FLOW --> RC
+
+  classDef user fill:#f8fafc,stroke:#64748b,color:#0f172a,stroke-width:1px;
+  classDef orchestrator fill:#ede9fe,stroke:#7c3aed,color:#2e1065,stroke-width:2px;
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#451a03,stroke-width:1px;
+  classDef command fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1px;
+  classDef agent fill:#ccfbf1,stroke:#0f766e,color:#042f2e,stroke-width:1px;
+  classDef skill fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:1px;
+  classDef state fill:#e2e8f0,stroke:#475569,color:#0f172a,stroke-width:1px;
+  classDef external fill:#ffedd5,stroke:#ea580c,color:#431407,stroke-width:1px;
+  classDef output fill:#fce7f3,stroke:#db2777,color:#500724,stroke-width:2px;
+
+  class U user;
+  class J orchestrator;
+  class S,C1,RAG_READY decision;
+  class HELP,IMG_FLOW,VID_FLOW,REV,RAG_FIX,REVIEW command;
+  class RAG,PS agent;
+  class GI,GV,ED skill;
+  class PROF,ID_SCHEMA,SHOT_SCHEMA,STATE,RC state;
+  class HF external;
+  class OUT output;
 ```
+
+### Guia visual do mapa
+
+| Tipo | Forma | Cor | Exemplos |
+|------|-------|-----|----------|
+| Usuário | cápsula | cinza claro | `Usuário` |
+| Orquestrador | hexágono | roxo | `Jotaro` |
+| Decisão/gate | losango | amarelo | `Pedido`, `Cadência`, `RAG pronta?` |
+| Comandos e materiais | retângulo | azul | `/revisao`, `RAG/review`, templates |
+| Agentes folha | paralelogramo | verde-água | `rag`, `prompt-smith` |
+| Skills executáveis | subrotina | verde | `gera-imagem`, `gera-video`, `editor-video` |
+| Estado/contrato local | cilindro | cinza | `schemas/*`, `output/*.json` |
+| Serviço externo | cilindro | laranja | `Higgsfield MCP` |
+| Saída final | cápsula | rosa | `output/reels` |
 
 ### Equipe e responsabilidades
 
@@ -122,6 +163,8 @@ flowchart TD
 - **RBAC:** só o Jotaro age sobre o mundo. `rag` e `prompt-smith` são folhas de leitura/síntese.
 - **Save-crystal:** `output/.pipeline-state.json` evita regerar cenas já pagas.
 - **Cadência de revisão:** `output/.review-cadence.json` conta fluxos concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
+- **Modo expert:** `output/.jotaro-profile.json` registra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
+- **Materiais de revisão:** `RAG/review/` traz checklists para prompt, consistência, regeneração de cena e reel final.
 
 ## Custos (honesto)
 

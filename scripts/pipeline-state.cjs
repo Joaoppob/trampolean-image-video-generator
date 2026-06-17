@@ -15,9 +15,9 @@
  *   set    --root <repo> --cena <n> --tipo imagem|video --job-id <id>
  *          --path <p> [--media-ids a,b,c] [--prompt-tag <tag>]
  *          -> grava/atualiza o registro da cena
- *   media  --root <repo> --key <hash-do-arquivo> --media-id <id>
+ *   media  --root <repo> --key <chave-estavel-da-ref> --media-id <id>
  *          -> registra um media_id de referencia ja confirmado (reuso no run)
- *   media-get --root <repo> --key <hash>
+ *   media-get --root <repo> --key <chave-estavel-da-ref>
  *          -> { media_id } se ja confirmado nesse run
  *   dump   --root <repo>           -> imprime o state inteiro
  *
@@ -57,7 +57,7 @@ function emptyState() {
     criado_em: new Date().toISOString(),
     atualizado_em: new Date().toISOString(),
     cenas: {}, // { "<n>": { imagem: {...}, video: {...} } }
-    refs_media: {}, // { "<hash>": "<media_id>" } — media_ids de referencia reusaveis no run
+    refs_media: {}, // { "<ref-key>": "<media_id>" } — media_ids de referencia reusaveis no run
   };
 }
 

@@ -161,6 +161,10 @@ spawna subagente.
 **Contrato de saída** = o mesmo schema do `exemplo-shotlist-mago.json`:
 `{ campanha, cliente, formato, modelo, referencias_obrigatorias[], anchor_personagem,
 cenas[ {n, tag, tempo_seg, intencao, prompt, salvar_em} ], gate_consistencia }`.
+O contrato formal fica em `schemas/shotlist.schema.json`.
+
+No free tier, cada clipe `veo3_1_lite` tem 4 segundos. Use janelas como `0-4`, `4-8`,
+`8-12` e deixe `duracao_total_seg` igual ao fim da ultima cena.
 
 **Paths de referência sempre relativos à raiz do repo** (`RAG/identidade-visual/mage1.png`),
 nunca `../../../mage1.png`. É o formato canônico do produto.
