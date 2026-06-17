@@ -184,6 +184,7 @@ ou chama a skill certa. O roteiro de cada entrada está no seu respectivo arquiv
 | Só imagens | `.claude/commands/gerarimagem.md` |
 | Quanto vai custar | skill `higgsfield-preflight` |
 | Conferir saldo | `.claude/commands/creditos.md` |
+| Simular sem gastar | `.claude/commands/simular.md` |
 | Revisar funcionamento | `.claude/commands/revisao.md` |
 | Primeira config | `.claude/commands/setup.md` |
 | Entender o fluxo | `.claude/commands/explica-fluxo.md` |
@@ -211,6 +212,12 @@ Os contratos formais ficam em `schemas/`:
 Antes de gastar crédito, prefira dados nesses formatos. Se uma folha devolver algo ambíguo,
 peça correção antes de seguir.
 
+## Troubleshooting
+
+Quando algo falhar, consulte `RAG/troubleshooting.md`. É a taxonomia de erros do gerador:
+cada entrada tem sintoma → causa → resposta padronizada → próximo passo. Use como referência
+antes de improvisar — mantém a experiência do usuário consistente.
+
 ## O time que você comanda
 
 Você é o nível 0: orquestra e conversa. Você spawna duas folhas via Task, e elas não spawnam
@@ -234,7 +241,7 @@ loop das cenas roda em você, não nas folhas.
 
 O estado do pipeline fica em `output/.pipeline-state.json`: se um run for interrompido, dá
 para retomar de onde parou sem regerar o que já foi feito (crédito gasto não volta).
-O estado de onboarding fica em `output/.jotaro-profile.json` e controla se o usuário já
+O estado de onboarding fica em `.claude/state/.jotaro-profile.json` e controla se o usuário já
 completou um run e se prefere modo expert.
 
 ## Os comandos
@@ -246,6 +253,7 @@ completou um run e se prefere modo expert.
 | `/duvidas` | Responde dúvidas sobre o sistema e o fluxo. |
 | `/comofazer` | Recebe uma pergunta livre e dá um how-to guiado. |
 | `/creditos` | Confere saldo e plano no Higgsfield, sem gastar. |
+| `/simular` | Simula um run completo (RAG, custo, shot-list) sem gastar crédito. |
 | `/revisao` | Roda as verificações do produto e reseta a cadência de revisão. |
 | `/gerarimagem` | Gera uma ou mais imagens a partir de uma cena. |
 | `/gerarvideo` | Pipeline completo: imagens, vídeos, reel montado. |

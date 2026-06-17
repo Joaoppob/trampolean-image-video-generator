@@ -426,6 +426,71 @@ function checkShotlists() {
   }
 }
 
+function checkPromptLint() {
+  const dir = path.join(ROOT, 'RAG', 'prompts');
+  const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
+  const BANNED_IN_NON_CTA = /\b(text overlay|logo|UI elements?|on-screen text|subtitles?|title card)\b/gi;
+
+  function isNegated(prompt, idx) {
+    const before = prompt.slice(Math.max(0, idx - 30), idx).toLowerCase();
+    return /\b(no|without|not|free of|devoid of)\s*$/.test(before);
+  }
+
+  for (const file of files) {
+    const name = rel(file);
+    let json;
+    try { json = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { continue; }
+    if (!Array.isArray(json.cenas)) continue;
+
+    const anchor = String(json.anchor_personagem || '');
+
+    for (let i = 0; i < json.cenas.length; i++) {
+      const cena = json.cenas[i];
+      const prompt = String(cena.prompt || '');
+      const tag = String(cena.tag || '').toLowerCase();
+      const cenaLabel = `${name} cena ${i + 1} (${cena.tag || 'sem tag'})`;
+
+      if (!/vertical 9:16/i.test(prompt)) {
+        fail(`prompt-lint 9:16 ${cenaLabel}`, 'prompt nao menciona vertical 9:16');
+      }
+      if (!/vertical 9:16/i.test(anchor)) {
+        fail(`prompt-lint anchor 9:16 ${name}`, 'anchor_personagem nao menciona vertical 9:16');
+      }
+
+      const isCta = tag.includes('cta');
+      if (!isCta) {
+        let m;
+        BANNED_IN_NON_CTA.lastIndex = 0;
+        while ((m = BANNED_IN_NON_CTA.exec(prompt)) !== null) {
+          if (!isNegated(prompt, m.index)) {
+            fail(`prompt-lint text-in-non-cta ${cenaLabel}`, `"${m[0]}" em cena nao-CTA`);
+            break;
+          }
+        }
+      }
+
+      if (anchor.length < 40) {
+        fail(`prompt-lint anchor-length ${name}`, `anchor tem ${anchor.length} chars (min 40)`);
+      }
+
+      if (!prompt.includes('9:16')) {
+        fail(`prompt-lint aspect ${cenaLabel}`, 'prompt nao menciona 9:16');
+      }
+    }
+
+    const refs = Array.isArray(json.referencias_obrigatorias) ? json.referencias_obrigatorias : [];
+    for (const ref of refs) {
+      if (!/^RAG\/identidade-visual\/[^/]+\.(png|jpg|jpeg|webp)$/i.test(ref)) {
+        fail(`prompt-lint ref-path ${name}`, ref);
+      }
+    }
+  }
+
+  if (!results.some((r) => r.name.startsWith('prompt-lint') && !r.ok)) {
+    pass('prompt-lint all shot-lists clean');
+  }
+}
+
 function checkDocs() {
   const allText = walk(ROOT, (p) => /\.(md|json|cjs)$/.test(p))
     .filter((p) => rel(p) !== 'scripts/verify.cjs')
@@ -492,6 +557,7 @@ checkReviewCadence();
 checkRbacContracts();
 checkSchemas();
 checkShotlists();
+checkPromptLint();
 checkDocs();
 
 const failed = results.filter((r) => !r.ok);

@@ -44,6 +44,26 @@ function hasHeading(text, heading) {
   return new RegExp(`^##\\s+${escaped}\\s*$`, 'mi').test(text);
 }
 
+function hasAnyHeading(text) {
+  const m = text.match(/^##\s+.+$/gm);
+  return m ? m.length : 0;
+}
+
+function hasHeadingMatching(text, pattern) {
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const escaped = pattern
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^##\\s+.*${escaped}.*$`, 'mi').test(normalized);
+}
+
+function countSections(text) {
+  return (text.match(/^##\s+.+$/gm) || []).length;
+}
+
 function extractAnchor(text) {
   const marker = /Anchor textual canonico|Anchor textual canônico/i;
   const idx = text.search(marker);
@@ -69,6 +89,7 @@ function validate(root) {
     'RAG/narrativa.md',
     'RAG/marca-template.md',
     'RAG/narrativa-template.md',
+    'RAG/troubleshooting.md',
     'RAG/prompts/padroes-de-prompt.md',
     'RAG/prompts/exemplos.md',
     'RAG/prompts/exemplo-shotlist-mago.json',
@@ -91,16 +112,18 @@ function validate(root) {
 
   if (exists(root, 'RAG/marca.md')) {
     const marca = read(root, 'RAG/marca.md');
-    for (const heading of [
-      'O que é',
-      'Público',
-      'Personagem central: o mago',
-      'Estilo visual',
-      'Tom da comunicação',
-      'Como o `prompt-smith` usa esta marca',
-    ]) {
-      add(hasHeading(marca, heading), `marca.md contem secao: ${heading}`);
+    const marcaSections = countSections(marca);
+    add(marcaSections >= 4, 'marca.md tem ao menos 4 secoes', `${marcaSections} encontradas`);
+
+    const marcaUniversal = ['O que', 'Publico', 'Estilo visual', 'Tom da comunicacao'];
+    for (const kw of marcaUniversal) {
+      add(hasHeadingMatching(marca, kw), `marca.md contem secao com "${kw}"`);
     }
+
+    const hasPersonagem = hasHeadingMatching(marca, 'Personagem central') ||
+      hasHeadingMatching(marca, 'Produto central');
+    add(hasPersonagem, 'marca.md contem secao de personagem ou produto central');
+
     const anchor = extractAnchor(marca);
     add(anchor.length >= 80, 'marca.md contem anchor textual canonico', anchor.slice(0, 80));
     add(/vertical 9:16 frame/i.test(anchor), 'anchor textual inclui vertical 9:16 frame');
@@ -108,14 +131,12 @@ function validate(root) {
 
   if (exists(root, 'RAG/narrativa.md')) {
     const narrativa = read(root, 'RAG/narrativa.md');
-    for (const heading of [
-      'A história',
-      'Cenário',
-      'Inimigos',
-      'Magia do mago',
-      'Como o `prompt-smith` usa esta narrativa',
-    ]) {
-      add(hasHeading(narrativa, heading), `narrativa.md contem secao: ${heading}`);
+    const narrSections = countSections(narrativa);
+    add(narrSections >= 3, 'narrativa.md tem ao menos 3 secoes', `${narrSections} encontradas`);
+
+    const narrUniversal = ['Historia', 'Cenario', 'Como o'];
+    for (const kw of narrUniversal) {
+      add(hasHeadingMatching(narrativa, kw), `narrativa.md contem secao com "${kw}"`);
     }
   }
 

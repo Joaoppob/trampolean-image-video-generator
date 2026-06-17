@@ -58,6 +58,7 @@ Ou use os comandos diretos:
 | `/duvidas` | Tira dúvidas sobre o sistema e os custos. |
 | `/comofazer "..."` | How-to guiado para um objetivo específico. |
 | `/creditos` | Mostra saldo e plano. Não gasta crédito. |
+| `/simular` | Simula um run completo (RAG, custo, shot-list, checks) sem gastar 1 crédito. |
 | `/revisao` | Roda as verificações do produto e zera a cadência de revisão. |
 | `/gerarimagem "..."` | Gera uma ou mais imagens de uma cena. |
 | `/gerarvideo "..."` | Pipeline completo: imagens, vídeos e reel montado. |
@@ -80,7 +81,7 @@ flowchart TD
   S -->|"imagem"| IMG_FLOW["Fluxo de imagem"]
   S -->|"reel completo"| VID_FLOW["Fluxo de vídeo"]
 
-  IMG_FLOW --> PROF[("output/.jotaro-profile.json<br/>modo guiado ou expert")]
+  IMG_FLOW --> PROF[(".claude/state/.jotaro-profile.json<br/>modo guiado ou expert")]
   VID_FLOW --> PROF
   PROF --> C1{"Cadência de revisão<br/>pode iniciar?"}
   C1 -->|"2 fluxos sem revisão"| REV["/revisao<br/>verify + reset do contador"]
@@ -102,7 +103,7 @@ flowchart TD
 
   GI --> STATE[("output/.pipeline-state.json<br/>save-crystal")]
   GV --> STATE
-  IMG_FLOW --> RC[("output/.review-cadence.json<br/>contador local")]
+  IMG_FLOW --> RC[(".claude/state/.review-cadence.json<br/>contador local")]
   VID_FLOW --> RC
 
   classDef user fill:#f8fafc,stroke:#64748b,color:#0f172a,stroke-width:1px;
@@ -162,9 +163,33 @@ flowchart TD
 - **Scope-lock:** Jotaro recusa código, opinião, política, texto genérico e jailbreak; ele volta para imagem/vídeo.
 - **RBAC:** só o Jotaro age sobre o mundo. `rag` e `prompt-smith` são folhas de leitura/síntese.
 - **Save-crystal:** `output/.pipeline-state.json` evita regerar cenas já pagas.
-- **Cadência de revisão:** `output/.review-cadence.json` conta fluxos concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
-- **Modo expert:** `output/.jotaro-profile.json` registra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
+- **Cadência de revisão:** `.claude/state/.review-cadence.json` conta fluxos concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
+- **Modo expert:** `.claude/state/.jotaro-profile.json` registra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
 - **Materiais de revisão:** `RAG/review/` traz checklists para prompt, consistência, regeneração de cena e reel final.
+
+### Jornada do usuário
+
+O que você vê e faz quando usa o gerador:
+
+```mermaid
+flowchart LR
+  U1["Você fala com o<br/>Jotaro em português"] --> J1{{"Jotaro entende<br/>o que você quer"}}
+  J1 --> C1{"Primeiro uso?"}
+  C1 -->|"sim"| SETUP["/setup<br/>Conectar Higgsfield<br/>Instalar FFmpeg"]
+  C1 -->|"não"| C2{"Já tem RAG?"}
+  SETUP --> C2
+  C2 -->|"não"| RAGSETUP["Colocar imagens em<br/>RAG/identidade-visual/<br/>Preencher marca.md"]
+  C2 -->|"sim"| SIM["/simular<br/>Validar tudo sem gastar"]
+  RAGSETUP --> SIM
+  SIM --> OK{"Saldo cobre?"}
+  OK -->|"sim"| GEN["/gerarimagem ou<br/>/gerarvideo"]
+  OK -->|"não"| PLAN["Escolher: menos cenas,<br/>aguardar renovação,<br/>ou plano pago"]
+  PLAN --> OK
+  GEN --> PROG["Jotaro mostra<br/>progresso a cada cena"]
+  PROG --> OUT["Recebe o arquivo<br/>em output/"]
+```
+
+Acima: a sua experiência, do início ao arquivo final. Abaixo: o que acontece dentro do sistema.
 
 ## Custos (honesto)
 
@@ -199,7 +224,7 @@ output/clips/      clipes de vídeo
 output/reels/      o reel final montado (reel-<data-hora>.mp4)
 ```
 
-O contador local da cadência fica em `output/.review-cadence.json` e não é versionado.
+O contador local da cadência fica em `.claude/state/.review-cadence.json` e não é versionado. O perfil do Jotaro fica em `.claude/state/.jotaro-profile.json`.
 
 ## Quer ver antes de gerar
 

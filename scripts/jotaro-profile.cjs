@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const STATE_REL = path.join('output', '.jotaro-profile.json');
+const STATE_REL = path.join('.claude', 'state', '.jotaro-profile.json');
 
 function parseArgs(argv) {
   const out = {};

@@ -2,6 +2,9 @@
 
 > Template para substituir o exemplo Trace Defense. Mantenha os titulos de secao para o
 > agente `rag` conseguir extrair a identidade com previsibilidade.
+>
+> IMPORTANTE: o validador (`validate-rag.cjs`) checa cada secao por palavra-chave. Use as
+> palavras em negrito no titulo de cada secao — o resto do titulo voce pode adaptar.
 
 ## O que e
 
@@ -12,10 +15,9 @@ Descreva o produto, servico, jogo, personagem ou campanha em 3 a 6 linhas.
 Quem deve assistir ao reel? Descreva idade, contexto de uso, desejo principal e o tipo de
 linguagem que funciona para esse publico.
 
-## Personagem central ou produto central
+## Personagem central: <nome do personagem>    (ou "Produto central: <nome do produto>")
 
 Liste os elementos visuais invariantes. Prefira detalhes distintivos:
-
 - silhueta ou formato;
 - cores principais;
 - roupa, embalagem, material ou acabamento;

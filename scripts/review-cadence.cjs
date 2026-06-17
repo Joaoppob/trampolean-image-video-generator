@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const STATE_REL = path.join('output', '.review-cadence.json');
+const STATE_REL = path.join('.claude', 'state', '.review-cadence.json');
 const SUGGEST_AFTER = 2;
 
 function parseArgs(argv) {

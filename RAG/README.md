@@ -45,6 +45,10 @@ funcionam:
 Checklists que o Jotaro usa para revisar prompts, imagens, regeneração de cenas e o reel final.
 Eles evitam avaliação improvisada antes de gastar crédito de vídeo ou entregar o arquivo final.
 
+### `troubleshooting.md`
+Guia de erros do gerador. Tabela de sintoma → causa → resposta → próximo passo. O Jotaro
+consulta aqui antes de improvisar quando algo falha.
+
 ### Templates
 Use `marca-template.md` e `narrativa-template.md` quando for substituir o exemplo por uma
 marca nova.
