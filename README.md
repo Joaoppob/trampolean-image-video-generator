@@ -96,7 +96,8 @@ flowchart TD
   REVIEW --> GI[[Gerador de imagens<br/>cria as cenas no Higgsfield]]
   GI --> HF[("Higgsfield<br/>serviço externo de IA")]
 
-  GI --> GV[[Animador de clipes<br/>transforma cada imagem em vídeo curto]]
+  GI -->|"se o pedido era só imagem"| IMG_OUT([Imagens prontas<br/>arquivos para revisar ou usar])
+  GI -->|"se o pedido era reel"| GV[[Animador de clipes<br/>transforma cada imagem em vídeo curto]]
   GV --> HF
   GV --> ED[[Editor de vídeo<br/>junta tudo em 1080x1920]]
   ED --> OUT([Reel final<br/>arquivo pronto para postar])
@@ -124,7 +125,7 @@ flowchart TD
   class GI,GV,ED skill;
   class PROF,ID_SCHEMA,SHOT_SCHEMA,STATE,RC state;
   class HF external;
-  class OUT output;
+  class IMG_OUT,OUT output;
 ```
 
 ### Guia visual do mapa
@@ -139,7 +140,7 @@ flowchart TD
 | Skills executáveis | subrotina | verde | gerador de imagens, animador de clipes, editor de vídeo |
 | Estado/contrato local | cilindro | cinza | preferências, contador, memória de progresso, contratos |
 | Serviço externo | cilindro | laranja | `Higgsfield` |
-| Saída final | cápsula | rosa | reel pronto |
+| Saída final | cápsula | rosa | imagens prontas, reel pronto |
 
 ### Equipe e responsabilidades
 
@@ -209,7 +210,8 @@ flowchart TB
   class DELIVER output;
 ```
 
-Acima: a sua experiência, do início ao arquivo final. Abaixo: o que acontece dentro do sistema.
+Este é o caminho visto por quem usa. O mapa anterior mostra o que acontece por dentro do
+sistema para entregar esse resultado.
 
 ## Custos (honesto)
 

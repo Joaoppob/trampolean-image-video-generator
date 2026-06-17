@@ -72,7 +72,7 @@ Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json` e do contrat
   "referencias_obrigatorias": ["RAG/identidade-visual/..."],
   "anchor_personagem": "...",
   "cenas": [
-    { "n": 1, "tag": "hook", "tempo_seg": "0-5", "intencao": "...", "prompt": "...", "salvar_em": "output/imagens/cena-01-hook.png" }
+    { "n": 1, "tag": "hook", "tempo_seg": "0-4", "intencao": "...", "prompt": "...", "salvar_em": "output/imagens/cena-01-hook.png" }
   ],
   "gate_consistencia": { "criterio": "...", "passa": "6/6 ou 5/6" }
 }
