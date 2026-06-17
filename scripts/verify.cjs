@@ -174,6 +174,58 @@ function checkPipelineStateReadOnly() {
   }
 }
 
+function checkReviewCadence() {
+  const script = path.join(ROOT, 'scripts', 'review-cadence.cjs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-review-'));
+  function call(args) {
+    const r = spawnSync('node', [script, ...args, '--root', tmp], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+    return JSON.parse(r.stdout);
+  }
+
+  try {
+    const initial = call(['status']);
+    if (initial.pode_iniciar_fluxo === true && initial.fluxos_desde_revisao === 0) {
+      pass('review cadence initial status allows flow');
+    } else {
+      fail('review cadence initial status allows flow', JSON.stringify(initial));
+    }
+
+    const first = call(['record-flow', '--kind', 'imagem', '--label', 'teste-1']);
+    if (first.pode_iniciar_fluxo === true && first.revisao_sugerida === false) {
+      pass('review cadence first flow does not require review');
+    } else {
+      fail('review cadence first flow does not require review', JSON.stringify(first));
+    }
+
+    const second = call(['record-flow', '--kind', 'video', '--label', 'teste-2']);
+    if (
+      second.revisao_sugerida === true &&
+      second.revisao_obrigatoria_antes_do_proximo_fluxo === true &&
+      second.pode_iniciar_fluxo === false
+    ) {
+      pass('review cadence second flow requires review before next flow');
+    } else {
+      fail('review cadence second flow requires review before next flow', JSON.stringify(second));
+    }
+
+    const reset = call(['mark-review', '--resultado', 'ok']);
+    if (reset.pode_iniciar_fluxo === true && reset.fluxos_desde_revisao === 0) {
+      pass('review cadence mark-review resets counter');
+    } else {
+      fail('review cadence mark-review resets counter', JSON.stringify(reset));
+    }
+  } catch (e) {
+    fail('review cadence command sequence', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 function checkRbacContracts() {
   const agentDir = path.join(ROOT, '.claude', 'agents');
   for (const file of walk(agentDir, (p) => p.endsWith('.md'))) {
@@ -241,6 +293,7 @@ checkCjsSyntax();
 checkHook();
 checkPreflight();
 checkPipelineStateReadOnly();
+checkReviewCadence();
 checkRbacContracts();
 checkDocs();
 

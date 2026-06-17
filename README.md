@@ -56,11 +56,16 @@ Ou use os comandos diretos:
 | `/duvidas` | Tira dúvidas sobre o sistema e os custos. |
 | `/comofazer "..."` | How-to guiado para um objetivo específico. |
 | `/creditos` | Mostra saldo e plano. Não gasta crédito. |
+| `/revisao` | Roda as verificações do produto e zera a cadência de revisão. |
 | `/gerarimagem "..."` | Gera uma ou mais imagens de uma cena. |
 | `/gerarvideo "..."` | Pipeline completo: imagens, vídeos e reel montado. |
 
 O Jotaro sempre confere o custo antes de gerar e sempre confere se há imagens na pasta de
 referência. Você não gasta crédito sem ele avisar.
+
+O Jotaro também mantém uma cadência de revisão: depois de 2 fluxos gerados, ele sugere rodar
+`/revisao`; se você tentar gerar um 3º fluxo sem revisar, ele roda a revisão antes de gastar
+crédito. Isso evita seguir gerando com hook, permissões ou helpers quebrados.
 
 ## Custos (honesto)
 
@@ -93,6 +98,8 @@ output/imagens/   imagens geradas
 output/clips/      clipes de vídeo
 output/reels/      o reel final montado (reel-<data-hora>.mp4)
 ```
+
+O contador local da cadência fica em `output/.review-cadence.json` e não é versionado.
 
 ## Quer ver antes de gerar
 

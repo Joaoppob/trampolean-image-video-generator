@@ -14,6 +14,7 @@ output/reels/*
 tmp/
 .pipeline-state.json
 output/.pipeline-state.json
+output/.review-cadence.json
 **/*.tmp
 
 # === Credenciais — NUNCA versionar (OAuth é por-usuário, em ~/.claude/) ===

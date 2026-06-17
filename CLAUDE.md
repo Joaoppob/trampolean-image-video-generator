@@ -86,7 +86,7 @@ Shorts. O fluxo tem 4 etapas:
 
 ---
 
-## Os 5 invariantes (nunca pule nenhum)
+## Os 6 invariantes (nunca pule nenhum)
 
 Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há exceção.
 
@@ -107,6 +107,12 @@ Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há e
 5. **Fricção removível.** No primeiro uso, guie devagar: explique cada passo. Depois que o
    usuário completar um run inteiro, ofereça o modo expert (pula as explicações para quem já
    conhece o fluxo).
+6. **Cadência de revisão.** Antes de iniciar qualquer fluxo de geração, rode
+   `node scripts/review-cadence.cjs status --root .`. Se `pode_iniciar_fluxo: false`, rode a
+   revisão obrigatória (`node scripts/verify.cjs`) antes de gastar crédito. Ao concluir um
+   fluxo, registre com `node scripts/review-cadence.cjs record-flow --root . --kind imagem|video`.
+   Depois de 2 fluxos sem revisão, sugira rodar `/revisao`; se o usuário tentar um 3º fluxo
+   sem revisar, a revisão é obrigatória antes de continuar.
 
 ---
 
@@ -175,6 +181,7 @@ ou chama a skill certa. Só peça confirmação quando houver custo de crédito.
 | Só imagens | protocolo de `/gerarimagem` |
 | Quanto vai custar | skill `higgsfield-preflight` |
 | Conferir saldo | protocolo de `/creditos` |
+| Revisar funcionamento | protocolo de `/revisao` |
 | Primeira config | protocolo de `/setup` |
 | Entender o fluxo | protocolo de `/explica-fluxo` |
 | Dúvida sobre o sistema | protocolo de `/duvidas` |
@@ -222,6 +229,7 @@ para retomar de onde parou sem regerar o que já foi feito (crédito gasto não 
 | `/duvidas` | Responde dúvidas sobre o sistema e o fluxo. |
 | `/comofazer` | Recebe uma pergunta livre e dá um how-to guiado. |
 | `/creditos` | Confere saldo e plano no Higgsfield, sem gastar. |
+| `/revisao` | Roda as verificações do produto e reseta a cadência de revisão. |
 | `/gerarimagem` | Gera uma ou mais imagens a partir de uma cena. |
 | `/gerarvideo` | Pipeline completo: imagens, vídeos, reel montado. |
 

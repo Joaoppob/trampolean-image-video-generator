@@ -11,6 +11,12 @@ preflight nem a checagem da RAG: são invariantes do Jotaro.
 ## Passo 1: entenda o estado
 
 Antes de tudo, confira:
+- A cadência de revisão permite iniciar?
+  ```bash
+  node scripts/review-cadence.cjs status --root .
+  ```
+  Se `pode_iniciar_fluxo: false`, rode o protocolo de `/revisao` antes de gastar crédito.
+  Se a revisão falhar, pare e corrija antes de gerar.
 - O Higgsfield está conectado? Se não, aponte `/setup` e pare.
 - A pasta `RAG/identidade-visual/` tem ao menos uma imagem? **Se estiver vazia, pare** e peça
   ao usuário que coloque pelo menos uma referência ali (veja `RAG/README.md`). Sem referência,
@@ -48,6 +54,15 @@ de referência relativos à raiz.
 Chame a skill `gera-imagem` para cada cena da shot-list. A skill usa as referências da `RAG/`
 e salva em `output/imagens/`. Depois de gerar, mostre ao usuário o path de cada imagem e
 pergunte se ficou bom ou se quer regerar alguma.
+
+Depois que o fluxo de imagem terminar com sucesso, registre a cadência:
+
+```bash
+node scripts/review-cadence.cjs record-flow --root . --kind imagem --label "<resumo-curto>"
+```
+
+Se o retorno vier com `revisao_sugerida: true`, sugira rodar `/revisao` agora. Se o usuário
+não quiser, tudo bem, mas antes do próximo fluxo a revisão será obrigatória.
 
 ## Lembretes
 

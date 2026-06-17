@@ -12,6 +12,12 @@ na ordem, sem pular invariante.
 ## Passo 1: entenda o estado e cheque a retomada
 
 Antes de tudo:
+- A cadência de revisão permite iniciar?
+  ```bash
+  node scripts/review-cadence.cjs status --root .
+  ```
+  Se `pode_iniciar_fluxo: false`, rode o protocolo de `/revisao` antes de gastar crédito.
+  Se a revisão falhar, pare e corrija antes de gerar.
 - O Higgsfield está conectado? Se não, aponte `/setup` e pare.
 - O FFmpeg responde (`ffmpeg -version`)? Se não, aponte `/setup` (Passo 2) e pare. Não comece
   a gastar crédito sem o FFmpeg, senão você gera os clipes e não consegue montar.
@@ -79,6 +85,15 @@ O reel sai em `output/reels/reel-<timestamp>.mp4`.
 Mostre o path final do reel. Diga que os clipes mudos do free não têm trilha (dá para colocar
 por fora se quiser). Pergunte se ficou bom ou se quer regerar alguma cena (o checkpoint deixa
 regerar só a cena ruim, sem refazer o reel inteiro).
+
+Depois que o reel terminar com sucesso, registre a cadência:
+
+```bash
+node scripts/review-cadence.cjs record-flow --root . --kind video --label "<resumo-curto>"
+```
+
+Se o retorno vier com `revisao_sugerida: true`, sugira rodar `/revisao` agora. Se o usuário
+não quiser, tudo bem, mas antes do próximo fluxo a revisão será obrigatória.
 
 ## Lembretes
 
