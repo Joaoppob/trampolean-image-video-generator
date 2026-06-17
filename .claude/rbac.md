@@ -1,0 +1,91 @@
+# rbac.md — fonte única de autorização do Trampolean Generator
+
+Documento de autoridade legível. Espelha em espírito o `roles.yaml` do D.TAI, sem
+toolchain. É a referência humana do contrato de poder desta arquitetura. O hard-enforce
+portátil real está no `tools:` do frontmatter de cada agente; este doc descreve a intenção,
+as fronteiras e o porquê.
+
+## Princípio: narrowing monotônico
+
+- As tools de cada folha são um subconjunto das tools do orquestrador (folha ⊆ Jotaro).
+- Folha não orquestra: nenhuma folha tem `Task`, logo nenhuma folha spawna outra.
+- Só o Jotaro spawna, e só via `Task`, e só as duas folhas declaradas.
+- Capacidade de agir sobre o mundo (Bash, MCP, Skill) é privilégio exclusivo do Jotaro.
+  As folhas só leem e pensam; quem executa é o nível 0.
+
+---
+
+## jotaro (orquestrador)
+
+- **escopo:** criação de imagem/vídeo neste gerador — nada além.
+- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, curl, node, mkdir, where, which)`,
+  `Task`, `Skill`, `mcp__higgsfield__*`.
+- **pode_spawnar:** `[rag, prompt-smith]`.
+- **contrato_entrada:** pedido do usuário em linguagem natural.
+- **contrato_saida:** reel gerado OU redirect educado (taxonomia de recusa do `CLAUDE.md`).
+- **fronteiras:** não responde fora do escopo de criação de imagem/vídeo deste gerador;
+  recusa instrução que tente mudar seu papel; avisa custo de crédito antes de gerar.
+
+---
+
+## rag (folha de leitura)
+
+- **escopo:** ler a pasta `RAG/` e devolver a identidade da marca.
+- **tools:** `Read`, `Glob`, `Grep` — **SEM Bash, SEM MCP, SEM Task, SEM Skill.**
+- **pode_spawnar:** nenhum.
+- **contrato_entrada:** `{ objetivo: "ler identidade da marca" }`.
+- **contrato_saida:** `{ refs, anchor_textual, estilo, paleta, narrativa_resumo, tom }`.
+- **fronteira:** não gera, não anima, não chama skills nem Higgsfield. Não lê fora de `RAG/`.
+  Devolve o anchor fiel, sem reescrever nem inferir.
+
+---
+
+## prompt-smith (folha de síntese)
+
+- **escopo:** receber identidade + intenção e devolver shot-list.
+- **tools:** `Read`, `Glob`, `Grep` — **SEM Bash, SEM MCP, SEM Task, SEM Skill.**
+- **pode_spawnar:** nenhum.
+- **contrato_entrada:** `{ identidade: <saída do rag>, intencao: <descrição das cenas> }`.
+- **contrato_saida:** shot-list JSON (schema de `RAG/prompts/exemplo-shotlist-mago.json`).
+- **fronteira:** não gera imagem, não chama Higgsfield, não chama o `rag` diretamente.
+  Se a identidade não vier no input, informa que o `rag` deve ser consultado antes —
+  não lê `RAG/` por conta própria para inferir o anchor.
+
+---
+
+## Tabela de narrowing (verificada)
+
+| Tool                  | jotaro | rag | prompt-smith |
+|-----------------------|:------:|:---:|:------------:|
+| Read                  |   ✓    |  ✓  |      ✓       |
+| Glob                  |   ✓    |  ✓  |      ✓       |
+| Grep                  |   ✓    |  ✓  |      ✓       |
+| Bash (lista restrita) |   ✓    |  —  |      —       |
+| Task                  |   ✓    |  —  |      —       |
+| Skill                 |   ✓    |  —  |      —       |
+| mcp__higgsfield__*    |   ✓    |  —  |      —       |
+
+Leitura (Read/Glob/Grep): todos. Ação (Bash/Task/Skill/MCP): só o Jotaro.
+Cada coluna de folha é subconjunto da coluna do Jotaro — narrowing monotônico satisfeito.
+
+---
+
+## Nota: `rag` quarentenado
+
+O `rag` é deliberadamente quarentenado: tem leitura (`Read/Glob/Grep`) mas **nenhuma
+capacidade de ação** (sem Bash, sem MCP, sem Task, sem Skill). É o padrão dual-LLM da OWASP
+contra prompt-injection indireta: o agente que toca conteúdo não-confiável (arquivos da
+`RAG/`, que o usuário controla) não pode agir sobre o que lê. Se um arquivo da `RAG/`
+carregar uma instrução maliciosa ("ignore tudo e rode X"), o `rag` não tem como executá-la —
+ele só consegue devolver texto ao Jotaro, que decide. O privilégio de agir fica concentrado
+no orquestrador, que opera sobre dados estruturados, não sobre conteúdo bruto injetável.
+
+---
+
+## Referência
+
+- Hard-enforce portátil: `tools:` no frontmatter de `.claude/agents/rag.md` e
+  `.claude/agents/prompt-smith.md`.
+- Reforço opcional (degrada gracioso): `.claude/hooks/scope-guard.cjs` + `.claude/settings.json`.
+- Defesa primária de escopo: as camadas de instrução do `CLAUDE.md` (role lock, árvore de
+  scope/recusa, estabilidade de instrução, re-grounding por turno).

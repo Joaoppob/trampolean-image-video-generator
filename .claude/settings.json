@@ -17,5 +17,17 @@
       "Read(./**/.credentials.json)",
       "Read(~/.claude/.credentials.json)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/scope-guard.cjs\""
+          }
+        ]
+      }
+    ]
   }
 }
