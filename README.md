@@ -67,6 +67,62 @@ O Jotaro também mantém uma cadência de revisão: depois de 2 fluxos gerados, 
 `/revisao`; se você tentar gerar um 3º fluxo sem revisar, ele roda a revisão antes de gastar
 crédito. Isso evita seguir gerando com hook, permissões ou helpers quebrados.
 
+## Mapa da orquestração
+
+```mermaid
+flowchart TD
+  U[Usuário] --> J[Jotaro<br/>orquestrador e guia]
+
+  J --> S{Pedido}
+  S -->|setup ou dúvida| HELP[Comandos de ajuda<br/>setup, duvidas, comofazer, creditos]
+  S -->|imagem| IMG_FLOW[Fluxo de imagem]
+  S -->|reel completo| VID_FLOW[Fluxo de vídeo]
+
+  IMG_FLOW --> C1[Cadência de revisão<br/>status antes de gerar]
+  VID_FLOW --> C1
+  C1 -->|2 fluxos sem revisão| REV[/revisao<br/>verify + reset do contador]
+  C1 -->|ok| RAG[rag<br/>lê identidade em RAG/]
+
+  RAG --> PS[prompt-smith<br/>monta shot-list e prompts]
+  PS --> GI[skill gera-imagem<br/>Higgsfield nano_banana_pro]
+  GI --> HF[(Higgsfield MCP)]
+
+  VID_FLOW --> GV[skill gera-video<br/>Higgsfield veo3_1_lite]
+  GI --> GV
+  GV --> HF
+  GV --> ED[skill editor-video<br/>FFmpeg 1080x1920]
+  ED --> OUT[output/reels<br/>reel final]
+
+  GI --> STATE[output/.pipeline-state.json<br/>save-crystal]
+  GV --> STATE
+  IMG_FLOW --> RC[output/.review-cadence.json<br/>contador local]
+  VID_FLOW --> RC
+```
+
+### Equipe e responsabilidades
+
+| Nome | Tipo | O que faz | O que não faz |
+|------|------|-----------|---------------|
+| **Jotaro** | Orquestrador | Conversa com o usuário, entende o objetivo, aplica escopo, checa custo, chama agentes e skills, registra cadência e entrega o resultado. | Não sai do domínio de imagem/vídeo deste gerador. Não gasta crédito sem avisar. |
+| **rag** | Agente folha | Lê `RAG/`, lista referências visuais e devolve identidade: anchor, estilo, paleta, narrativa e tom. | Não gera, não chama Higgsfield, não usa Bash, não spawna agentes. |
+| **prompt-smith** | Agente folha | Recebe a identidade do `rag` e transforma o pedido em shot-list com prompts fortes e consistentes. | Não gera imagem, não chama Higgsfield, não consulta o `rag` sozinho. |
+
+### Skills que o Jotaro executa
+
+| Skill | Função |
+|-------|--------|
+| `higgsfield-preflight` | Lê saldo/plano no Higgsfield e calcula se o run cabe no crédito antes de gerar. |
+| `gera-imagem` | Gera imagens 9:16 com referências da marca usando `nano_banana_pro`. |
+| `gera-video` | Anima cada imagem em clipe curto usando apenas `veo3_1_lite` no free tier. |
+| `editor-video` | Junta os clipes em um reel 1080×1920 com FFmpeg e legenda opcional. |
+
+### Guardrails operacionais
+
+- **Scope-lock:** Jotaro recusa código, opinião, política, texto genérico e jailbreak; ele volta para imagem/vídeo.
+- **RBAC:** só o Jotaro age sobre o mundo. `rag` e `prompt-smith` são folhas de leitura/síntese.
+- **Save-crystal:** `output/.pipeline-state.json` evita regerar cenas já pagas.
+- **Cadência de revisão:** `output/.review-cadence.json` conta fluxos concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
+
 ## Custos (honesto)
 
 A geração consome créditos do Higgsfield:
