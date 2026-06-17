@@ -71,31 +71,31 @@ crédito. Isso evita seguir gerando com hook, permissões ou helpers quebrados.
 
 ```mermaid
 flowchart TD
-  U[Usuário] --> J[Jotaro<br/>orquestrador e guia]
+  U["Usuário"] --> J["Jotaro<br/>orquestrador e guia"]
 
-  J --> S{Pedido}
-  S -->|setup ou dúvida| HELP[Comandos de ajuda<br/>setup, duvidas, comofazer, creditos]
-  S -->|imagem| IMG_FLOW[Fluxo de imagem]
-  S -->|reel completo| VID_FLOW[Fluxo de vídeo]
+  J --> S{"Pedido"}
+  S -->|"setup ou dúvida"| HELP["Comandos de ajuda<br/>setup, duvidas, comofazer, creditos"]
+  S -->|"imagem"| IMG_FLOW["Fluxo de imagem"]
+  S -->|"reel completo"| VID_FLOW["Fluxo de vídeo"]
 
-  IMG_FLOW --> C1[Cadência de revisão<br/>status antes de gerar]
+  IMG_FLOW --> C1["Cadência de revisão<br/>status antes de gerar"]
   VID_FLOW --> C1
-  C1 -->|2 fluxos sem revisão| REV[/revisao<br/>verify + reset do contador]
-  C1 -->|ok| RAG[rag<br/>lê identidade em RAG/]
+  C1 -->|"2 fluxos sem revisão"| REV["/revisao<br/>verify + reset do contador"]
+  C1 -->|"ok"| RAG["rag<br/>lê identidade em RAG"]
 
-  RAG --> PS[prompt-smith<br/>monta shot-list e prompts]
-  PS --> GI[skill gera-imagem<br/>Higgsfield nano_banana_pro]
-  GI --> HF[(Higgsfield MCP)]
+  RAG --> PS["prompt-smith<br/>monta shot-list e prompts"]
+  PS --> GI["skill gera-imagem<br/>Higgsfield nano_banana_pro"]
+  GI --> HF[("Higgsfield MCP")]
 
-  VID_FLOW --> GV[skill gera-video<br/>Higgsfield veo3_1_lite]
+  VID_FLOW --> GV["skill gera-video<br/>Higgsfield veo3_1_lite"]
   GI --> GV
   GV --> HF
-  GV --> ED[skill editor-video<br/>FFmpeg 1080x1920]
-  ED --> OUT[output/reels<br/>reel final]
+  GV --> ED["skill editor-video<br/>FFmpeg 1080x1920"]
+  ED --> OUT["output/reels<br/>reel final"]
 
-  GI --> STATE[output/.pipeline-state.json<br/>save-crystal]
+  GI --> STATE["output/.pipeline-state.json<br/>save-crystal"]
   GV --> STATE
-  IMG_FLOW --> RC[output/.review-cadence.json<br/>contador local]
+  IMG_FLOW --> RC["output/.review-cadence.json<br/>contador local"]
   VID_FLOW --> RC
 ```
 
