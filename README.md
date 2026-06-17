@@ -81,29 +81,29 @@ flowchart TD
   S -->|"imagem"| IMG_FLOW["Fluxo de imagem"]
   S -->|"reel completo"| VID_FLOW["Fluxo de vídeo"]
 
-  IMG_FLOW --> PROF[(".claude/state/.jotaro-profile.json<br/>modo guiado ou expert")]
+  IMG_FLOW --> PROF[("Preferências do usuário<br/>guia passo a passo ou modo direto")]
   VID_FLOW --> PROF
   PROF --> C1{"Cadência de revisão<br/>pode iniciar?"}
-  C1 -->|"2 fluxos sem revisão"| REV["/revisao<br/>verify + reset do contador"]
-  C1 -->|"ok"| RAG_READY{"RAG pronta?<br/>refs + marca + narrativa"}
-  RAG_READY -->|"não"| RAG_FIX["RAG templates<br/>marca + narrativa"]
-  RAG_READY -->|"sim"| RAG[/rag<br/>lê identidade em RAG/]
+  C1 -->|"2 fluxos sem revisão"| REV["Revisão automática<br/>confere se o gerador está saudável"]
+  C1 -->|"ok"| RAG_READY{"Materiais da marca<br/>estão prontos?"}
+  RAG_READY -->|"não"| RAG_FIX["Modelos para preencher<br/>marca, história e referências"]
+  RAG_READY -->|"sim"| RAG[/Leitor de identidade<br/>entende a marca e as imagens/]
 
-  RAG --> ID_SCHEMA[("schemas/identity.schema.json")]
-  ID_SCHEMA --> PS[/prompt-smith<br/>monta shot-list e prompts/]
-  PS --> SHOT_SCHEMA[("schemas/shotlist.schema.json")]
-  SHOT_SCHEMA --> REVIEW["RAG/review<br/>checklists de qualidade"]
-  REVIEW --> GI[[skill gera-imagem<br/>Higgsfield nano_banana_pro]]
-  GI --> HF[("Higgsfield MCP")]
+  RAG --> ID_SCHEMA[("Contrato da identidade<br/>garante resposta padronizada")]
+  ID_SCHEMA --> PS[/Diretor de prompts<br/>transforma o pedido em cenas/]
+  PS --> SHOT_SCHEMA[("Contrato da lista de cenas<br/>evita campos faltando")]
+  SHOT_SCHEMA --> REVIEW["Checklists de qualidade<br/>consistência, texto, logo e CTA"]
+  REVIEW --> GI[[Gerador de imagens<br/>cria as cenas no Higgsfield]]
+  GI --> HF[("Higgsfield<br/>serviço externo de IA")]
 
-  GI --> GV
+  GI --> GV[[Animador de clipes<br/>transforma cada imagem em vídeo curto]]
   GV --> HF
-  GV --> ED[[skill editor-video<br/>FFmpeg 1080x1920]]
-  ED --> OUT([output/reels<br/>reel final])
+  GV --> ED[[Editor de vídeo<br/>junta tudo em 1080x1920]]
+  ED --> OUT([Reel final<br/>arquivo pronto para postar])
 
-  GI --> STATE[("output/.pipeline-state.json<br/>save-crystal")]
+  GI --> STATE[("Memória do progresso<br/>não paga duas vezes pela mesma cena")]
   GV --> STATE
-  IMG_FLOW --> RC[(".claude/state/.review-cadence.json<br/>contador local")]
+  IMG_FLOW --> RC[("Contador de revisão<br/>lembra quando revisar o sistema")]
   VID_FLOW --> RC
 
   classDef user fill:#f8fafc,stroke:#64748b,color:#0f172a,stroke-width:1px;
@@ -133,13 +133,13 @@ flowchart TD
 |------|-------|-----|----------|
 | Usuário | cápsula | cinza claro | `Usuário` |
 | Orquestrador | hexágono | roxo | `Jotaro` |
-| Decisão/gate | losango | amarelo | `Pedido`, `Cadência`, `RAG pronta?` |
-| Comandos e materiais | retângulo | azul | `/revisao`, `RAG/review`, templates |
-| Agentes folha | paralelogramo | verde-água | `rag`, `prompt-smith` |
-| Skills executáveis | subrotina | verde | `gera-imagem`, `gera-video`, `editor-video` |
-| Estado/contrato local | cilindro | cinza | `schemas/*`, `output/*.json` |
-| Serviço externo | cilindro | laranja | `Higgsfield MCP` |
-| Saída final | cápsula | rosa | `output/reels` |
+| Decisão/gate | losango | amarelo | pedido, cadência, materiais da marca prontos |
+| Comandos e materiais | retângulo | azul | revisão automática, checklists, modelos para preencher |
+| Agentes folha | paralelogramo | verde-água | leitor de identidade, diretor de prompts |
+| Skills executáveis | subrotina | verde | gerador de imagens, animador de clipes, editor de vídeo |
+| Estado/contrato local | cilindro | cinza | preferências, contador, memória de progresso, contratos |
+| Serviço externo | cilindro | laranja | `Higgsfield` |
+| Saída final | cápsula | rosa | reel pronto |
 
 ### Equipe e responsabilidades
 
@@ -162,9 +162,9 @@ flowchart TD
 
 - **Scope-lock:** Jotaro recusa código, opinião, política, texto genérico e jailbreak; ele volta para imagem/vídeo.
 - **RBAC:** só o Jotaro age sobre o mundo. `rag` e `prompt-smith` são folhas de leitura/síntese.
-- **Save-crystal:** `output/.pipeline-state.json` evita regerar cenas já pagas.
-- **Cadência de revisão:** `.claude/state/.review-cadence.json` conta fluxos concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
-- **Modo expert:** `.claude/state/.jotaro-profile.json` registra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
+- **Memória do progresso:** o gerador lembra quais cenas já foram criadas para não gastar crédito duas vezes refazendo a mesma etapa.
+- **Cadência de revisão:** o gerador conta quantos fluxos foram concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
+- **Modo expert:** Jotaro lembra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
 - **Materiais de revisão:** `RAG/review/` traz checklists para prompt, consistência, regeneração de cena e reel final.
 
 ### Jornada do usuário
@@ -172,21 +172,41 @@ flowchart TD
 O que você vê e faz quando usa o gerador:
 
 ```mermaid
-flowchart LR
-  U1["Você fala com o<br/>Jotaro em português"] --> J1{{"Jotaro entende<br/>o que você quer"}}
-  J1 --> C1{"Primeiro uso?"}
-  C1 -->|"sim"| SETUP["/setup<br/>Conectar Higgsfield<br/>Instalar FFmpeg"]
-  C1 -->|"não"| C2{"Já tem RAG?"}
-  SETUP --> C2
-  C2 -->|"não"| RAGSETUP["Colocar imagens em<br/>RAG/identidade-visual/<br/>Preencher marca.md"]
-  C2 -->|"sim"| SIM["/simular<br/>Validar tudo sem gastar"]
-  RAGSETUP --> SIM
-  SIM --> OK{"Saldo cobre?"}
-  OK -->|"sim"| GEN["/gerarimagem ou<br/>/gerarvideo"]
-  OK -->|"não"| PLAN["Escolher: menos cenas,<br/>aguardar renovação,<br/>ou plano pago"]
-  PLAN --> OK
-  GEN --> PROG["Jotaro mostra<br/>progresso a cada cena"]
-  PROG --> OUT["Recebe o arquivo<br/>em output/"]
+flowchart TB
+  START([Você abre o Claude Code<br/>dentro desta pasta])
+  TALK["Você pede em português<br/>exemplo: quero um reel de 4 cenas"]
+  UNDERSTAND{{Jotaro entende o objetivo<br/>e explica o próximo passo}}
+  FIRST{"É o primeiro uso?"}
+  SETUP["Jotaro conduz o setup<br/>conecta Higgsfield, confere saldo e FFmpeg"]
+  BRAND{"A marca já está preparada?"}
+  BRAND_FIX["Você coloca as imagens de referência<br/>e preenche marca e narrativa"]
+  SIM["Jotaro simula antes de gastar<br/>confere materiais, custo e cenas"]
+  BALANCE{"O saldo cobre o pedido?"}
+  ADJUST["Você escolhe uma saída<br/>menos cenas, esperar créditos ou usar plano pago"]
+  CONFIRM["Você confirma a geração<br/>imagem única ou reel completo"]
+  GENERATE["Jotaro gera cena por cena<br/>mostrando o progresso"]
+  DELIVER([Você recebe o arquivo final<br/>pronto para revisar e postar])
+
+  START --> TALK --> UNDERSTAND --> FIRST
+  FIRST -->|"sim"| SETUP --> BRAND
+  FIRST -->|"não"| BRAND
+  BRAND -->|"não"| BRAND_FIX --> SIM
+  BRAND -->|"sim"| SIM
+  SIM --> BALANCE
+  BALANCE -->|"não"| ADJUST --> SIM
+  BALANCE -->|"sim"| CONFIRM --> GENERATE --> DELIVER
+
+  classDef start fill:#f8fafc,stroke:#64748b,color:#0f172a,stroke-width:1px;
+  classDef guide fill:#ede9fe,stroke:#7c3aed,color:#2e1065,stroke-width:2px;
+  classDef action fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1px;
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#451a03,stroke-width:1px;
+  classDef output fill:#fce7f3,stroke:#db2777,color:#500724,stroke-width:2px;
+
+  class START,DELIVER start;
+  class UNDERSTAND guide;
+  class TALK,SETUP,BRAND_FIX,SIM,ADJUST,CONFIRM,GENERATE action;
+  class FIRST,BRAND,BALANCE decision;
+  class DELIVER output;
 ```
 
 Acima: a sua experiência, do início ao arquivo final. Abaixo: o que acontece dentro do sistema.
