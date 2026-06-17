@@ -6,8 +6,6 @@
  *   1. CHECK de FFmpeg (ffmpeg -version; fallback where/which). Ausente -> PARA
  *      com instrucoes de instalacao por OS. NAO prossegue sem FFmpeg.
  *   2. Concat normalizado de N clipes pra 1080x1920 9:16
- *      (filter_complex scale+pad+setsar+fps24, libx264 preset fast, yuv420p,
- *      +faststart). Abordagem A (defensiva) — generaliza o comando do spike pra N.
  *   3. Legenda opcional via drawtext (caixa OU contorno, zona segura vertical,
  *      escape de fonte por OS — pegadinha do C\: no Windows).
  *   4. Saida com timestamp em output/reels/reel-YYYYMMDD-HHMMSS.mp4 (nao sobrescreve).

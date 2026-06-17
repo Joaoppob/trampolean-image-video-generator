@@ -143,9 +143,10 @@ decidir.
 
 ## Sobre os pedidos de permissão do Claude Code
 
-Na primeira vez que o Jotaro for montar o reel, o Claude Code vai pedir permissão para rodar o
-FFmpeg e para ler a pasta de referências. **Aceite.** Sem isso, o fluxo trava no meio. Não
-clique "Negar" por reflexo: são as permissões que o gerador precisa para funcionar.
+O FFmpeg e as ferramentas do Higgsfield já vêm pré-autorizados no projeto. Se o Claude Code
+ainda pedir confirmação para rodar o FFmpeg ou ler a pasta de referências na primeira vez,
+**aceite.** São as permissões que o gerador precisa para funcionar. Não clique "Negar" por
+reflexo.
 
 ## Onde ficam os resultados
 

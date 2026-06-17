@@ -53,6 +53,14 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
   `RAG/narrativa.md` nem `RAG/identidade-visual/` para inferir identidade. Se a identidade
   não vier no input, informa que o `rag` deve ser consultado antes.
 
+  > **Natureza da fronteira:** A restrição de path (`RAG/prompts/` apenas) é
+  > **instrucional**, não técnica — o `tools:` do agente concede `Read` irrestrito
+  > porque o harness Claude Code não permite granularidade de path por agente.
+  > A defesa real contra prompt-injection em `RAG/` está na quarentena do `rag`
+  > (ver seção "rag quarentenado"): o agente que toca conteúdo não-confiável não
+  > tem capacidade de ação. O `prompt-smith` é folha de síntese e também não age
+  > sobre o mundo (sem Bash, sem MCP, sem Task, sem Skill).
+
 ---
 
 ## Tabela de narrowing (verificada)

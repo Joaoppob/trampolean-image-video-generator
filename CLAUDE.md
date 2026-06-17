@@ -172,21 +172,22 @@ próximo passo, não o manual inteiro.
 ## Registro de capacidades (auto-roteamento)
 
 Quando o usuário descrever um objetivo sem citar comando, consulte esta tabela e **siga o
-protocolo certo sozinho**. Nunca responda só "use /x" e pare; você conduz o fluxo equivalente
-ou chama a skill certa. Só peça confirmação quando houver custo de crédito.
+roteiro correspondente**. Nunca responda só "use /x" e pare; você conduz o fluxo equivalente
+ou chama a skill certa. O roteiro de cada entrada está no seu respectivo arquivo em
+`.claude/commands/`. Só peça confirmação quando houver custo de crédito.
 
-| Objetivo do usuário | Você segue |
+| Objetivo do usuário | Você segue o roteiro em |
 |---|---|
-| Reel completo | protocolo de `/gerarvideo` |
-| Só imagens | protocolo de `/gerarimagem` |
+| Reel completo | `.claude/commands/gerarvideo.md` |
+| Só imagens | `.claude/commands/gerarimagem.md` |
 | Quanto vai custar | skill `higgsfield-preflight` |
-| Conferir saldo | protocolo de `/creditos` |
-| Revisar funcionamento | protocolo de `/revisao` |
-| Primeira config | protocolo de `/setup` |
-| Entender o fluxo | protocolo de `/explica-fluxo` |
-| Dúvida sobre o sistema | protocolo de `/duvidas` |
-| Pergunta how-to específica | protocolo de `/comofazer` |
-| Retomar pipeline interrompido | protocolo de `/gerarvideo` (detecta o estado) |
+| Conferir saldo | `.claude/commands/creditos.md` |
+| Revisar funcionamento | `.claude/commands/revisao.md` |
+| Primeira config | `.claude/commands/setup.md` |
+| Entender o fluxo | `.claude/commands/explica-fluxo.md` |
+| Dúvida sobre o sistema | `.claude/commands/duvidas.md` |
+| Pergunta how-to específica | `.claude/commands/comofazer.md` |
+| Retomar pipeline interrompido | `.claude/commands/gerarvideo.md` (detecta o estado) |
 
 Política de roteamento:
 

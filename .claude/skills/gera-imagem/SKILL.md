@@ -24,7 +24,7 @@ consistência vem das referências).
 ### 0. Idempotência — checar o save-crystal ANTES de gerar
 
 ```bash
-node .claude/skills/gera-imagem/scripts/pipeline-state.cjs get \
+node scripts/pipeline-state.cjs get \
   --root . --cena <N> --tipo imagem
 ```
 
@@ -37,7 +37,7 @@ Para cada ref que ainda não tem `media_id` neste run:
 
 1. Cheque se já foi confirmada antes (chave = nome do arquivo):
    ```bash
-   node .claude/skills/gera-imagem/scripts/pipeline-state.cjs media-get --root . --key mage1
+   node scripts/pipeline-state.cjs media-get --root . --key mage1
    ```
    Se `existe: true`, reuse o `media_id` — **não suba de novo**.
 2. Se não: `mcp__higgsfield__media_upload` (com o filename) → retorna `upload_url`
@@ -45,7 +45,7 @@ Para cada ref que ainda não tem `media_id` neste run:
    → `mcp__higgsfield__media_confirm` (type apropriado) → retorna o `media_id`.
 3. Grave o media_id pra reuso:
    ```bash
-   node .claude/skills/gera-imagem/scripts/pipeline-state.cjs media \
+   node scripts/pipeline-state.cjs media \
      --root . --key mage1 --media-id <MEDIA_ID>
    ```
 
@@ -81,7 +81,7 @@ curl -L "<rawUrl>" -o "output/imagens/cena-<NN>-<tag>.png"
 ### 5. Save-crystal — gravar SEMPRE após cada imagem
 
 ```bash
-node .claude/skills/gera-imagem/scripts/pipeline-state.cjs set \
+node scripts/pipeline-state.cjs set \
   --root . --cena <N> --tipo imagem \
   --job-id <JOB_ID> \
   --path "output/imagens/cena-<NN>-<tag>.png" \

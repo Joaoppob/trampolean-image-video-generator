@@ -39,7 +39,7 @@ caia pra Seedance/Kling/Grok/Wan na esperança de que funcione.
 ### 0. Idempotência — checar o save-crystal
 
 ```bash
-node .claude/skills/gera-video/scripts/pipeline-state.cjs get \
+node scripts/pipeline-state.cjs get \
   --root . --cena <N> --tipo video
 ```
 
@@ -70,7 +70,7 @@ curl -L "<rawUrl>" -o "output/clips/cena-<NN>-<tag>.mp4"
 ### 4. Save-crystal — gravar SEMPRE após cada clipe
 
 ```bash
-node .claude/skills/gera-video/scripts/pipeline-state.cjs set \
+node scripts/pipeline-state.cjs set \
   --root . --cena <N> --tipo video \
   --job-id <JOB_ID_VIDEO> \
   --path "output/clips/cena-<NN>-<tag>.mp4" \

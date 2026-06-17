@@ -8,6 +8,8 @@ const os = require('os');
 
 const ROOT = path.resolve(__dirname, '..');
 
+const REQUIRED_CORE_TOOLS = ['Skill', 'Read', 'Glob', 'Grep', 'Task', 'Write'];
+
 const REQUIRED_HIGGSFIELD_TOOLS = [
   'mcp__higgsfield__balance',
   'mcp__higgsfield__show_plans_and_credits',
@@ -152,7 +154,7 @@ function checkPreflight() {
 }
 
 function checkPipelineStateReadOnly() {
-  const script = path.join(ROOT, '.claude', 'skills', 'gera-imagem', 'scripts', 'pipeline-state.cjs');
+  const script = path.join(ROOT, 'scripts', 'pipeline-state.cjs');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-verify-'));
   const r = spawnSync('node', [script, 'get', '--root', tmp, '--cena', '1', '--tipo', 'imagem'], {
     cwd: ROOT,
@@ -238,13 +240,14 @@ function checkRbacContracts() {
 
   const settings = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));
   const allowed = new Set(settings.permissions && settings.permissions.allow ? settings.permissions.allow : []);
+  for (const tool of REQUIRED_CORE_TOOLS) {
+    if (allowed.has(tool)) pass(`settings allows ${tool}`);
+    else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
+  }
   for (const tool of REQUIRED_HIGGSFIELD_TOOLS) {
     if (allowed.has(tool)) pass(`settings allows ${tool}`);
     else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
   }
-  if (allowed.has('Task')) pass('settings allows Task');
-  else fail('settings allows Task', 'missing from .claude/settings.json');
-
   const requiredBySkill = {
     '.claude/skills/higgsfield-preflight/SKILL.md': [
       'mcp__higgsfield__balance',
@@ -289,10 +292,34 @@ function checkDocs() {
   }
 }
 
+function checkPipelineStateDedup() {
+  const canonical = path.join(ROOT, 'scripts', 'pipeline-state.cjs');
+  if (!fs.existsSync(canonical)) {
+    fail('pipeline-state canonical copy exists', 'scripts/pipeline-state.cjs missing');
+    return;
+  }
+  pass('pipeline-state canonical at scripts/pipeline-state.cjs');
+  // old locations are now thin shims; verify they still exist and are valid JS
+  const shims = [
+    path.join(ROOT, '.claude', 'skills', 'gera-imagem', 'scripts', 'pipeline-state.cjs'),
+    path.join(ROOT, '.claude', 'skills', 'gera-video', 'scripts', 'pipeline-state.cjs'),
+  ];
+  for (const shim of shims) {
+    if (!fs.existsSync(shim)) {
+      fail(`pipeline-state shim exists: ${rel(shim)}`, 'file missing');
+      continue;
+    }
+    const r = spawnSync('node', ['--check', shim], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+    if (r.status === 0) pass(`pipeline-state shim valid: ${rel(shim)}`);
+    else fail(`pipeline-state shim valid: ${rel(shim)}`, (r.stderr || '').trim());
+  }
+}
+
 checkCjsSyntax();
 checkHook();
 checkPreflight();
 checkPipelineStateReadOnly();
+checkPipelineStateDedup();
 checkReviewCadence();
 checkRbacContracts();
 checkDocs();

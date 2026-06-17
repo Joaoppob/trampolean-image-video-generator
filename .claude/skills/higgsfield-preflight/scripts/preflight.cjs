@@ -46,7 +46,13 @@ function toBool(v, def) {
 }
 
 function preflight({ cenas, saldo, comVideo, tetoDia }) {
+  if (cenas === undefined || cenas === null || cenas === '') {
+    return { erro: 'numero de cenas invalido ou ausente (use --cenas <N>)' };
+  }
   const n = Math.max(0, Math.floor(Number(cenas) || 0));
+  if (n === 0) {
+    return { erro: 'numero de cenas deve ser pelo menos 1 (recebido: 0)' };
+  }
   const incluiVideo = comVideo !== false;
   const teto = Number.isFinite(Number(tetoDia)) ? Number(tetoDia) : TETO_DIA_FREE;
 
