@@ -38,6 +38,6 @@ Shorts). São 4 etapas:
 
 ## Como fechar
 
-Pergunte o que a pessoa quer fazer agora: configurar o ambiente (`/setup`), gerar uma imagem
-de teste (`/gerarimagem`), ou montar um reel completo (`/gerarvideo`). Conduza para o próximo
-passo, não deixe a conversa solta.
+Pergunte o que a pessoa quer fazer agora: configurar o ambiente, gerar uma imagem de teste ou
+montar um reel completo. Se ela escolher uma opção, siga o protocolo correspondente. Conduza
+para o próximo passo, não deixe a conversa solta.

@@ -34,8 +34,9 @@ reiniciar o programa. Você não precisa logar de novo toda vez.
 O FFmpeg é o programa que monta o reel final (junta os clipes, queima a legenda). Precisa
 estar instalado na máquina. Confira:
 
-- Peça para o usuário rodar `ffmpeg -version` (no Windows também serve `where ffmpeg`; no
-  Mac/Linux, `command -v ffmpeg`).
+- Rode `ffmpeg -version` você mesmo. Se a permissão do Claude Code pedir confirmação, explique
+  que é só a checagem do FFmpeg e aguarde o ok. No Windows também serve `where ffmpeg`; no
+  Mac/Linux, `which ffmpeg`.
 - Se aparecer a versão, está pronto. Siga.
 - Se der erro ou "comando não encontrado", está faltando. Mostre o comando do sistema dele:
 

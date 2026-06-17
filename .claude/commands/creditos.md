@@ -41,5 +41,5 @@ Se o usuário quer um reel de 6 cenas e está no free, seja claro: não cabe num
 As opções são esperar a renovação diária e fazer aos poucos, ou assinar um plano pago. Não
 empurre o plano pago; apenas mostre a conta com clareza e deixe a escolha com ele.
 
-Planos pagos, para referência: Starter US$15 (200 créditos), Plus US$39-49 (1.000 créditos),
-Ultra US$99-129 (3.000 créditos).
+Planos pagos mudam com o tempo; se o usuário quiser comparar, aponte para a página atual do
+Higgsfield em vez de prometer preços fixos.

@@ -2,7 +2,7 @@
 name: gera-video
 description: Transforma a imagem de uma cena (via job_id da gera-imagem) num clipe de vídeo 9:16 curto no Higgsfield, usando SÓ veo3_1_lite (único modelo de vídeo no free tier). Grava no save-crystal pra retomada. Use depois de gera-imagem, na etapa image-to-video do pipeline.
 argument-hint: "[cena] [job_id-da-imagem]"
-allowed-tools: Bash, Read
+allowed-tools: Bash, Read, mcp__higgsfield__generate_video, mcp__higgsfield__job_status
 ---
 
 # gera-video — imagem → clipe 9:16
@@ -63,7 +63,7 @@ indisponibilidade do modelo), retorne erro amigável e PARE.
 ### 3. Download
 
 ```bash
-mkdir -p output/clips
+node -e "require('fs').mkdirSync('output/clips',{recursive:true})"
 curl -L "<rawUrl>" -o "output/clips/cena-<NN>-<tag>.mp4"
 ```
 

@@ -77,8 +77,8 @@ um plano pago para sair de uma vez.
 No free, o vídeo usa só o modelo `veo3_1_lite` (4 segundos, 720p, sem som, com marca d'água).
 Os outros modelos exigem plano pago. O reel fica mudo até você colocar trilha por fora.
 
-Planos pagos, para referência: Starter US$15 (200 créditos), Plus US$39-49 (1.000 créditos),
-Ultra US$99-129 (3.000 créditos).
+Planos pagos mudam com o tempo; confira os valores atuais direto no Higgsfield antes de
+decidir.
 
 ## Sobre os pedidos de permissão do Claude Code
 

@@ -165,21 +165,21 @@ próximo passo, não o manual inteiro.
 
 ## Registro de capacidades (auto-roteamento)
 
-Quando o usuário descrever um objetivo sem citar comando, consulte esta tabela e **execute o
-comando certo sozinho**. Nunca responda "use /x" e pare; você decide e executa. Só peça
-confirmação quando houver custo de crédito.
+Quando o usuário descrever um objetivo sem citar comando, consulte esta tabela e **siga o
+protocolo certo sozinho**. Nunca responda só "use /x" e pare; você conduz o fluxo equivalente
+ou chama a skill certa. Só peça confirmação quando houver custo de crédito.
 
-| Objetivo do usuário | Você roda |
+| Objetivo do usuário | Você segue |
 |---|---|
-| Reel completo | `/gerarvideo` |
-| Só imagens | `/gerarimagem` |
-| Quanto vai custar | `higgsfield-preflight` |
-| Conferir saldo | `/creditos` |
-| Primeira config | `/setup` |
-| Entender o fluxo | `/explica-fluxo` |
-| Dúvida sobre o sistema | `/duvidas` |
-| Pergunta how-to específica | `/comofazer` |
-| Retomar pipeline interrompido | `/gerarvideo` (detecta o estado) |
+| Reel completo | protocolo de `/gerarvideo` |
+| Só imagens | protocolo de `/gerarimagem` |
+| Quanto vai custar | skill `higgsfield-preflight` |
+| Conferir saldo | protocolo de `/creditos` |
+| Primeira config | protocolo de `/setup` |
+| Entender o fluxo | protocolo de `/explica-fluxo` |
+| Dúvida sobre o sistema | protocolo de `/duvidas` |
+| Pergunta how-to específica | protocolo de `/comofazer` |
+| Retomar pipeline interrompido | protocolo de `/gerarvideo` (detecta o estado) |
 
 Política de roteamento:
 

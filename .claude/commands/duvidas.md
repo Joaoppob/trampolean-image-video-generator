@@ -35,6 +35,7 @@ Use o que for relevante à pergunta. Não despeje diagnóstico que ninguém pedi
 
 ## Se a dúvida for sobre setup ou erro
 
-Encaminhe para o comando certo: configuração inicial → `/setup`; saldo e plano → `/creditos`;
-como fazer uma coisa específica → `/comofazer`. Não tente resolver tudo aqui se há um comando
-dedicado melhor.
+Conduza pelo protocolo certo: configuração inicial → `/setup`; saldo e plano → `/creditos`;
+como fazer uma coisa específica → `/comofazer`. Não jogue o comando no colo do usuário e
+pare; se for algo que você consegue conduzir agora, conduza. Peça confirmação só quando
+houver custo de crédito.

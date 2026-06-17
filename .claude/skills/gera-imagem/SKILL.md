@@ -2,7 +2,7 @@
 name: gera-imagem
 description: Gera uma imagem 9:16 no Higgsfield (nano_banana_pro) com a identidade visual da marca, usando as imagens de referência de RAG/identidade-visual/ como condicionamento. Grava o resultado no save-crystal pra retomada. Use quando o usuário (ou o fluxo /gerarvideo) precisa criar a imagem de uma cena a partir de um prompt + refs.
 argument-hint: "[cena] [prompt]"
-allowed-tools: Bash, Read
+allowed-tools: Bash, Read, mcp__higgsfield__media_upload, mcp__higgsfield__media_confirm, mcp__higgsfield__generate_image, mcp__higgsfield__job_status
 ---
 
 # gera-imagem — uma cena → imagem 9:16 com a cara da marca
@@ -72,7 +72,7 @@ preflight já deveria ter avisado).
 Pegue o `rawUrl` do job completado e baixe:
 
 ```bash
-mkdir -p output/imagens
+node -e "require('fs').mkdirSync('output/imagens',{recursive:true})"
 curl -L "<rawUrl>" -o "output/imagens/cena-<NN>-<tag>.png"
 ```
 

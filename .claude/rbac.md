@@ -1,9 +1,10 @@
 # rbac.md — fonte única de autorização do Trampolean Generator
 
 Documento de autoridade legível. Espelha em espírito o `roles.yaml` do D.TAI, sem
-toolchain. É a referência humana do contrato de poder desta arquitetura. O hard-enforce
-portátil real está no `tools:` do frontmatter de cada agente; este doc descreve a intenção,
-as fronteiras e o porquê.
+toolchain. É a referência humana do contrato de poder desta arquitetura. O enforcement
+técnico portátil está em três lugares: `tools:` no frontmatter dos agentes, `allowed-tools`
+no frontmatter das skills, e `.claude/settings.json` para permissões do projeto. Este doc
+também descreve fronteiras instrucionais que o harness não consegue expressar sozinho.
 
 ## Princípio: narrowing monotônico
 
@@ -48,8 +49,9 @@ as fronteiras e o porquê.
 - **contrato_entrada:** `{ identidade: <saída do rag>, intencao: <descrição das cenas> }`.
 - **contrato_saida:** shot-list JSON (schema de `RAG/prompts/exemplo-shotlist-mago.json`).
 - **fronteira:** não gera imagem, não chama Higgsfield, não chama o `rag` diretamente.
-  Se a identidade não vier no input, informa que o `rag` deve ser consultado antes —
-  não lê `RAG/` por conta própria para inferir o anchor.
+  Pode ler `RAG/prompts/` para usar os moldes do HUB, mas não lê `RAG/marca.md`,
+  `RAG/narrativa.md` nem `RAG/identidade-visual/` para inferir identidade. Se a identidade
+  não vier no input, informa que o `rag` deve ser consultado antes.
 
 ---
 
@@ -84,8 +86,9 @@ no orquestrador, que opera sobre dados estruturados, não sobre conteúdo bruto 
 
 ## Referência
 
-- Hard-enforce portátil: `tools:` no frontmatter de `.claude/agents/rag.md` e
+- Enforcement de agentes: `tools:` no frontmatter de `.claude/agents/rag.md` e
   `.claude/agents/prompt-smith.md`.
-- Reforço opcional (degrada gracioso): `.claude/hooks/scope-guard.cjs` + `.claude/settings.json`.
+- Enforcement de skills e projeto: `allowed-tools` nos `SKILL.md` + `.claude/settings.json`.
+- Reforço de escopo (degrada gracioso): `.claude/hooks/scope-guard.cjs`.
 - Defesa primária de escopo: as camadas de instrução do `CLAUDE.md` (role lock, árvore de
   scope/recusa, estabilidade de instrução, re-grounding por turno).

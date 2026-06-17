@@ -2,7 +2,7 @@
 name: higgsfield-preflight
 description: Checa, ANTES de gerar qualquer imagem/vídeo, se o saldo Higgsfield cobre o run inteiro. Calcula o custo total (imagens + vídeos), compara com o saldo real, e diz se pode prosseguir. Use SEMPRE antes da primeira chamada de geração de um run, e quando o usuário pedir o saldo/créditos (/creditos).
 argument-hint: "[nº de cenas]"
-allowed-tools: Bash
+allowed-tools: Bash, mcp__higgsfield__balance, mcp__higgsfield__show_plans_and_credits
 ---
 
 # higgsfield-preflight — trava de crédito
