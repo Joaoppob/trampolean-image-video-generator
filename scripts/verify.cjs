@@ -319,6 +319,10 @@ function checkRbacContracts() {
       'mcp__higgsfield__generate_video',
       'mcp__higgsfield__job_status',
     ],
+    '.claude/skills/editor-video/SKILL.md': [
+      'Bash',
+      'Read',
+    ],
   };
 
   for (const [relativeFile, required] of Object.entries(requiredBySkill)) {
@@ -491,6 +495,28 @@ function checkPromptLint() {
   }
 }
 
+function checkHookRegistered() {
+  const settingsPath = path.join(ROOT, '.claude', 'settings.json');
+  if (!fs.existsSync(settingsPath)) {
+    fail('hook registered in settings.json', 'settings.json missing');
+    return;
+  }
+  try {
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    const userHooks = (settings.hooks && settings.hooks.UserPromptSubmit) || [];
+    const found = userHooks.some(function (entry) {
+      if (!entry.hooks) return false;
+      return entry.hooks.some(function (h) {
+        return h.type === 'command' && /scope-guard\.cjs/.test(h.command || '');
+      });
+    });
+    if (found) pass('hook scope-guard.cjs registered in settings.json');
+    else fail('hook scope-guard.cjs registered in settings.json', 'UserPromptSubmit hook not wired');
+  } catch (e) {
+    fail('hook registered in settings.json', e.message);
+  }
+}
+
 function checkDocs() {
   const allText = walk(ROOT, (p) => /\.(md|json|cjs)$/.test(p))
     .filter((p) => rel(p) !== 'scripts/verify.cjs')
@@ -523,6 +549,31 @@ function checkDocs() {
   else pass('editor-video docs have no dead approach label');
 }
 
+function checkMcpConfig() {
+  const mcpPath = path.join(ROOT, '.mcp.json');
+  if (!fs.existsSync(mcpPath)) {
+    fail('.mcp.json exists', 'missing');
+    return;
+  }
+  pass('.mcp.json exists');
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(mcpPath, 'utf8'));
+  } catch (e) {
+    fail('.mcp.json valid JSON', e.message);
+    return;
+  }
+  pass('.mcp.json valid JSON');
+
+  const servers = parsed.mcpServers || {};
+  if (servers.higgsfield && servers.higgsfield.url) {
+    pass('.mcp.json declares higgsfield MCP server');
+  } else {
+    fail('.mcp.json declares higgsfield MCP server', 'missing higgsfield entry or url');
+  }
+}
+
 function checkPipelineStateDedup() {
   const canonical = path.join(ROOT, 'scripts', 'pipeline-state.cjs');
   if (!fs.existsSync(canonical)) {
@@ -548,7 +599,9 @@ function checkPipelineStateDedup() {
 
 checkCjsSyntax();
 checkHook();
+checkHookRegistered();
 checkPreflight();
+checkMcpConfig();
 checkValidateRag();
 checkPipelineStateReadOnly();
 checkPipelineStateDedup();

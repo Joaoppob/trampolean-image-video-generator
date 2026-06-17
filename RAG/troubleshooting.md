@@ -53,7 +53,7 @@
 
 ### FFmpeg nao encontrado
 
-**Sintoma:** `ffmpeg -version` falha. `concat-reel.cjs --check` retorna `ok: false`.
+**Sintoma:** `ffmpeg -version` falha. `node .claude/skills/editor-video/scripts/concat-reel.cjs --check` retorna `ok: false`.
 
 **Resposta:** "O FFmpeg nao esta instalado (ou nao esta no PATH). Ele e o programa que monta o reel final. Para instalar: [comando do SO]. Depois reinicie o Claude Code para ele encontrar."
 

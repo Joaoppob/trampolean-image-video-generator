@@ -12,10 +12,7 @@ output/reels/*
 
 # === Temporários e estado de pipeline ===
 tmp/
-.pipeline-state.json
 output/.pipeline-state.json
-output/.review-cadence.json
-output/.jotaro-profile.json
 .claude/state/.review-cadence.json
 .claude/state/.jotaro-profile.json
 **/*.tmp

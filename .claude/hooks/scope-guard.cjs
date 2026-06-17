@@ -62,7 +62,7 @@ function normalize(prompt) {
 }
 
 var JAILBREAK = [
-  /ignore?\s+(o|os|todas?|tudo)?\s*(anterior|acima|as?\s+instru)/,
+  /ignor[ae]\s+(o|os|todas?|tudo)?\s*(anterior|acima|as?\s+instru)/,
   /esqueca\s+(suas?\s+)?(instru|tudo|o\s+anterior)/,
   /desconsidere?\s+(as?\s+)?(instru|regras|tudo)/,
   /voce\s+agora\s+(e|vai\s+ser|sera)/,
