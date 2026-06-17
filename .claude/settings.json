@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ffmpeg:*)",
+      "Bash(ffprobe:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(where:*)",
+      "Bash(which:*)",
+      "Read(./RAG/**)",
+      "Read(./output/**)",
+      "Read(./examples/**)",
+      "Write(./output/**)"
+    ],
+    "deny": [
+      "Read(./**/.credentials.json)",
+      "Read(~/.claude/.credentials.json)"
+    ]
+  }
+}

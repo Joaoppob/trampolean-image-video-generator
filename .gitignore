@@ -1,0 +1,31 @@
+# === Saídas geradas (não versionar — só os .gitkeep das pastas) ===
+output/*
+!output/imagens/
+!output/clips/
+!output/reels/
+output/imagens/*
+!output/imagens/.gitkeep
+output/clips/*
+!output/clips/.gitkeep
+output/reels/*
+!output/reels/.gitkeep
+
+# === Temporários e estado de pipeline ===
+tmp/
+.pipeline-state.json
+output/.pipeline-state.json
+**/*.tmp
+
+# === Credenciais — NUNCA versionar (OAuth é por-usuário, em ~/.claude/) ===
+.credentials.json
+*.credentials.json
+.env
+.env.*
+*.secret
+*.key
+*.token
+
+# === Lixo de SO / editor ===
+.DS_Store
+Thumbs.db
+desktop.ini

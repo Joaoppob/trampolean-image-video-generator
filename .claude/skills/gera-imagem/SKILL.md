@@ -1,0 +1,105 @@
+---
+name: gera-imagem
+description: Gera uma imagem 9:16 no Higgsfield (nano_banana_pro) com a identidade visual da marca, usando as imagens de referência de RAG/identidade-visual/ como condicionamento. Grava o resultado no save-crystal pra retomada. Use quando o usuário (ou o fluxo /gerarvideo) precisa criar a imagem de uma cena a partir de um prompt + refs.
+argument-hint: "[cena] [prompt]"
+allowed-tools: Bash, Read
+---
+
+# gera-imagem — uma cena → imagem 9:16 com a cara da marca
+
+Pipeline provado nos spikes: `media_upload` → PUT bytes → `media_confirm` das refs
+→ `generate_image(nano_banana_pro, refs role=image, aspect_ratio 9:16)` → poll →
+download. **2 créditos/imagem.** Sem `create_character` (isso é pago — a
+consistência vem das referências).
+
+## Entrada
+
+- `cena` — número da cena (índice no save-crystal).
+- `prompt` — prompt de imagem (vem do `prompt-smith`, formato do `exemplo-shotlist-mago.json`).
+- `refs` — paths das imagens de referência em `RAG/identidade-visual/` (1-3; o mago usa 3).
+- aspecto fixo **9:16**.
+
+## Procedimento
+
+### 0. Idempotência — checar o save-crystal ANTES de gerar
+
+```bash
+node .claude/skills/gera-imagem/scripts/pipeline-state.cjs get \
+  --root . --cena <N> --tipo imagem
+```
+
+Se `existe: true` (já tem `job_id` + `path`), **NÃO regere** — crédito não volta.
+Reuse o `job_id`/`path` do registro e siga. Só gere se `existe: false`.
+
+### 1. Subir as referências (ou reusar media_ids do run)
+
+Para cada ref que ainda não tem `media_id` neste run:
+
+1. Cheque se já foi confirmada antes (chave = nome do arquivo):
+   ```bash
+   node .claude/skills/gera-imagem/scripts/pipeline-state.cjs media-get --root . --key mage1
+   ```
+   Se `existe: true`, reuse o `media_id` — **não suba de novo**.
+2. Se não: `mcp__higgsfield__media_upload` (com o filename) → retorna `upload_url`
+   → **PUT os bytes** do arquivo pra essa URL (via `curl -X PUT --data-binary @<path> "<upload_url>"`)
+   → `mcp__higgsfield__media_confirm` (type apropriado) → retorna o `media_id`.
+3. Grave o media_id pra reuso:
+   ```bash
+   node .claude/skills/gera-imagem/scripts/pipeline-state.cjs media \
+     --root . --key mage1 --media-id <MEDIA_ID>
+   ```
+
+> As refs (mage1-3.png) são as MESMAS pra todas as cenas do run — suba uma vez,
+> reuse em todas. O save-crystal guarda os media_ids por arquivo.
+
+### 2. Gerar a imagem
+
+Chame `mcp__higgsfield__generate_image` com:
+- `model`: `nano_banana_pro`
+- `aspect_ratio`: `9:16` (redundante com o `vertical 9:16 frame` no texto do prompt — rede de segurança)
+- `medias`: os media_ids das refs, cada um com `role: image`
+- `prompt`: o prompt da cena
+- **NÃO** passe `create_character` / Soul (pago).
+
+### 3. Poll do job
+
+Use `mcp__higgsfield__job_status` com `sync: true` (≈20s → `completed`). Se vier
+erro de crédito, é o teto batendo — pare e retome quando o pool renovar (o
+preflight já deveria ter avisado).
+
+### 4. Download do resultado
+
+Pegue o `rawUrl` do job completado e baixe:
+
+```bash
+mkdir -p output/imagens
+curl -L "<rawUrl>" -o "output/imagens/cena-<NN>-<tag>.png"
+```
+
+(Use o `salvar_em` da shotlist se vier; ex: `output/imagens/cena-02-aparicao.png`.)
+
+### 5. Save-crystal — gravar SEMPRE após cada imagem
+
+```bash
+node .claude/skills/gera-imagem/scripts/pipeline-state.cjs set \
+  --root . --cena <N> --tipo imagem \
+  --job-id <JOB_ID> \
+  --path "output/imagens/cena-<NN>-<tag>.png" \
+  --media-ids <id1>,<id2>,<id3> \
+  --prompt-tag <tag>
+```
+
+Isso é o que permite retomar um run sem requeimar crédito.
+
+## Retorno
+
+`{ path da imagem, job_id }`. O `job_id` é a entrada da skill `gera-video`
+(image-to-video reusa o job sem re-upload).
+
+## Pegadinhas Windows
+
+- `curl` está no PATH do Windows 10+ (curl.exe nativo). Em PUT de bytes binários,
+  use `--data-binary @"<path>"` (com as aspas se o path tiver espaço — e o repo do
+  produto tem espaço no nome: "Trampolean Image and Video Generator").
+- Paths de referência são **relativos à raiz do repo** (`RAG/identidade-visual/mage1.png`),
+  nunca `../../../` (P0.3).
