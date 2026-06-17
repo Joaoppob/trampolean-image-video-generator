@@ -246,12 +246,38 @@ output/clips/      clipes de vídeo
 output/reels/      o reel final montado (reel-<data-hora>.mp4)
 ```
 
-O contador local da cadência fica em `.claude/state/.review-cadence.json` e não é versionado. O perfil do Jotaro fica em `.claude/state/.jotaro-profile.json`.
+Arquivos de estado local (não versionados, ficam na sua máquina):
+
+- `.claude/state/.review-cadence.json` — contador de revisão.
+- `.claude/state/.jotaro-profile.json` — lembra se você já completou um run e prefere modo expert.
+- `output/.pipeline-state.json` — checkpoint que salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
 
 ## Quer ver antes de gerar
 
 A pasta `examples/` traz um reel pronto (o mago do Trace Defense) e uma imagem de exemplo. É a
 prova de que funciona, antes de você gastar o primeiro crédito.
+
+## O que a revisão verifica
+
+A cada 2 fluxos gerados o Jotaro sugere rodar `/revisao`. O verificador (`scripts/verify.cjs`)
+confere 108 itens de uma vez:
+
+- **Scripts** — syntax check de todos os `.cjs` do projeto.
+- **Hook de escopo** — testa que `scope-guard.cjs` bloqueia jailbreak e programação, libera
+  pedidos de imagem/vídeo, e está registrado em `.claude/settings.json`.
+- **Preflight** — testa que a trava de crédito bloqueia saldo insuficiente e libera quando cabe.
+- **Conexão Higgsfield** — confere que `.mcp.json` existe e é JSON válido.
+- **Pasta RAG** — valida que `identidade-visual/` tem imagens, que `marca.md` e `narrativa.md`
+  têm todas as seções, e que o anchor textual é canônico.
+- **Pipeline e cadência** — testa que o checkpoint é read-only, que a cadência bloqueia após 2
+  fluxos e reseta com revisão.
+- **RBAC e permissões** — confere que os agentes folha não têm Bash/Task/MCP, que o
+  `settings.json` expõe só as tools certas, e que as skills declaram seus `allowed-tools`.
+- **Schemas e shot-lists** — valida JSON, checa paths de referência, coerência de timing
+  (`0-4`, `4-8`, ...), e faz lint de prompt (9:16, anchor mínimo, texto em cena não-CTA).
+
+Se a revisão falhar, o Jotaro não gasta crédito até corrigir. Isso evita gerar com hook,
+permissão ou helpers quebrados.
 
 ## Problemas comuns
 
@@ -265,3 +291,7 @@ prova de que funciona, antes de você gastar o primeiro crédito.
   retoma de onde parou no dia seguinte) ou assine um plano pago.
 - **"O vídeo está sem som"**: Normal no free: o `veo3_1_lite` gera clipe mudo. Coloque trilha
   por fora se quiser.
+
+Se o erro não estiver nesta lista, o Jotaro consulta `RAG/troubleshooting.md` — um catálogo
+completo de sintomas, causas e próximos passos para conexão, crédito, FFmpeg, geração e
+retomada de pipeline.
