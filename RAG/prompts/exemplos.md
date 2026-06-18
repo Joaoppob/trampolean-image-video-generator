@@ -52,8 +52,10 @@ reconhecidamente o mesmo (chapéu, barba, manto, cajado) em 5 ou 6 das 6 cenas.
 
 1. Troque as imagens em `identidade-visual/` e o `anchor_personagem` pela sua identidade
    (o `rag` faz isso lendo `marca.md`).
-2. Mantenha a curva das 6 cenas: gancho, apresentação, tensão, carga, clímax, fechamento.
-   Funciona para quase qualquer produto.
+2. Preserve a **função dramática** — gancho, construção, payoff, CTA limpo —, não a contagem
+   fixa de 6 cenas. O arco de 6 é a forma cheia da história de personagem; marcas de
+   produto/serviço condensam (os exemplos abaixo usam 4). Ver "Decisão de arco" em
+   `RAG/narrativa.md`.
 3. Troque os slots de cena (cenário, ação, inimigos ou obstáculos) pela sua história.
 4. O `prompt-smith` faz isso automaticamente quando você pede um reel. O exemplo serve de
    molde e de prova de que o formato funciona.
@@ -62,3 +64,11 @@ Se a sua marca não é um jogo, veja também `exemplo-shotlist-produto.json` e
 `exemplo-shotlist-servico.json`. Os moldes 7 (detalhe de produto) e 8 (lifestyle) do HUB
 cobrem e-commerce, serviço e lifestyle. A curva muda, mas a lógica de anchor mais molde mais
 cena é a mesma.
+
+> **Sobre as referências dos exemplos produto/serviço.** O exemplo do mago é o **demo
+> rodável**: suas refs (`mage1-3.png`) são arte real em `identidade-visual/` e o `verify`
+> garante que continuem lá. Já `produto1.png` e `brand1.png` (nos exemplos de produto e
+> serviço) são **templates de formato** — nomes ilustrativos da ref que *você* fornece, não
+> arquivos que viajam no repo. E nem caberiam: `identidade-visual/` guarda só a marca ativa
+> (no máximo 3 refs — ver `validate-rag.cjs`). Para rodar um desses formatos, troque a marca
+> ativa: coloque a sua imagem em `identidade-visual/` e aponte a ref do exemplo pra ela.

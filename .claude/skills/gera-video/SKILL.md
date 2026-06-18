@@ -97,6 +97,19 @@ node scripts/pipeline-state.cjs set \
   --prompt-tag <tag>
 ```
 
+### 5. Ledger de crédito — registrar o gasto (trilha de auditoria)
+
+Só **depois de ter gerado de fato** (gasto real). Nunca numa retomada/skip
+(quando `existe: true` ou reconciliou do disco) — lá não houve gasto:
+
+```bash
+node scripts/lib/ledger.cjs append \
+  --root . --tipo video --cena <N> --job-id <JOB_ID_VIDEO> --marca "<cliente-ou-marca>"
+```
+
+Trilha append-only em `output/.credit-ledger.jsonl`, separada do save-crystal. Crédito
+vem de `custos.cjs`. Total do run: `node scripts/lib/ledger.cjs summary --root .`.
+
 ## Retorno
 
 `{ path do clipe }`. Os paths de todos os clipes do run alimentam a skill

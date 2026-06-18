@@ -94,13 +94,22 @@ Mostre o progresso ao usuário a cada cena ("cena 3 de 6 pronta").
 
 Pergunte se o usuário quer legenda queimada no fim (ex.: "BAIXE AGORA") e, se sim, qual texto.
 Chame a skill `editor-video` para juntar os clipes num reel 1080×1920 com a legenda opcional.
-O reel sai em `output/reels/reel-<timestamp>.mp4`.
+O reel sai em `output/reels/reel-<timestamp-UTC>.mp4` (timestamp em UTC, sufixo `Z`).
 
 ## Passo 8: entregue
 
 Mostre o path final do reel. Diga que os clipes mudos do free não têm trilha (dá para colocar
 por fora se quiser). Pergunte se ficou bom ou se quer regerar alguma cena (o checkpoint deixa
 regerar só a cena ruim, sem refazer o reel inteiro).
+
+Mostre também o **custo real do run** pela trilha de auditoria (leitura, não gasta):
+
+```bash
+node scripts/lib/ledger.cjs summary --root .
+```
+
+O `total_creditos` confirma quanto este run efetivamente consumiu (deve bater com o preflight
+do Passo 4) e os `alertas` avisam se algum dia passou do teto free.
 
 Registre que o usuário completou um run:
 

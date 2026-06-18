@@ -40,6 +40,19 @@ Diga, em linguagem simples:
     pago para sair de uma vez.
 - Quantas cenas dá para fazer hoje com o que ele tem.
 
+## Gasto já registrado (ledger local)
+
+O Higgsfield diz o saldo; o **ledger local** diz o que *este projeto* já gastou. Se houver
+trilha de auditoria, mostre o histórico de gasto deste diretório (não custa nada, é leitura):
+
+```bash
+node scripts/lib/ledger.cjs summary --root .
+```
+
+Devolve `total_creditos`, `por_dia`, `por_tipo` e `alertas` (dias que passaram do teto free).
+Use pra responder "quanto já gastei aqui?" e cruzar com o saldo do Higgsfield. Se o arquivo
+não existir ainda (`n_entries: 0`), é só porque nenhum run gastou crédito neste diretório.
+
 ## Custo honesto
 
 Se o usuário quer um reel de 6 cenas e está no free, seja claro: não cabe num dia só (36 > 10).

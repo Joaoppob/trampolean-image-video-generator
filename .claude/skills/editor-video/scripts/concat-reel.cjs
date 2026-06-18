@@ -7,8 +7,11 @@
  *      com instrucoes de instalacao por OS. NAO prossegue sem FFmpeg.
  *   2. Concat normalizado de N clipes pra 1080x1920 9:16
  *   3. Legenda opcional via drawtext (caixa OU contorno, zona segura vertical,
- *      escape de fonte por OS — pegadinha do C\: no Windows).
- *   4. Saida com timestamp em output/reels/reel-YYYYMMDD-HHMMSS.mp4 (nao sobrescreve).
+ *      escape de fonte por OS — pegadinha do C\: no Windows; cadeia de fallback
+ *      de fonte bold por OS, nao aborta na primeira ausente).
+ *   4. Saida com timestamp UTC em output/reels/reel-YYYYMMDD-HHMMSSZ.mp4. UTC
+ *      (sufixo Z) pra nao ser ambiguo entre fusos/DST; se ja existir um arquivo
+ *      nesse mesmo segundo, sufixa -2, -3, ... (nunca sobrescreve um run anterior).
  *   5. ffprobe da saida -> resolucao + duracao no resultado.
  *
  * Uso:
@@ -79,18 +82,51 @@ function instrucoesInstalacao() {
 }
 
 // ---------- fonte por OS (drawtext) ----------
-function fontFileForOs() {
+// Cadeia de fallback de fonte bold por OS. Nao depende de UMA fonte existir:
+// no Windows o Arial pode faltar, mas Segoe UI / Calibri / Tahoma / Verdana
+// (bold) acompanham qualquer Win10+. Escolhe a primeira que existe no disco.
+function fontCandidatesForOs() {
   const plat = process.platform;
   if (plat === 'win32') {
-    // o ':' do drive PRECISA ser escapado no filter (C\:/...)
-    return { path: 'C\\:/Windows/Fonts/arialbd.ttf', existsCheck: 'C:/Windows/Fonts/arialbd.ttf' };
+    const f = 'C:/Windows/Fonts/';
+    return [
+      f + 'arialbd.ttf',   // Arial Bold
+      f + 'segoeuib.ttf',  // Segoe UI Bold (UI default do Win10+)
+      f + 'calibrib.ttf',  // Calibri Bold
+      f + 'tahomabd.ttf',  // Tahoma Bold
+      f + 'verdanab.ttf',  // Verdana Bold
+    ];
   }
   if (plat === 'darwin') {
-    const p = '/System/Library/Fonts/Supplemental/Arial Bold.ttf';
-    return { path: p, existsCheck: p };
+    return [
+      '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+      '/Library/Fonts/Arial Bold.ttf',
+      '/System/Library/Fonts/Helvetica.ttc',
+    ];
   }
-  const p = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
-  return { path: p, existsCheck: p };
+  return [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+    '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf',
+  ];
+}
+
+// escapa um path pro filter_complex do drawtext: barras pra frente e o ':' do
+// drive escapado (C:/ -> C\:/), a pegadinha que quebra o filtro silenciosamente.
+function escapeFilterPath(p) {
+  return String(p).replace(/\\/g, '/').replace(/:/g, '\\:');
+}
+
+function fontFileForOs() {
+  const candidates = fontCandidatesForOs();
+  for (const c of candidates) {
+    if (fs.existsSync(c)) {
+      return { path: escapeFilterPath(c), existsCheck: c, found: true };
+    }
+  }
+  // nenhuma fonte conhecida do OS no disco: caller decide (fontconfig no
+  // mac/linux, aborta com lista no Windows).
+  return { path: escapeFilterPath(candidates[0]), existsCheck: candidates[0], found: false, tried: candidates };
 }
 
 // escape de texto pro drawtext (a pegadinha que quebra o filtro silenciosamente)
@@ -127,11 +163,12 @@ function buildConcatFilter(clips) {
 // ---------- 3. drawtext (legenda opcional) ----------
 function buildDrawtext(opts) {
   const font = fontFileForOs();
-  if (!fs.existsSync(font.existsCheck)) {
-    // fallback fontconfig (mac/linux) ou aborta no windows
+  if (!font.found) {
+    // nenhuma fonte da cadeia existe no disco
     if (process.platform === 'win32') {
       throw new Error(
-        `Fonte nao encontrada: ${font.existsCheck}. Instale Arial ou ajuste o fontfile.`
+        'Nenhuma fonte bold encontrada. Tentei: ' + (font.tried || []).join(', ') +
+          '. Instale uma delas (ex.: Arial) ou ajuste o fontfile.'
       );
     }
     // mac/linux: deixa o fontconfig resolver via font=
@@ -172,16 +209,23 @@ function buildDrawtext(opts) {
   return 'drawtext=' + segs.join(':');
 }
 
-// ---------- saida com timestamp ----------
+// ---------- saida com timestamp (UTC, sem sobrescrever) ----------
 function timestampedOutput(root) {
   const d = new Date();
   const pad = (x) => String(x).padStart(2, '0');
+  // UTC explicito (sufixo Z): nome estavel entre fusos e imune a DST.
   const stamp =
-    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-` +
-    `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}-` +
+    `${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
   const dir = path.resolve(root || '.', 'output', 'reels');
   fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, `reel-${stamp}.mp4`);
+  // colisao no mesmo segundo UTC: sufixa -2, -3, ... (o -y do ffmpeg
+  // sobrescreveria em silencio; aqui honramos "nunca sobrescreve um run anterior").
+  let candidate = path.join(dir, `reel-${stamp}.mp4`);
+  for (let n = 2; fs.existsSync(candidate); n++) {
+    candidate = path.join(dir, `reel-${stamp}-${n}.mp4`);
+  }
+  return candidate;
 }
 
 // ---------- ffprobe da saida ----------
@@ -359,4 +403,13 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildConcatFilter, buildDrawtext, escapeDrawtext, fontFileForOs, checkFfmpeg };
+module.exports = {
+  buildConcatFilter,
+  buildDrawtext,
+  escapeDrawtext,
+  escapeFilterPath,
+  fontFileForOs,
+  fontCandidatesForOs,
+  timestampedOutput,
+  checkFfmpeg,
+};

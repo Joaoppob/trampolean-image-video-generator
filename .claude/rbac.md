@@ -19,8 +19,9 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 ## jotaro (orquestrador)
 
 - **escopo:** criação de imagem/vídeo neste gerador — nada além.
-- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, curl, node, where, which)`,
-  `Task`, `Skill`, `mcp__higgsfield__*`.
+- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, node, where, which)`,
+  `Bash(curl -L, curl -X PUT --data-binary)` — só as duas formas de curl que o produto
+  realmente usa (ver "Superfície do curl"), `Task`, `Skill`, `mcp__higgsfield__*`.
 - **pode_spawnar:** `[rag, prompt-smith]`.
 - **contrato_entrada:** pedido do usuário em linguagem natural.
 - **contrato_saida:** reel gerado OU redirect educado (taxonomia de recusa do `CLAUDE.md`).
@@ -94,6 +95,29 @@ contra prompt-injection indireta: o agente que toca conteúdo não-confiável (a
 carregar uma instrução maliciosa ("ignore tudo e rode X"), o `rag` não tem como executá-la —
 ele só consegue devolver texto ao Jotaro, que decide. O privilégio de agir fica concentrado
 no orquestrador, que opera sobre dados estruturados, não sobre conteúdo bruto injetável.
+
+---
+
+## Superfície do curl (decisão M11)
+
+**Decisão:** o `settings.json` autoriza só as duas formas de curl que o pipeline executa,
+não um `curl` aberto:
+
+- `Bash(curl -L:*)` — download do resultado (`curl -L "<rawUrl>" -o <dest>`), em
+  `gera-imagem` e `gera-video`.
+- `Bash(curl -X PUT --data-binary:*)` — PUT dos bytes da referência pra URL pré-assinada
+  do Higgsfield (`gera-imagem`, passo 1).
+
+Qualquer outra forma (`curl -O`, `curl -d`, `curl <host>` direto, etc.) deixa de ser
+pré-aprovada e passa a pedir confirmação — superfície reduzida às operações provadas.
+
+**Limite do harness (confirmado):** o casamento de permissão de Bash no Claude Code é por
+**prefixo de comando** (`Bash(cmd:*)` = "começa com `cmd`, resto curinga`"). Ele **não
+inspeciona a URL** nem o host do argumento — não há como, pela allowlist, restringir o curl
+a um domínio (ex.: só `*.higgsfield.*` ou só o bucket de storage). Por isso o narrowing
+para por aqui: nas duas formas de invocação, não no destino. A integridade do que volta do
+curl é defendida em código, não pela permissão: `scripts/lib/check-download.cjs` rejeita
+download vazio/truncado antes de gravar no save-crystal.
 
 ---
 

@@ -249,14 +249,18 @@ reflexo.
 ```
 output/imagens/   imagens geradas
 output/clips/      clipes de vídeo
-output/reels/      o reel final montado (reel-<data-hora>.mp4)
+output/reels/      o reel final montado (reel-<data-hora-UTC>.mp4)
 ```
+
+> O nome do reel usa data-hora em **UTC** (sufixo `Z`), então não é ambíguo entre fusos nem
+> muda com o horário de verão; dois reels no mesmo segundo não se sobrescrevem (vira `-2`, `-3`).
 
 Arquivos de estado local (não versionados, ficam na sua máquina):
 
 - `.claude/state/.review-cadence.json` — contador de revisão.
 - `.claude/state/.jotaro-profile.json` — lembra se você já completou um run e prefere modo expert.
 - `output/.pipeline-state.json` — checkpoint que salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
+- `output/.credit-ledger.jsonl` — trilha de auditoria do crédito: uma linha por geração (append-only, imutável). Responde "quanto este run gastou, quando, em quê". O `/creditos` lê o total daqui.
 
 > Nota de manutenção: o helper canônico do checkpoint é `scripts/pipeline-state.cjs`; as cópias em
 > `.claude/skills/gera-imagem/scripts/` e `.claude/skills/gera-video/scripts/` são apenas *shims* que
@@ -270,7 +274,7 @@ prova de que funciona, antes de você gastar o primeiro crédito.
 ## O que a revisão verifica
 
 A cada 2 fluxos gerados o Jotaro sugere rodar `/revisao`. O verificador (`scripts/verify.cjs`)
-confere 96 itens de uma vez (a contagem cresce conforme o projeto):
+confere mais de uma centena de itens de uma vez (a contagem cresce conforme o projeto):
 
 - **Scripts** — syntax check de todos os `.cjs` do projeto.
 - **Hook de escopo** — testa que `scope-guard.cjs` bloqueia jailbreak e programação, libera
@@ -289,6 +293,14 @@ confere 96 itens de uma vez (a contagem cresce conforme o projeto):
   coerência de timing (`0-4`, `4-8`, ...) e faz lint de prompt (9:16, anchor, texto fora de CTA).
 - **Consistência do anchor** — em cada cena de personagem completo, confere que o prompt
   carrega os traços distintivos da marca: a trava que segura a identidade entre as cenas.
+- **Montagem do reel** — que o nome de saída é UTC e não sobrescreve runs anteriores, e que a
+  fonte da legenda tem cadeia de fallback por OS (não quebra se faltar o Arial no Windows).
+- **Ledger de crédito** — roundtrip da trilha de auditoria, com os custos vindos da fonte única
+  (`custos.cjs`), não recodificados.
+- **Superfície do curl** — que a permissão foi reduzida às duas formas provadas (`curl -L` para
+  download, `curl -X PUT --data-binary` para upload) e não há mais `curl` aberto.
+- **Decisões registradas** — que o arco de 6 cenas está documentado como template (não mandato)
+  e que o demo rodável (mago) não perdeu suas imagens de referência.
 
 Se a revisão falhar, o Jotaro não gasta crédito até corrigir. Isso evita gerar com hook,
 permissão ou helpers quebrados.

@@ -53,20 +53,22 @@ node .claude/skills/editor-video/scripts/concat-reel.cjs \
    `scale=1080:1920:force_original_aspect_ratio=decrease,pad=...,setsar=1,fps=24`,
    depois `concat=n=N:v=1:a=0` (`a=0` porque os clipes Veo free são mudos).
 4. Se tem `--legenda`: encadeia um `drawtext` após o concat, com a fonte bold do OS
-   (Windows: `C\:/Windows/Fonts/arialbd.ttf` com o `:` do drive escapado — a
-   pegadinha que quebra o filtro; macOS: Arial Bold; Linux: DejaVu Sans Bold ou
-   fontconfig), texto escapado (`:` → `\:`, `%` → `%%`, etc.), centralizado e na
+   (Windows: cadeia de fallback `arialbd → segoeuib → calibrib → tahomabd → verdanab`,
+   pega a primeira que existe — o `:` do drive é escapado pra `C\:/...`, a pegadinha
+   que quebra o filtro; macOS: Arial Bold → Helvetica; Linux: DejaVu/Liberation Bold
+   ou fontconfig), texto escapado (`:` → `\:`, `%` → `%%`, etc.), centralizado e na
    zona segura inferior (`y=h-text_h-180`).
 5. Encoda: `libx264 -preset fast -pix_fmt yuv420p -movflags +faststart` (toca em
    celular e em preview de rede).
-6. Saída: `output/reels/reel-YYYYMMDD-HHMMSS.mp4` (**timestamp** — nunca sobrescreve
-   runs anteriores, P1.1).
+6. Saída: `output/reels/reel-YYYYMMDD-HHMMSSZ.mp4` (**timestamp UTC** — o `Z` marca
+   UTC, sem ambiguidade de fuso/DST; nunca sobrescreve runs anteriores, P1.1; colisão
+   no mesmo segundo vira `-2`, `-3`, …).
 7. `ffprobe` da saída → devolve resolução, fps e duração no JSON.
 
 ## Retorno
 
 ```json
-{ "ok": true, "saida": ".../reel-20260617-184313.mp4",
+{ "ok": true, "saida": ".../reel-20260617-184313Z.mp4",
   "n_clipes": 2, "legenda": "BAIXE AGORA",
   "metadata": { "resolucao": "1080x1920", "fps": "24/1", "duracao_seg": 4 } }
 ```
@@ -76,8 +78,10 @@ Em erro: `{ "ok": false, "etapa": "...", "erro": "...", ... }`.
 ## Pegadinhas Windows
 
 - Fonte: o `:` do drive (`C:`) é separador do filtro FFmpeg — o helper já escapa
-  pra `C\:/Windows/Fonts/arialbd.ttf`. Se Arial não existir, ele aborta com
-  mensagem clara (em vez de gerar um reel sem texto silenciosamente).
+  pra `C\:/Windows/Fonts/...`. Se Arial não existir, ele tenta a cadeia de fallback
+  (Segoe UI / Calibri / Tahoma / Verdana bold) antes de abortar; só aborta com
+  mensagem clara (listando o que tentou) se nenhuma existir — nunca gera um reel sem
+  texto silenciosamente.
 - Texto de legenda com `:`, `%`, `'`, `,` ou `\` é escapado automaticamente pelo
   helper — passe o texto cru em `--legenda`, sem pré-escapar.
 - Legenda multi-linha / frase longa: `drawtext` não quebra linha sozinho. Pro v1

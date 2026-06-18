@@ -49,3 +49,21 @@ A curva de 6 cenas mapeia direto nos templates do HUB (`prompts/padroes-de-promp
 gancho → template 1, aparição → template 2, tensão/confronto → template 4, carga → template 3,
 impacto → template 5, CTA → template 6. Os inimigos e o cenário preenchem os slots de
 ação e fundo. O efeito de magia é o "efeito principal" do template de payoff.
+
+## Decisão de arco: 6 cenas é template, não mandato
+
+**O arco de 6 cenas acima é um modelo recomendado para reel de personagem/história, não uma
+regra fixa.** O que é invariante é a **função dramática** — gancho → construção → payoff →
+CTA — não a contagem de cenas. O schema (`schemas/shotlist.schema.json`) reflete essa
+decisão: `cenas` tem `minItems: 1` e **sem** `maxItems`. O número de cenas é livre.
+
+A decisão é consciente, contra a homogeneização: se todo reel fosse forçado nas mesmas 6
+batidas do mago, toda marca sairia com a mesma cara. Os exemplos embarcados já provam a
+variação — `exemplo-shotlist-produto.json` e `exemplo-shotlist-servico.json` usam **4 cenas**
+(hook → hero → detalhe → CTA), não 6. O arco de 6 é a forma cheia da história de personagem;
+marcas de produto/serviço condensam.
+
+**Orientação ao `prompt-smith`:** escolha a contagem de cenas pela história e pelo orçamento
+de crédito do usuário (cada cena = 6 créditos), não por um molde fixo. Reels curtos de 3–4
+cenas são legítimos; o arco de 6 é o teto narrativo, não o piso. Preserve sempre a função
+dramática (abrir com gancho, fechar com CTA limpo); varie o miolo conforme a marca.

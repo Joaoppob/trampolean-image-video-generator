@@ -119,6 +119,20 @@ node scripts/pipeline-state.cjs set \
 
 Isso é o que permite retomar um run sem requeimar crédito.
 
+### 6. Ledger de crédito — registrar o gasto (trilha de auditoria)
+
+Só aqui, **depois de ter gerado de fato** (gasto real de crédito). Nunca registre
+numa retomada/skip (quando `existe: true` ou reconciliou do disco) — lá não houve gasto:
+
+```bash
+node scripts/lib/ledger.cjs append \
+  --root . --tipo imagem --cena <N> --job-id <JOB_ID> --marca "<cliente-ou-marca>"
+```
+
+O ledger é append-only (`output/.credit-ledger.jsonl`): trilha imutável de quanto cada
+run custou, separada do save-crystal (que é estado de retomada). O crédito vem de
+`custos.cjs`. Consulte o total com `node scripts/lib/ledger.cjs summary --root .`.
+
 ## Retorno
 
 `{ path da imagem, job_id }`. O `job_id` é a entrada da skill `gera-video`

@@ -689,6 +689,142 @@ function checkPipelineStateDedup() {
   }
 }
 
+function safeJson(s) {
+  try {
+    return JSON.parse(s);
+  } catch (_) {
+    return null;
+  }
+}
+
+// M9 — saida do editor em UTC (sem sobrescrever) + cadeia de fallback de fonte.
+function checkEditorOutputAndFont() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, '.claude', 'skills', 'editor-video', 'scripts', 'concat-reel.cjs'));
+  } catch (e) {
+    fail('editor concat-reel loads', e.message);
+    return;
+  }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-reel-'));
+  try {
+    const a = mod.timestampedOutput(tmp);
+    if (/reel-\d{8}-\d{6}Z\.mp4$/.test(path.basename(a))) pass('editor reel filename is UTC (Z suffix)');
+    else fail('editor reel filename is UTC (Z suffix)', path.basename(a));
+    fs.writeFileSync(a, 'x');
+    const b = mod.timestampedOutput(tmp);
+    if (b !== a && /Z-\d+\.mp4$/.test(path.basename(b))) pass('editor reel filename avoids overwrite on collision');
+    else fail('editor reel filename avoids overwrite on collision', path.basename(b));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+  const cands = mod.fontCandidatesForOs();
+  if (Array.isArray(cands) && cands.length >= 2) pass('editor font fallback chain has >1 candidate');
+  else fail('editor font fallback chain has >1 candidate', JSON.stringify(cands));
+  if (typeof mod.escapeFilterPath === 'function' && mod.escapeFilterPath('C:/x').includes('\\:')) {
+    pass('editor escapes drive colon in font path');
+  } else {
+    fail('editor escapes drive colon in font path', 'escapeFilterPath missing or not escaping');
+  }
+}
+
+// M10 — ledger de credito: roundtrip nao-vacuo, custos vindos de custos.cjs.
+function checkLedger() {
+  const ledger = path.join(ROOT, 'scripts', 'lib', 'ledger.cjs');
+  if (!fs.existsSync(ledger)) {
+    fail('ledger.cjs exists', 'missing');
+    return;
+  }
+  const syn = spawnSync('node', ['--check', ledger], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+  if (syn.status === 0) pass('ledger.cjs valid syntax');
+  else {
+    fail('ledger.cjs valid syntax', (syn.stderr || '').trim());
+    return;
+  }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-ledger-'));
+  try {
+    const led = (a) => {
+      const r = spawnSync('node', [ledger, ...a], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+      return { status: r.status, json: safeJson(r.stdout) };
+    };
+    const ap1 = led(['append', '--root', tmp, '--tipo', 'imagem', '--cena', '1', '--job-id', 'j1']);
+    led(['append', '--root', tmp, '--tipo', 'video', '--cena', '1', '--job-id', 'jv1']);
+    const sum = led(['summary', '--root', tmp]);
+    const expected = custos.IMAGEM + custos.VIDEO;
+    if (sum.json && sum.json.n_entries === 2 && sum.json.total_creditos === expected) {
+      pass('ledger summary totals match custos');
+    } else {
+      fail('ledger summary totals match custos', JSON.stringify(sum.json));
+    }
+    if (sum.json && sum.json.teto_dia === custos.TETO_DIA) pass('ledger teto_dia sourced from custos');
+    else fail('ledger teto_dia sourced from custos', JSON.stringify(sum.json && sum.json.teto_dia));
+    if (ap1.json && ap1.json.entry && /Z$/.test(ap1.json.entry.ts)) pass('ledger timestamps are UTC');
+    else fail('ledger timestamps are UTC', JSON.stringify(ap1.json && ap1.json.entry));
+    const bad = led(['append', '--root', tmp, '--tipo', 'bogus']);
+    if (bad.status === 1) pass('ledger rejects unknown tipo');
+    else fail('ledger rejects unknown tipo', JSON.stringify(bad));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+// M11 — superficie do curl reduzida as duas formas provadas.
+function checkCurlNarrowed() {
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));
+  } catch (e) {
+    fail('settings.json readable for curl check', e.message);
+    return;
+  }
+  const allow = new Set((settings.permissions && settings.permissions.allow) || []);
+  if (allow.has('Bash(curl:*)')) fail('curl permission narrowed (no broad Bash(curl:*))', 'broad Bash(curl:*) still present');
+  else pass('curl permission narrowed (no broad Bash(curl:*))');
+  for (const pat of ['Bash(curl -L:*)', 'Bash(curl -X PUT --data-binary:*)']) {
+    if (allow.has(pat)) pass(`settings allows ${pat}`);
+    else fail(`settings allows ${pat}`, 'missing narrowed curl pattern');
+  }
+}
+
+// M12 — decisao consciente: arco de 6 cenas e template, nao mandato.
+function checkArcDecision() {
+  try {
+    const narr = fs.readFileSync(path.join(ROOT, 'RAG', 'narrativa.md'), 'utf8');
+    if (/Decisão de arco/.test(narr) && /template, não mandato/.test(narr)) {
+      pass('arc decision documented (6 scenes = template, not mandate)');
+    } else {
+      fail('arc decision documented (6 scenes = template, not mandate)', 'sentinel ausente em RAG/narrativa.md');
+    }
+  } catch (e) {
+    fail('arc decision documented', e.message);
+  }
+}
+
+// Fixtures (decisao consciente) — o demo rodavel (personagem) tem refs reais no
+// disco; exemplos de produto/servico sao TEMPLATES de formato, cujas refs o
+// usuario fornece (nao viajam no repo, e nem caberiam: identidade-visual/ guarda
+// so a marca ativa, no maximo 3 refs — ver validate-rag.cjs). Aqui travamos: o
+// demo nao pode perder a arte em silencio; o template nao e cobrado por isso.
+function checkExampleRefsExist() {
+  const dir = path.join(ROOT, 'RAG', 'prompts');
+  const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
+  for (const file of files) {
+    const json = safeJson(fs.readFileSync(file, 'utf8'));
+    if (!json || !Array.isArray(json.referencias_obrigatorias)) continue;
+    const isTemplate = json.tipo_marca === 'produto' || json.tipo_marca === 'servico';
+    for (const ref of json.referencias_obrigatorias) {
+      if (isTemplate) {
+        // refs ilustrativas, fornecidas pelo usuario — existencia nao exigida.
+        pass(`example ref is user-supplied template ${rel(file)} -> ${ref}`);
+      } else if (fs.existsSync(path.join(ROOT, ref))) {
+        pass(`demo ref exists ${rel(file)} -> ${ref}`);
+      } else {
+        fail(`demo ref exists ${rel(file)} -> ${ref}`, 'demo rodável perdeu a arte de referência no disco');
+      }
+    }
+  }
+}
+
 checkCjsSyntax();
 checkHook();
 checkHookRegistered();
@@ -705,6 +841,11 @@ checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
 checkAnchorTraits();
+checkEditorOutputAndFont();
+checkLedger();
+checkCurlNarrowed();
+checkArcDecision();
+checkExampleRefsExist();
 checkDocs();
 
 const failed = results.filter((r) => !r.ok);

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(ffmpeg:*)",
       "Bash(ffprobe:*)",
-      "Bash(curl:*)",
+      "Bash(curl -L:*)",
+      "Bash(curl -X PUT --data-binary:*)",
       "Bash(node:*)",
       "Bash(where:*)",
       "Bash(which:*)",
