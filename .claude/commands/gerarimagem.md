@@ -46,7 +46,8 @@ Não gere no escuro. Espere as respostas.
 
 ## Passo 3: preflight de custo
 
-Rode `higgsfield-preflight` para o número de imagens que vai gerar (cada imagem = 2 créditos).
+Rode `higgsfield-preflight` para o número de imagens que vai gerar, **com `--com-video false`**
+(cada imagem = 2 créditos; não inclua custo de vídeo neste comando).
 Mostre o custo total e o saldo, e **reconfirme o projeto `<PROJ>`** junto do custo. Avise que a
 geração depende do Higgsfield CLI autenticado na conta certa. **Se o saldo não cobre, pare** e
 informe o custo antes de continuar. Peça o ok do usuário.

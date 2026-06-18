@@ -20,7 +20,8 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 ## jotaro (orquestrador)
 
 - **escopo:** criação de imagem/vídeo neste gerador — nada além.
-- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, node, where, which)`,
+- **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, where, which)`,
+  `Bash(node scripts/:*, node .claude/skills/:*)` — apenas helpers locais do produto,
   `Bash(higgsfield:*, hf:*)` — o Higgsfield CLI (auth, account, upload, generate),
   `Bash(npm install -g @higgsfield/cli:*)` — instalar o CLI no `/setup`,
   `Bash(curl -L)` — só a forma de download que o produto usa (ver "Superfície do curl"),
@@ -122,6 +123,20 @@ a um domínio (ex.: só `*.higgsfield.*` ou só o bucket de storage). Por isso o
 para por aqui: nas duas formas de invocação, não no destino. A integridade do que volta do
 curl é defendida em código, não pela permissão: `scripts/lib/check-download.cjs` rejeita
 download vazio/truncado antes de gravar no save-crystal.
+
+## Superfície do Node
+
+**Decisão:** não existe mais `Bash(node:*)`. Isso era largo demais: Node inline consegue escrever,
+apagar ou mover qualquer arquivo que o processo enxergue. O projeto autoriza só prefixos de
+helpers versionados:
+
+- `Bash(node scripts/:*)` — scripts canônicos (`verify`, state, ledger, validators, helpers).
+- `Bash(node .claude/skills/:*)` — scripts empacotados nas skills.
+
+Criação de diretório deve usar `node scripts/lib/ensure-dir.cjs --root <PROJ> ...`, não execução
+inline arbitrária.
+Escrita manual via `Write` fica restrita a `projects/**/output/**`, acompanhando a topologia
+multi-projeto.
 
 ---
 

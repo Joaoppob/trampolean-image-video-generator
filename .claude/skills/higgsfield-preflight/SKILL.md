@@ -41,8 +41,8 @@ antiga depois de uma troca), rode `higgsfield auth login` pra reautenticar na co
 
 > Se o CLI não estiver autenticado (`account status` dá "Not authenticated"), **pare** e
 > conduza o `higgsfield auth login` (passo do `/setup`). Não dá pra checar saldo nem gerar
-> sem auth. Se o comando falhar por outro motivo, NÃO invente um número: rode o cálculo sem
-> `--saldo` (modo defensivo abaixo).
+> sem auth. Se o comando falhar por outro motivo, NÃO invente um número: para geração real,
+> pare; para `/simular`, rode o cálculo sem `--saldo` e com `--allow-unknown-saldo true`.
 
 ### 2. Calcular custo e decisão (determinístico, sem rede)
 
@@ -52,6 +52,7 @@ node .claude/skills/higgsfield-preflight/scripts/preflight.cjs \
   --saldo <CREDITS_DO_ACCOUNT_STATUS>   # omitir se o account status não retornou
   [--com-video false]                   # se o run é só imagens
   [--teto-dia 10]                       # default 10 (free); ajustar se plano pago
+  [--allow-unknown-saldo true]          # somente /simular; NUNCA para geração real
 ```
 
 O script imprime JSON:
@@ -79,9 +80,10 @@ O script imprime JSON:
   pra regenerar cenas que saiam ruins sem renovar o pool.
 - **`pode_prosseguir: true` + `pool_baixo: false`** → siga, mostrando o custo
   total ao usuário antes da 1ª chamada (P1.2).
-- **`saldo_conhecido: false`** → siga com cautela; se uma chamada de geração
-  retornar erro de crédito, é o teto batendo — pause e retome quando o pool
-  renovar (não é falha do pipeline).
+- **`saldo_conhecido: false`** → geração real deve parar. Só `/simular` pode passar
+  `--allow-unknown-saldo true`, porque ali nenhuma chamada de geração será criada.
+- **`saldo_valido: false`** → pare e rode `higgsfield account status` de novo; não gere
+  com saldo inválido ou parseado como `NaN`.
 
 **Cross-check opcional (custo real, sem gastar).** O CLI estima o custo de um disparo sem
 criar job: `higgsfield generate cost veo3_1_lite --duration 4 --aspect_ratio 9:16` (deve dar

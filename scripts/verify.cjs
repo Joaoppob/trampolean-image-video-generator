@@ -11,7 +11,7 @@ const custos = require('./lib/custos.cjs');
 const ROOT = path.resolve(__dirname, '..');
 
 const REQUIRED_CORE_TOOLS = ['Skill', 'Read', 'Glob', 'Grep', 'Task'];
-const REQUIRED_SCOPED_TOOLS = ['Write(./output/**)'];
+const REQUIRED_SCOPED_TOOLS = ['Write(./projects/**/output/**)'];
 
 // Higgsfield agora e o CLI (via Bash), nao MCP. O settings.json autoriza o
 // binario higgsfield/hf e a instalacao do CLI no /setup.
@@ -19,6 +19,10 @@ const REQUIRED_CLI_TOOLS = [
   'Bash(higgsfield:*)',
   'Bash(hf:*)',
   'Bash(npm install -g @higgsfield/cli:*)',
+];
+const REQUIRED_NODE_TOOLS = [
+  'Bash(node scripts/:*)',
+  'Bash(node .claude/skills/:*)',
 ];
 
 const results = [];
@@ -142,7 +146,9 @@ function checkPreflight() {
   const cases = [
     ['preflight blocks insufficient balance', ['--cenas', '3', '--saldo', '10'], false],
     ['preflight allows sufficient image-only balance', ['--cenas', '2', '--saldo', '10', '--com-video', 'false'], true],
-    ['preflight allows unknown balance defensively', ['--cenas', '1'], true],
+    ['preflight blocks unknown balance by default', ['--cenas', '1'], false],
+    ['preflight allows unknown balance only in simulation mode', ['--cenas', '1', '--allow-unknown-saldo', 'true'], true],
+    ['preflight blocks invalid balance', ['--cenas', '1', '--saldo', 'abc'], false],
   ];
   for (const [name, args, expected] of cases) {
     const r = spawnSync('node', [script, ...args], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
@@ -312,6 +318,14 @@ function checkRbacContracts() {
     if (allowed.has(tool)) pass(`settings allows ${tool}`);
     else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
   }
+  for (const tool of REQUIRED_NODE_TOOLS) {
+    if (allowed.has(tool)) pass(`settings allows ${tool}`);
+    else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
+  }
+  if (allowed.has('Bash(node:*)')) fail('settings rejects broad Bash(node:*)', 'broad Node execution re-expands write surface');
+  else pass('settings rejects broad Bash(node:*)');
+  if (allowed.has('Write(./output/**)')) fail('settings rejects legacy root output write', 'root output is stale after multi-project topology');
+  else pass('settings rejects legacy root output write');
   // Pos-migracao: as skills de geracao chamam o Higgsfield CLI via Bash. A
   // preflight roda CLI + script (Bash); gera-imagem/video sobem ref e baixam
   // resultado (Bash) e leem arquivos (Read).
@@ -620,6 +634,17 @@ function checkDocs() {
     fail('rbac matches settings bash surface', e.message);
   }
 
+  const claudeDocs = walk(path.join(ROOT, '.claude'), (p) => /\.(md|json|cjs)$/.test(p))
+    .map((p) => [rel(p), fs.readFileSync(p, 'utf8')]);
+  let nodeEval = false;
+  for (const [file, text] of claudeDocs) {
+    if (/\bnode\s+-e\b/.test(text)) {
+      nodeEval = true;
+      fail(`no node -e in operational docs ${file}`, 'use scripts/lib/ensure-dir.cjs or another versioned helper');
+    }
+  }
+  if (!nodeEval) pass('no node -e in operational docs');
+
   try {
     const creditos = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'creditos.md'), 'utf8');
     if (/higgsfield-preflight/i.test(creditos) || /sem um run associado/i.test(creditos)) {
@@ -687,6 +712,25 @@ function checkPipelineStateDedup() {
     const r = spawnSync('node', ['--check', shim], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
     if (r.status === 0) pass(`pipeline-state shim valid: ${rel(shim)}`);
     else fail(`pipeline-state shim valid: ${rel(shim)}`, (r.stderr || '').trim());
+  }
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-state-validation-'));
+  try {
+    const run = (args) => spawnSync('node', [canonical, ...args], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+    const badCena = run(['set', '--root', tmp, '--cena', 'abc', '--tipo', 'imagem', '--job-id', 'j1', '--path', 'output/imagens/a.png']);
+    if (badCena.status === 1) pass('pipeline-state rejects invalid cena');
+    else fail('pipeline-state rejects invalid cena', badCena.stdout);
+    const missingJob = run(['set', '--root', tmp, '--cena', '1', '--tipo', 'imagem', '--path', 'output/imagens/a.png']);
+    if (missingJob.status === 1) pass('pipeline-state rejects missing job_id');
+    else fail('pipeline-state rejects missing job_id', missingJob.stdout);
+    const missingPath = run(['set', '--root', tmp, '--cena', '1', '--tipo', 'imagem', '--job-id', 'j1']);
+    if (missingPath.status === 1) pass('pipeline-state rejects missing path');
+    else fail('pipeline-state rejects missing path', missingPath.stdout);
+    const missingMediaId = run(['media', '--root', tmp, '--key', 'mage1']);
+    if (missingMediaId.status === 1) pass('pipeline-state rejects missing media_id');
+    else fail('pipeline-state rejects missing media_id', missingMediaId.stdout);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
 
@@ -764,6 +808,12 @@ function checkLedger() {
     const bad = led(['append', '--root', tmp, '--tipo', 'bogus']);
     if (bad.status === 1) pass('ledger rejects unknown tipo');
     else fail('ledger rejects unknown tipo', JSON.stringify(bad));
+    const missingJob = led(['append', '--root', tmp, '--tipo', 'imagem', '--cena', '2']);
+    if (missingJob.status === 1) pass('ledger rejects missing job_id');
+    else fail('ledger rejects missing job_id', JSON.stringify(missingJob));
+    const missingCena = led(['append', '--root', tmp, '--tipo', 'imagem', '--job-id', 'j2']);
+    if (missingCena.status === 1) pass('ledger rejects missing cena');
+    else fail('ledger rejects missing cena', JSON.stringify(missingCena));
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -794,6 +844,13 @@ function checkHfResult() {
   else fail('hf-result extracts status', JSON.stringify(out));
   if (out.url === 'https://h.ai/final.mp4') pass('hf-result picks media url over thumbnail');
   else fail('hf-result picks media url over thumbnail', JSON.stringify(out));
+  const ambiguous = mod.extract({
+    result: { id: '11111111-1111-1111-1111-111111111111', url: 'https://h.ai/final.png' },
+    job_id: '22222222-2222-2222-2222-222222222222',
+    status: 'completed',
+  });
+  if (ambiguous.job_id === '22222222-2222-2222-2222-222222222222') pass('hf-result prefers explicit job_id over generic id');
+  else fail('hf-result prefers explicit job_id over generic id', JSON.stringify(ambiguous));
 }
 
 // M11 — superficie do curl reduzida as formas provadas.

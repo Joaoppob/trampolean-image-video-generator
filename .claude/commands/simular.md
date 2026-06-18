@@ -27,13 +27,15 @@ ha o que simular.
 
 ## Passo 2: preflight de custo
 
-Rode `higgsfield-preflight` para o numero de cenas. Ele le o saldo real via CLI
-(`higgsfield account status`) e calcula o custo total. Mostre ao usuario:
+Rode `higgsfield-preflight` para o numero de cenas. Primeiro tente ler o saldo real via CLI
+(`higgsfield account status`). Se o saldo vier, passe `--saldo <credits>`. Se o CLI nao estiver
+autenticado ou o saldo nao retornar, use **somente na simulacao** `--allow-unknown-saldo true`
+para calcular custo sem liberar geracao real. Mostre ao usuario:
 
 - Numero de cenas
 - Custo por cena: 2 creditos (imagem) + 4 creditos (video) = 6 creditos
 - Custo total
-- Saldo atual
+- Saldo atual, ou "saldo nao conferido" se foi simulacao sem account status
 - Se cabe no saldo ou quantos dias no free
 
 Isso NAO gasta credito — e so consulta de saldo e calculo deterministico.
@@ -59,7 +61,8 @@ Confira:
 - Higgsfield CLI autenticado? (`higgsfield account status` — mostra a conta e o saldo). Se vier
   "Not authenticated", aponte `/setup` (ou conduza `higgsfield auth login`, sem reiniciar).
 - FFmpeg instalado? (`ffmpeg -version`). Se nao, aponte `/setup` Passo 2.
-- `<PROJ>/output/imagens/` e `<PROJ>/output/clips/` existem (crie se nao).
+- `<PROJ>/output/imagens/` e `<PROJ>/output/clips/` existem (se nao, crie com
+  `node scripts/lib/ensure-dir.cjs --root <PROJ> output/imagens output/clips`).
 - As referencias em `<PROJ>/RAG/identidade-visual/` batem com a shot-list.
 
 ## Fechamento

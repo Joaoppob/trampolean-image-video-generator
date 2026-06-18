@@ -4,7 +4,8 @@
       "Bash(ffmpeg:*)",
       "Bash(ffprobe:*)",
       "Bash(curl -L:*)",
-      "Bash(node:*)",
+      "Bash(node scripts/:*)",
+      "Bash(node .claude/skills/:*)",
       "Bash(where:*)",
       "Bash(which:*)",
       "Bash(higgsfield:*)",
@@ -16,9 +17,9 @@
       "Glob",
       "Grep",
       "Read(./RAG/**)",
-      "Read(./output/**)",
+      "Read(./projects/**/output/**)",
       "Read(./examples/**)",
-      "Write(./output/**)"
+      "Write(./projects/**/output/**)"
     ],
     "deny": [
       "Read(./**/.credentials.json)",

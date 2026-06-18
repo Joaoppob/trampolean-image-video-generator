@@ -109,7 +109,7 @@ vier **erro de crédito** → teto batendo, pause e retome. Se `url` vier `null`
 completo, inspecione o JSON cru (`<PROJ>/output/.last-video-job.json`) e pegue a URL à mão.
 
 ```bash
-node -e "require('fs').mkdirSync('<PROJ>/output/clips',{recursive:true})"
+node scripts/lib/ensure-dir.cjs --root <PROJ> output/clips
 curl -L "<url>" -o "<PROJ>/output/clips/cena-<NN>-<tag>.mp4"
 ```
 

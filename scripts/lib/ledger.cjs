@@ -52,10 +52,17 @@ function cmdAppend(root, args) {
   if (creditos === null) {
     return { ok: false, erro: 'tipo deve ser "imagem" ou "video"' };
   }
+  const cenaNum = Number(args.cena);
+  if (!Number.isInteger(cenaNum) || cenaNum < 1) {
+    return { ok: false, erro: 'cena deve ser um inteiro positivo' };
+  }
+  if (!args['job-id']) {
+    return { ok: false, erro: 'job-id obrigatorio para registrar gasto' };
+  }
   const entry = {
     ts: new Date().toISOString(), // UTC (ISO 8601 termina em Z)
     tipo,
-    cena: args.cena !== undefined ? Number(args.cena) : null,
+    cena: cenaNum,
     job_id: args['job-id'] || null,
     creditos,
     marca: args.marca || null,

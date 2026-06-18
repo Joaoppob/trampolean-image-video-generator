@@ -130,7 +130,7 @@ inspecione o JSON cru (`<PROJ>/output/.last-image-job.json`) e pegue a URL do as
 Download:
 
 ```bash
-node -e "require('fs').mkdirSync('<PROJ>/output/imagens',{recursive:true})"
+node scripts/lib/ensure-dir.cjs --root <PROJ> output/imagens
 curl -L "<url>" -o "<PROJ>/output/imagens/cena-<NN>-<tag>.png"
 ```
 

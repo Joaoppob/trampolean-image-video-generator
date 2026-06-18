@@ -15,6 +15,7 @@
  *
  * Uso:
  *   node preflight.js --cenas <N> [--saldo <S>] [--com-video true|false] [--teto-dia 10]
+ *     [--allow-unknown-saldo true]  # somente simulacao; geracao real bloqueia sem saldo
  *
  * Sai com JSON no stdout. exit 0 sempre (a decisao esta no campo pode_prosseguir).
  */
@@ -32,7 +33,7 @@ function toBool(v, def) {
   return String(v).toLowerCase() !== 'false' && String(v) !== '0';
 }
 
-function preflight({ cenas, saldo, comVideo, tetoDia }) {
+function preflight({ cenas, saldo, comVideo, tetoDia, allowUnknownSaldo }) {
   if (cenas === undefined || cenas === null || cenas === '') {
     return { erro: 'numero de cenas invalido ou ausente (use --cenas <N>)' };
   }
@@ -56,22 +57,29 @@ function preflight({ cenas, saldo, comVideo, tetoDia }) {
   // saldo: pode ser desconhecido (agente nao conseguiu o tool)
   const saldoConhecido = saldo !== undefined && saldo !== null && saldo !== '';
   const saldoNum = saldoConhecido ? Number(saldo) : null;
+  const saldoValido = saldoConhecido && Number.isFinite(saldoNum);
 
   let podeProsseguir;
   let poolBaixo = false;
   let mensagem;
 
-  if (!saldoConhecido) {
-    // sem saldo real: nao bloqueia, mas avisa que a 1a chamada que estourar
-    // retorna erro de credito SEM cobrar (tratar como sinal, nao falha fatal)
-    podeProsseguir = true;
+  if (saldoConhecido && !saldoValido) {
+    podeProsseguir = false;
+    mensagem =
+      `Saldo real invalido recebido (${String(saldo)}). Nao vou gerar sem saldo confiavel. ` +
+      `Rode higgsfield account status novamente ou reconecte com higgsfield auth login.`;
+  } else if (!saldoConhecido) {
+    // Geracao real bloqueia sem saldo confiavel. A excecao explicita e /simular,
+    // onde o usuario so quer custo/planejamento e nenhuma chamada sera criada.
+    podeProsseguir = !!allowUnknownSaldo;
     mensagem =
       `Custo estimado do run: ${custoTotal} creditos ` +
       `(${n} imagens x ${CUSTO_IMAGEM} = ${custoImagens}` +
       (incluiVideo ? ` + ${n} videos x ${CUSTO_VIDEO} = ${custoVideos}` : '') +
-      `). Saldo real INDISPONIVEL (tool de saldo nao retornou). ` +
-      `Seguindo de forma defensiva: se uma chamada estourar o teto, o Higgsfield ` +
-      `recusa SEM cobrar credito — trate como sinal pra pausar e retomar amanha. ` +
+      `). Saldo real INDISPONIVEL. ` +
+      (allowUnknownSaldo
+        ? `Modo simulacao: pode seguir porque nenhuma geracao sera disparada. `
+        : `PARANDO: geracao real exige higgsfield account status com saldo valido. `) +
       `No free tier (${teto} cr/dia) este run levaria ~${diasFree} dia(s).`;
   } else if (custoTotal > saldoNum) {
     podeProsseguir = false;
@@ -101,6 +109,7 @@ function preflight({ cenas, saldo, comVideo, tetoDia }) {
     inclui_video: incluiVideo,
     saldo: saldoNum,
     saldo_conhecido: saldoConhecido,
+    saldo_valido: saldoValido,
     custo_imagens: custoImagens,
     custo_videos: custoVideos,
     custo_total: custoTotal,
@@ -119,6 +128,7 @@ if (require.main === module) {
     saldo: args.saldo,
     comVideo: toBool(args['com-video'], true),
     tetoDia: args['teto-dia'],
+    allowUnknownSaldo: toBool(args['allow-unknown-saldo'], false),
   });
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   process.exit(0);

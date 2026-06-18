@@ -10,7 +10,7 @@
  * Keywords suportadas:
  *   type (object|array|string|integer|number|boolean), required, properties,
  *   additionalProperties:false, items, minItems, maxItems, minLength, minimum,
- *   minProperties, pattern (regex via new RegExp), enum.
+ *   maximum, minProperties, pattern (regex via new RegExp), enum.
  *
  * `pattern` segue a semantica de JSON Schema: casa em QUALQUER posicao da string
  * (nao ancorado). Ex.: "pattern": "9:16" exige que a string contenha "9:16".
@@ -26,6 +26,26 @@ function typeOf(value) {
   if (Array.isArray(value)) return 'array';
   return typeof value; // object | string | number | boolean
 }
+
+const SUPPORTED_SCHEMA_KEYS = new Set([
+  '$schema',
+  '$id',
+  'title',
+  'description',
+  'type',
+  'required',
+  'properties',
+  'additionalProperties',
+  'items',
+  'minItems',
+  'maxItems',
+  'minLength',
+  'minimum',
+  'maximum',
+  'minProperties',
+  'pattern',
+  'enum',
+]);
 
 function matchesType(value, type) {
   switch (type) {
@@ -59,6 +79,12 @@ function checkType(value, schemaType, p, errors) {
 
 function validateNode(schema, data, p, errors) {
   if (!schema || typeof schema !== 'object') return;
+
+  for (const key of Object.keys(schema)) {
+    if (!SUPPORTED_SCHEMA_KEYS.has(key)) {
+      errors.push(`${p || '(schema)'}: keyword de schema nao suportada (${key})`);
+    }
+  }
 
   // enum
   if (Array.isArray(schema.enum)) {
@@ -100,6 +126,9 @@ function validateNode(schema, data, p, errors) {
   if (t === 'number') {
     if (typeof schema.minimum === 'number' && data < schema.minimum) {
       errors.push(`${p || '(root)'}: minimum ${schema.minimum} nao satisfeito (tem ${data})`);
+    }
+    if (typeof schema.maximum === 'number' && data > schema.maximum) {
+      errors.push(`${p || '(root)'}: maximum ${schema.maximum} excedido (tem ${data})`);
     }
   }
 

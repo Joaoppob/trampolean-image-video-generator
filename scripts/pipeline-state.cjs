@@ -99,8 +99,18 @@ function cmdSet(root, args) {
   const state = load(root);
   const key = String(args.cena);
   const tipo = args.tipo;
+  const cenaNum = Number(args.cena);
+  if (!Number.isInteger(cenaNum) || cenaNum < 1) {
+    return { erro: 'cena deve ser um inteiro positivo' };
+  }
   if (!tipo || (tipo !== 'imagem' && tipo !== 'video')) {
     return { erro: 'tipo deve ser "imagem" ou "video"' };
+  }
+  if (!args['job-id']) {
+    return { erro: 'job-id obrigatorio para gravar state' };
+  }
+  if (!args.path) {
+    return { erro: 'path obrigatorio para gravar state' };
   }
   if (!state.cenas[key]) state.cenas[key] = {};
   const registro = {
@@ -112,10 +122,16 @@ function cmdSet(root, args) {
   };
   state.cenas[key][tipo] = registro;
   save(root, state);
-  return { ok: true, cena: Number(key), tipo, registro };
+  return { ok: true, cena: cenaNum, tipo, registro };
 }
 
 function cmdMedia(root, hashKey, mediaId) {
+  if (!hashKey) {
+    return { erro: 'key obrigatoria para registrar media_id' };
+  }
+  if (!mediaId) {
+    return { erro: 'media-id obrigatorio para registrar referencia' };
+  }
   const state = load(root);
   state.refs_media[hashKey] = mediaId;
   save(root, state);

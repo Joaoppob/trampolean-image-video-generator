@@ -7,7 +7,7 @@
  * O `higgsfield generate create/get/wait --json` imprime o objeto do job. O shape
  * exato pode variar entre releases do CLI, entao em vez de depender de um campo
  * fixo, este walker percorre a arvore inteira e acha:
- *   - job_id : primeiro valor de chave ~ /job_id|id|job_set_id/ que parece UUID
+ *   - job_id : primeiro valor de chave explicita de job; `id` generico so como fallback
  *   - status : primeiro valor de chave ~ /status|state/
  *   - url    : a URL do asset gerado (prefere extensao de midia; senao chave ~ url)
  *
@@ -21,7 +21,8 @@
 
 const MEDIA_EXT = /\.(png|jpe?g|webp|gif|mp4|mov|webm|m4v)(\?|#|$)/i;
 const URL_KEY = /url|uri|link|raw|result|output|media|video|image|download|asset/i;
-const ID_KEY = /^(job_?id|id|job_set_id|set_id)$/i;
+const JOB_ID_KEY = /^(job_?id|job_?set_?id|set_id)$/i;
+const GENERIC_ID_KEY = /^id$/i;
 const STATUS_KEY = /status|state/i;
 const UUIDISH = /^[0-9a-f]{6,}(-[0-9a-f]+)*$/i;
 
@@ -41,13 +42,15 @@ function walk(node, visit, seen) {
 }
 
 function extract(json) {
-  let jobId = null;
+  const explicitJobIds = [];
+  const genericIds = [];
   let status = null;
   const urls = [];
   walk(
     json,
     (key, val) => {
-      if (!jobId && ID_KEY.test(key) && UUIDISH.test(val) && val.length >= 8) jobId = val;
+      if (JOB_ID_KEY.test(key) && UUIDISH.test(val) && val.length >= 8) explicitJobIds.push(val);
+      else if (GENERIC_ID_KEY.test(key) && UUIDISH.test(val) && val.length >= 8) genericIds.push(val);
       if (!status && STATUS_KEY.test(key)) status = val;
       if (/^https?:\/\//i.test(val)) urls.push({ key, val });
     },
@@ -67,7 +70,7 @@ function extract(json) {
   }
 
   return {
-    job_id: jobId,
+    job_id: explicitJobIds[0] || genericIds[0] || null,
     status,
     url: best,
     all_urls: urls.map((u) => u.val),

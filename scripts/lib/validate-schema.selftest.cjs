@@ -62,6 +62,26 @@ if (!brokenRes.valid && temErroDuracao && temErroMinLength) {
   for (const e of brokenRes.errors) console.log(`       - ${e}`);
 }
 
+// 3. keywords suportadas precisam realmente validar; keywords desconhecidas
+//    precisam falhar para nao criar falsa seguranca em schemas futuros.
+const maxRes = validate({ type: 'object', properties: { x: { type: 'integer', maximum: 3 } } }, { x: 99 });
+if (!maxRes.valid && maxRes.errors.some((e) => /maximum 3/.test(e))) {
+  console.log('OK   maximum detecta numero acima do limite');
+} else {
+  fail = true;
+  console.log('FAIL maximum nao detectou violacao');
+  for (const e of maxRes.errors) console.log(`       - ${e}`);
+}
+
+const unsupportedRes = validate({ type: 'string', format: 'email' }, 'a@b.com');
+if (!unsupportedRes.valid && unsupportedRes.errors.some((e) => /keyword de schema nao suportada \(format\)/.test(e))) {
+  console.log('OK   keyword desconhecida falha explicitamente');
+} else {
+  fail = true;
+  console.log('FAIL keyword desconhecida passou em silencio');
+  for (const e of unsupportedRes.errors) console.log(`       - ${e}`);
+}
+
 if (fail) {
   console.error('\nSELFTEST FALHOU');
   process.exit(1);
