@@ -150,6 +150,9 @@ flowchart TD
 | **rag** | Agente folha | Lê `RAG/`, lista referências visuais e devolve identidade: anchor, estilo, paleta, narrativa e tom. | Não gera, não chama Higgsfield, não usa Bash, não spawna agentes. |
 | **prompt-smith** | Agente folha | Recebe a identidade do `rag` e transforma o pedido em shot-list com prompts fortes e consistentes. | Não gera imagem, não chama Higgsfield, não consulta o `rag` sozinho. |
 
+> No mapa da orquestração, *Leitor de identidade* = `rag` e *Diretor de prompts* = `prompt-smith`
+> (os arquivos ficam em `.claude/agents/`).
+
 ### Skills que o Jotaro executa
 
 | Skill | Função |
@@ -161,8 +164,11 @@ flowchart TD
 
 ### Guardrails operacionais
 
-- **Scope-lock:** Jotaro recusa código, opinião, política, texto genérico e jailbreak; ele volta para imagem/vídeo.
-- **RBAC:** só o Jotaro age sobre o mundo. `rag` e `prompt-smith` são folhas de leitura/síntese.
+- **Scope-lock:** a defesa primária é o `CLAUDE.md` (role lock, árvore de recusa, re-grounding por
+  turno); o hook `scope-guard.cjs` reforça, bloqueando jailbreak e off-topic e liberando imagem/vídeo.
+- **RBAC:** só o Jotaro age sobre o mundo (Bash/Task/Skill/MCP); `rag` e `prompt-smith` são folhas de
+  leitura/síntese sem capacidade de ação. A quarentena do `rag` (lê conteúdo da `RAG/`, mas não age) é
+  a defesa real contra prompt-injection indireta.
 - **Memória do progresso:** o gerador lembra quais cenas já foram criadas para não gastar crédito duas vezes refazendo a mesma etapa.
 - **Cadência de revisão:** o gerador conta quantos fluxos foram concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
 - **Modo expert:** Jotaro lembra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
@@ -260,12 +266,13 @@ prova de que funciona, antes de você gastar o primeiro crédito.
 ## O que a revisão verifica
 
 A cada 2 fluxos gerados o Jotaro sugere rodar `/revisao`. O verificador (`scripts/verify.cjs`)
-confere 108 itens de uma vez:
+confere 96 itens de uma vez (a contagem cresce conforme o projeto):
 
 - **Scripts** — syntax check de todos os `.cjs` do projeto.
 - **Hook de escopo** — testa que `scope-guard.cjs` bloqueia jailbreak e programação, libera
   pedidos de imagem/vídeo, e está registrado em `.claude/settings.json`.
-- **Preflight** — testa que a trava de crédito bloqueia saldo insuficiente e libera quando cabe.
+- **Preflight e custos** — testa que a trava de crédito bloqueia saldo insuficiente e libera
+  quando cabe, e ancora os custos canônicos (imagem 2, vídeo 4, teto 10/dia).
 - **Conexão Higgsfield** — confere que `.mcp.json` existe e é JSON válido.
 - **Pasta RAG** — valida que `identidade-visual/` tem imagens, que `marca.md` e `narrativa.md`
   têm todas as seções, e que o anchor textual é canônico.
@@ -273,8 +280,11 @@ confere 108 itens de uma vez:
   fluxos e reseta com revisão.
 - **RBAC e permissões** — confere que os agentes folha não têm Bash/Task/MCP, que o
   `settings.json` expõe só as tools certas, e que as skills declaram seus `allowed-tools`.
-- **Schemas e shot-lists** — valida JSON, checa paths de referência, coerência de timing
-  (`0-4`, `4-8`, ...), e faz lint de prompt (9:16, anchor mínimo, texto em cena não-CTA).
+- **Schemas e shot-lists** — valida cada shot-list de exemplo contra o contrato formal
+  (`schemas/*.json`, por um validador próprio sem dependências), confere paths de referência,
+  coerência de timing (`0-4`, `4-8`, ...) e faz lint de prompt (9:16, anchor, texto fora de CTA).
+- **Consistência do anchor** — em cada cena de personagem completo, confere que o prompt
+  carrega os traços distintivos da marca: a trava que segura a identidade entre as cenas.
 
 Se a revisão falhar, o Jotaro não gasta crédito até corrigir. Isso evita gerar com hook,
 permissão ou helpers quebrados.
