@@ -63,7 +63,9 @@ function walk(dir, predicate, out = []) {
 }
 
 function parseFrontmatter(file) {
-  const raw = fs.readFileSync(file, 'utf8');
+  // normaliza CRLF->LF: com core.autocrlf=true no Windows os arquivos podem vir
+  // com \r\n no working tree; sem isso o startsWith abaixo falharia em silencio.
+  const raw = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   if (!raw.startsWith('---\n')) return {};
   const end = raw.indexOf('\n---', 4);
   if (end === -1) return {};
