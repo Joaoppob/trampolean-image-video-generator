@@ -1,5 +1,5 @@
 ---
-description: Confere saldo e plano no Higgsfield. Não gasta crédito.
+description: Confere saldo e plano no Higgsfield (via CLI). Não gasta crédito.
 ---
 
 # /creditos
@@ -9,33 +9,43 @@ o que dá para fazer com isso.
 
 ## Antes
 
-Confirme que o Higgsfield está conectado. Se `/mcp` não mostra o servidor ativo, aponte para
-o `/setup` (Passo 1) antes de tentar.
+Confirme que o Higgsfield CLI está autenticado. Rode `higgsfield account status` — se vier
+"Not authenticated", aponte para o `/setup` (Passo 1: `higgsfield auth login`) antes de tentar.
+Você mesmo pode disparar o login, sem reiniciar o Claude Code.
 
 ## O que fazer
 
-Leia o saldo direto pelos tools do Higgsfield, sem chamar geração:
+Leia o saldo direto pelo CLI, sem chamar geração:
 
-1. `mcp__higgsfield__balance` — saldo direto.
-2. Se não retornar, `mcp__higgsfield__show_plans_and_credits` — plano + créditos.
+```bash
+higgsfield account status
+```
 
-Isso é diferente do preflight de um run. Preflight precisa de número de cenas e calcula custo;
-`/creditos` só consulta saldo/plano.
+Retorna **email, plano e créditos**. Para o histórico de gasto recente na conta:
 
-Se a versão do Higgsfield conectada não expõe uma ferramenta de saldo, diga isso com
-honestidade: o saldo exato pode não ser legível por aqui. Nesse caso, explique o que dá para
-saber pela conta de créditos do plano free e ofereça calcular o custo de um run específico
-(pela fórmula fixa) quando o usuário disser quantas cenas quer.
+```bash
+higgsfield account transactions --size 20
+```
+
+Isso é diferente do cálculo de um run, que precisa do número de cenas para estimar o custo.
+`/creditos` só consulta saldo/plano da conta.
+
+## Confira a conta certa
+
+O `account status` mostra o **email** da conta conectada. Confirme com o usuário que é a conta
+que ele quer usar (a dos créditos). Se trocou de conta no Higgsfield e o saldo não bate, é só
+`higgsfield auth login` na conta nova — eu reconecto e confiro o novo saldo na hora, sem
+reiniciar nada.
 
 ## Como apresentar
 
 Diga, em linguagem simples:
 
-- O saldo atual (se legível) e o plano.
+- O saldo atual e o plano (e o email da conta, pra não haver dúvida de qual conta é).
 - A regra do free: **10 créditos por dia**, pool compartilhado entre imagem e vídeo.
 - A tabela de custo:
   - Imagem = 2 créditos
-  - Vídeo (clipe de 4s) = 4 créditos
+  - Vídeo (clipe de 4s, `--duration 4`) = 4 créditos
   - Reel completo de 6 cenas = 36 créditos (6 × 2 + 6 × 4) = uns 4 dias no free, ou um plano
     pago para sair de uma vez.
 - Quantas cenas dá para fazer hoje com o que ele tem.

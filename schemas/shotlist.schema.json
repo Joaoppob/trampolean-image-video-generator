@@ -36,7 +36,7 @@
     },
     "modelo": {
       "type": "string",
-      "pattern": "nano_banana_pro"
+      "pattern": "nano_banana_2"
     },
     "referencias_obrigatorias": {
       "type": "array",

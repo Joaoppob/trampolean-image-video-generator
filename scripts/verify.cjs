@@ -13,14 +13,12 @@ const ROOT = path.resolve(__dirname, '..');
 const REQUIRED_CORE_TOOLS = ['Skill', 'Read', 'Glob', 'Grep', 'Task'];
 const REQUIRED_SCOPED_TOOLS = ['Write(./output/**)'];
 
-const REQUIRED_HIGGSFIELD_TOOLS = [
-  'mcp__higgsfield__balance',
-  'mcp__higgsfield__show_plans_and_credits',
-  'mcp__higgsfield__media_upload',
-  'mcp__higgsfield__media_confirm',
-  'mcp__higgsfield__generate_image',
-  'mcp__higgsfield__generate_video',
-  'mcp__higgsfield__job_status',
+// Higgsfield agora e o CLI (via Bash), nao MCP. O settings.json autoriza o
+// binario higgsfield/hf e a instalacao do CLI no /setup.
+const REQUIRED_CLI_TOOLS = [
+  'Bash(higgsfield:*)',
+  'Bash(hf:*)',
+  'Bash(npm install -g @higgsfield/cli:*)',
 ];
 
 const results = [];
@@ -310,24 +308,24 @@ function checkRbacContracts() {
   }
   if (allowed.has('Write')) fail('settings does not allow global Write', 'global Write expands write surface');
   else pass('settings does not allow global Write');
-  for (const tool of REQUIRED_HIGGSFIELD_TOOLS) {
+  for (const tool of REQUIRED_CLI_TOOLS) {
     if (allowed.has(tool)) pass(`settings allows ${tool}`);
     else fail(`settings allows ${tool}`, 'missing from .claude/settings.json');
   }
+  // Pos-migracao: as skills de geracao chamam o Higgsfield CLI via Bash. A
+  // preflight roda CLI + script (Bash); gera-imagem/video sobem ref e baixam
+  // resultado (Bash) e leem arquivos (Read).
   const requiredBySkill = {
     '.claude/skills/higgsfield-preflight/SKILL.md': [
-      'mcp__higgsfield__balance',
-      'mcp__higgsfield__show_plans_and_credits',
+      'Bash',
     ],
     '.claude/skills/gera-imagem/SKILL.md': [
-      'mcp__higgsfield__media_upload',
-      'mcp__higgsfield__media_confirm',
-      'mcp__higgsfield__generate_image',
-      'mcp__higgsfield__job_status',
+      'Bash',
+      'Read',
     ],
     '.claude/skills/gera-video/SKILL.md': [
-      'mcp__higgsfield__generate_video',
-      'mcp__higgsfield__job_status',
+      'Bash',
+      'Read',
     ],
     '.claude/skills/editor-video/SKILL.md': [
       'Bash',
@@ -602,7 +600,7 @@ function checkDocs() {
   const allText = walk(ROOT, (p) => /\.(md|json|cjs)$/.test(p))
     .filter((p) => rel(p) !== 'scripts/verify.cjs')
     .map((p) => [rel(p), fs.readFileSync(p, 'utf8')]);
-  const stalePatterns = [/Flux Kontext/i, /\bLoRA\b/i, /ComfyUI/i];
+  const stalePatterns = [/Flux Kontext/i, /\bLoRA\b/i, /ComfyUI/i, /mcp__higgsfield__/];
   for (const [file, text] of allText) {
     for (const pattern of stalePatterns) {
       if (pattern.test(text)) {
@@ -659,11 +657,13 @@ function checkMcpConfig() {
   }
   pass('.mcp.json valid JSON');
 
+  // Migracao pro CLI: o servidor MCP do higgsfield foi removido (era a fonte do
+  // bug de "grudar na conta antiga"). O .mcp.json nao deve mais declara-lo.
   const servers = parsed.mcpServers || {};
-  if (servers.higgsfield && servers.higgsfield.url) {
-    pass('.mcp.json declares higgsfield MCP server');
+  if (servers.higgsfield) {
+    fail('.mcp.json has no higgsfield MCP server (migrated to CLI)', 'higgsfield MCP server still declared');
   } else {
-    fail('.mcp.json declares higgsfield MCP server', 'missing higgsfield entry or url');
+    pass('.mcp.json has no higgsfield MCP server (migrated to CLI)');
   }
 }
 
@@ -769,7 +769,34 @@ function checkLedger() {
   }
 }
 
-// M11 — superficie do curl reduzida as duas formas provadas.
+// Parser do resultado do Higgsfield CLI: roundtrip nao-vacuo. O shape do job
+// pode variar entre releases, entao o extractor tem que achar job_id, status e
+// a URL do asset (preferindo midia sobre thumbnail) numa arvore arbitraria.
+function checkHfResult() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'hf-result.cjs'));
+  } catch (e) {
+    fail('hf-result.cjs loads', e.message);
+    return;
+  }
+  const sample = {
+    data: {
+      id: 'abc12345-dead',
+      state: 'completed',
+      jobs: [{ thumbnail_url: 'https://h.ai/thumb.jpg', raw_url: 'https://h.ai/final.mp4' }],
+    },
+  };
+  const out = mod.extract(sample);
+  if (out.job_id === 'abc12345-dead') pass('hf-result extracts job_id');
+  else fail('hf-result extracts job_id', JSON.stringify(out));
+  if (out.status === 'completed') pass('hf-result extracts status');
+  else fail('hf-result extracts status', JSON.stringify(out));
+  if (out.url === 'https://h.ai/final.mp4') pass('hf-result picks media url over thumbnail');
+  else fail('hf-result picks media url over thumbnail', JSON.stringify(out));
+}
+
+// M11 — superficie do curl reduzida as formas provadas.
 function checkCurlNarrowed() {
   let settings;
   try {
@@ -781,9 +808,14 @@ function checkCurlNarrowed() {
   const allow = new Set((settings.permissions && settings.permissions.allow) || []);
   if (allow.has('Bash(curl:*)')) fail('curl permission narrowed (no broad Bash(curl:*))', 'broad Bash(curl:*) still present');
   else pass('curl permission narrowed (no broad Bash(curl:*))');
-  for (const pat of ['Bash(curl -L:*)', 'Bash(curl -X PUT --data-binary:*)']) {
-    if (allow.has(pat)) pass(`settings allows ${pat}`);
-    else fail(`settings allows ${pat}`, 'missing narrowed curl pattern');
+  // Download e a unica forma de curl que sobrou. O upload de refs agora e do CLI
+  // (higgsfield upload create), entao a forma PUT --data-binary saiu da allowlist.
+  if (allow.has('Bash(curl -L:*)')) pass('settings allows Bash(curl -L:*)');
+  else fail('settings allows Bash(curl -L:*)', 'missing narrowed curl pattern');
+  if (allow.has('Bash(curl -X PUT --data-binary:*)')) {
+    fail('curl PUT removed (uploads via CLI)', 'stale Bash(curl -X PUT --data-binary:*) still allowed');
+  } else {
+    pass('curl PUT removed (uploads via CLI)');
   }
 }
 
@@ -991,6 +1023,7 @@ checkPromptLint();
 checkAnchorTraits();
 checkEditorOutputAndFont();
 checkLedger();
+checkHfResult();
 checkCurlNarrowed();
 checkArcDecision();
 checkProjectMarkers();

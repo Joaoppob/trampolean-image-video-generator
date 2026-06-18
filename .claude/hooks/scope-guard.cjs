@@ -77,7 +77,7 @@ var IN_DOMAIN = [
   /\b(higgsfield|mcp|ffmpeg|rag|jotaro|reel|reels|shorts|tiktok)\b/,
   /\b(imagem|imagens|video|videos|credito|creditos|setup|gerador|geracao)\b/,
   /\b(pipeline|retomar|retomada|checkpoint|save[- ]?crystal|prompt|shot[- ]?list)\b/,
-  /\b(conect[ae][mr]?\b|login|OAuth|autentic)\b/,
+  /\b(conect[ae][mr]?\b|login|OAuth|autentic|cli|conta|saldo|account)\b/,
 ];
 
 var OFFTOPIC = [

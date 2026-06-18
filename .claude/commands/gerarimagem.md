@@ -28,7 +28,8 @@ Antes de tudo, confira:
   ```
   Se `pode_iniciar_fluxo: false`, rode o protocolo de `/revisao` antes de gastar crédito.
   Se a revisão falhar, pare e corrija antes de gerar.
-- O Higgsfield está conectado? Se não, aponte `/setup` e pare.
+- O Higgsfield CLI está autenticado na conta certa? Cheque `higgsfield account status`. Se vier
+  "Not authenticated", conduza `higgsfield auth login` (sem reiniciar) ou aponte `/setup`.
 - A pasta `<PROJ>/RAG/identidade-visual/` tem ao menos uma imagem? **Se estiver vazia, pare** e
   peça ao usuário que coloque pelo menos uma referência ali (veja `RAG/README.md`). Sem
   referência, não há consistência.
@@ -47,8 +48,8 @@ Não gere no escuro. Espere as respostas.
 
 Rode `higgsfield-preflight` para o número de imagens que vai gerar (cada imagem = 2 créditos).
 Mostre o custo total e o saldo, e **reconfirme o projeto `<PROJ>`** junto do custo. Avise que a
-geração depende do Higgsfield conectado. **Se o saldo não cobre, pare** e informe o custo antes
-de continuar. Peça o ok do usuário.
+geração depende do Higgsfield CLI autenticado na conta certa. **Se o saldo não cobre, pare** e
+informe o custo antes de continuar. Peça o ok do usuário.
 
 ## Passo 4: busque a identidade
 

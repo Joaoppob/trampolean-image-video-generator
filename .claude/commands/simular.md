@@ -27,8 +27,8 @@ ha o que simular.
 
 ## Passo 2: preflight de custo
 
-Rode `higgsfield-preflight` para o numero de cenas. Ele consulta o saldo real via MCP e
-calcula o custo total. Mostre ao usuario:
+Rode `higgsfield-preflight` para o numero de cenas. Ele le o saldo real via CLI
+(`higgsfield account status`) e calcula o custo total. Mostre ao usuario:
 
 - Numero de cenas
 - Custo por cena: 2 creditos (imagem) + 4 creditos (video) = 6 creditos
@@ -56,7 +56,8 @@ Isso NAO gasta credito — os agentes so leem e sintetizam.
 ## Passo 4: checks de prontidao
 
 Confira:
-- Higgsfield conectado? Se nao, aponte `/setup`.
+- Higgsfield CLI autenticado? (`higgsfield account status` — mostra a conta e o saldo). Se vier
+  "Not authenticated", aponte `/setup` (ou conduza `higgsfield auth login`, sem reiniciar).
 - FFmpeg instalado? (`ffmpeg -version`). Se nao, aponte `/setup` Passo 2.
 - `<PROJ>/output/imagens/` e `<PROJ>/output/clips/` existem (crie se nao).
 - As referencias em `<PROJ>/RAG/identidade-visual/` batem com a shot-list.
@@ -69,7 +70,7 @@ Mostre um resumo final:
 SIMULACAO COMPLETA
 
 RAG:                    pronta
-Higgsfield:             conectado
+Higgsfield CLI:         autenticado (conta <email>)
 FFmpeg:                 OK
 Cenas:                  N
 Custo total:            X creditos (Y imagens × 2 + Y videos × 4)

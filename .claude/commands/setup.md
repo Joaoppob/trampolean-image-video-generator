@@ -1,33 +1,70 @@
 ---
-description: Guia o setup de primeira vez: Higgsfield (OAuth), FFmpeg e conferência de saldo.
+description: Guia o setup de primeira vez: Higgsfield CLI (install + login), FFmpeg e conferência de saldo.
 ---
 
 # /setup
 
 Guie o usuário pela configuração inicial, passo a passo, esperando ele confirmar cada etapa
 antes de seguir. É a primeira vez dele: não assuma nada, explique o porquê de cada coisa.
+Mantenha o tom animado e proativo — e termine cada passo oferecendo o próximo.
 
 ## Passo 0: interface gráfica
 
 Confirme com o usuário que ele está rodando o Claude Code num computador com tela e navegador
-(não num servidor sem interface). A primeira conexão com o Higgsfield abre uma página de login
-no navegador, então precisa de ambiente gráfico. Se for terminal puro sem GUI, pare aqui: o
-login não vai funcionar.
+(não num servidor sem interface). O login do Higgsfield abre uma página no navegador, então
+precisa de ambiente gráfico. Se for terminal puro sem GUI, pare aqui: o login não vai funcionar.
 
-## Passo 1: conectar o Higgsfield
+## Passo 1: instalar e conectar o Higgsfield (CLI)
 
-O Higgsfield é o serviço que gera as imagens e os vídeos. A conexão é por conta do usuário,
-via login (OAuth), sem nenhuma senha guardada no projeto.
+O Higgsfield é o serviço que gera as imagens e os vídeos. A gente usa o **Higgsfield CLI** — é
+o jeito recomendado pra Claude Code (o próprio Higgsfield recomenda o CLI no lugar do MCP).
+A vantagem prática: **eu mesmo conduzo o login e a troca de conta, sem você reiniciar o Claude
+Code.** A conexão é por conta do usuário, via login no navegador, sem senha guardada no projeto.
 
-1. Rode `/mcp` no Claude Code. Vai aparecer o servidor `higgsfield`.
-2. Inicie a autenticação. Abre uma página no navegador para o login na conta Higgsfield.
-3. Faça login e autorize.
+### 1a. Instalar o CLI (uma vez por máquina)
 
-O login fica guardado por usuário, no perfil do Claude Code (`~/.claude/`), e sobrevive a
-reiniciar o programa. Você não precisa logar de novo toda vez.
+Cheque se já está instalado:
 
-**Importante: depois de conectar pela primeira vez, reinicie o Claude Code.** O servidor só
-é carregado no início da sessão. Sem reiniciar, as ferramentas de geração não aparecem.
+```bash
+higgsfield --version
+```
+
+- Se imprimir uma versão (`higgsfield 0.x.x ...`), pule pra 1b.
+- Se der "command not found", instale:
+
+```bash
+npm install -g @higgsfield/cli
+```
+
+> O instalador baixa um binário (`hf`) da release do GitHub. Se o download falhar (rede/proxy),
+> rode de novo; em último caso, dá pra baixar o binário manualmente da página de releases
+> (https://github.com/higgsfield-ai/cli/releases) e pôr no PATH. Aliases: `higgsfield`, `higgs`, `hf`.
+
+Confirme com `higgsfield --version` antes de seguir.
+
+### 1b. Fazer login (eu disparo, você aprova no navegador)
+
+```bash
+higgsfield auth login
+```
+
+Isso abre o navegador (ou imprime um link `https://higgsfield.ai/device?code=...`). **Você
+faz o login e aprova na conta certa** — essa parte é sua, acontece no seu navegador. Eu
+disparo o comando e aguardo a aprovação; **não preciso reiniciar o Claude Code.**
+
+> Se você tem mais de uma conta Higgsfield, garanta que está logado **na conta que você quer
+> usar** (a que tem os créditos). Se o navegador já estiver logado na conta errada, troque a
+> conta lá antes de aprovar.
+
+### 1c. Confirmar a conta conectada
+
+```bash
+higgsfield account status
+```
+
+Mostra **email, plano e créditos**. Eu confiro o email com você: "conectou na conta `<email>`,
+plano `<plano>`, `<N>` créditos — é essa mesmo?". Se for a conta errada, é só `higgsfield auth
+login` de novo (passo 1b) — sem reinício, sem drama.
 
 ## Passo 2: conferir o FFmpeg
 
@@ -56,18 +93,27 @@ no fim que não dá para montar o reel.
 
 ## Passo 3: conferir o saldo
 
-Rode `/creditos` para confirmar que o Higgsfield responde e ver o plano. É um teste de saldo,
-não gasta crédito.
+Rode `/creditos` (ou `higgsfield account status`) para confirmar que o Higgsfield responde e
+ver o plano. É um teste de saldo, não gasta crédito.
 
 ## Fechamento
 
-Confirme que as três coisas estão prontas: Higgsfield conectado (e reiniciado), FFmpeg
-respondendo, saldo conferido. Diga ao usuário que o próximo passo é escolher (ou criar) um
-projeto em `projects/` e colocar as imagens da marca em
+Confirme que as três coisas estão prontas: Higgsfield CLI instalado e logado (na conta certa),
+FFmpeg respondendo, saldo conferido. Diga ao usuário que o próximo passo é escolher (ou criar)
+um projeto em `projects/` e colocar as imagens da marca em
 `projects/<projeto>/RAG/identidade-visual/` (veja `RAG/README.md` e `templates/README.md` pra
-começar uma marca nova), e então pedir um reel com `/gerarvideo`.
+começar uma marca nova), e então pedir um reel com `/gerarvideo`. Feche oferecendo: "quer que
+eu já te mostre os projetos, ou prefere um tour rápido com o `/tutorial`?".
 
-## Se a conexão falhar mais tarde
+## Se a conexão falhar — ou se você trocar de conta
 
-Se em algum momento a geração reclamar de autenticação (o login pode expirar), rode `/setup`
-de novo a partir do Passo 1 para reconectar, e reinicie o Claude Code.
+Esta é a parte que eu resolvo **sozinho**, sem você reiniciar nada:
+
+- **"Não autenticado" / o login expirou:** eu rodo `higgsfield auth login` de novo, você
+  aprova no navegador, e seguimos na hora.
+- **Você trocou de conta no Higgsfield (e o saldo não bateu):** diferente do MCP antigo (que
+  grudava na conta velha e exigia reconectar + reiniciar), aqui é só `higgsfield auth login`
+  na conta nova. Eu confiro com `higgsfield account status` que o email e os créditos agora
+  são os certos, e a gente dispara o run. Tudo na mesma sessão.
+- **Saldo zerado:** toda conta free começa em 0 e repõe 10 créditos/dia conforme usa. Se a
+  conta certa está zerada, é esperar o pool renovar (amanhã) ou assinar um plano pago.

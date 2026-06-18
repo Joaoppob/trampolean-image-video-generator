@@ -9,23 +9,27 @@ pede um vídeo, e sai com o reel montado.
 
 ## Pré-requisitos
 
-1. **Claude Code** instalado, num computador com tela e navegador (a primeira conexão com o
-   Higgsfield abre uma página de login no navegador, não funciona em servidor sem interface).
+1. **Claude Code** instalado, num computador com tela e navegador (o login do Higgsfield abre
+   uma página no navegador, não funciona em servidor sem interface).
 2. **Conta Higgsfield** (o serviço que gera as imagens e vídeos). O plano free dá 10 créditos
    por dia. https://higgsfield.ai
-3. **FFmpeg** instalado (monta o reel final). Como instalar está no `/setup`.
+3. **Higgsfield CLI** (`npm install -g @higgsfield/cli`) — o jeito recomendado pra Claude Code.
+   O `/setup` instala e conecta pra você.
+4. **FFmpeg** instalado (monta o reel final). Como instalar está no `/setup`.
 
 ## Primeiro uso
 
 1. **Baixe ou clone esta pasta.**
 2. **Abra o Claude Code dentro da pasta** (com interface gráfica, não terminal puro). Ao abrir,
    o **Jotaro** já está lá: é o guia com quem você fala.
-3. **Rode `/setup`.** Ele conduz a conexão com o Higgsfield (login OAuth no navegador), confere
-   o FFmpeg e o saldo. **Depois de conectar o Higgsfield pela primeira vez, reinicie o Claude
-   Code**. O serviço só carrega no início da sessão.
-4. **Rode `/creditos`** para confirmar que está tudo conectado e ver seu saldo.
+3. **Rode `/setup`.** Ele instala o Higgsfield CLI (se preciso), conduz o login no navegador
+   (`higgsfield auth login` — você só aprova na conta certa), e confere o FFmpeg e o saldo.
+   **Não precisa reiniciar o Claude Code** — a auth do CLI vale na mesma sessão.
+4. **Rode `/creditos`** para confirmar a conta conectada (email + saldo) e ver seu crédito.
 
-Pronto isso uma vez, não precisa repetir. O login fica guardado no seu perfil.
+Pronto isso uma vez, não precisa repetir. O login fica guardado no seu perfil. Se você trocar
+de conta no Higgsfield, é só pedir pro Jotaro reconectar (`higgsfield auth login`) — ele
+resolve na hora, sem reiniciar.
 
 ## Onde colocar suas imagens
 
@@ -158,16 +162,16 @@ flowchart TD
 
 | Skill | Função |
 |-------|--------|
-| `higgsfield-preflight` | Lê saldo/plano no Higgsfield e calcula se o run cabe no crédito antes de gerar. |
-| `gera-imagem` | Gera imagens 9:16 com referências da marca usando `nano_banana_pro`. |
-| `gera-video` | Anima cada imagem em clipe curto usando apenas `veo3_1_lite` no free tier. |
+| `higgsfield-preflight` | Lê saldo/plano via `higgsfield account status` e calcula se o run cabe no crédito antes de gerar. |
+| `gera-imagem` | Gera imagens 9:16 com referências da marca usando `nano_banana_2` (CLI). |
+| `gera-video` | Anima cada imagem em clipe curto usando apenas `veo3_1_lite --duration 4` no free tier (CLI). |
 | `editor-video` | Junta os clipes em um reel 1080×1920 com FFmpeg e legenda opcional. |
 
 ### Guardrails operacionais
 
 - **Scope-lock:** a defesa primária é o `CLAUDE.md` (role lock, árvore de recusa, re-grounding por
   turno); o hook `scope-guard.cjs` reforça, bloqueando jailbreak e off-topic e liberando imagem/vídeo.
-- **RBAC:** só o Jotaro age sobre o mundo (Bash/Task/Skill/MCP); `rag` e `prompt-smith` são folhas de
+- **RBAC:** só o Jotaro age sobre o mundo (Bash/Task/Skill — inclui o Higgsfield CLI via Bash); `rag` e `prompt-smith` são folhas de
   leitura/síntese sem capacidade de ação. A quarentena do `rag` (lê conteúdo da `RAG/`, mas não age) é
   a defesa real contra prompt-injection indireta.
 - **Memória do progresso:** o gerador lembra quais cenas já foram criadas para não gastar crédito duas vezes refazendo a mesma etapa.
@@ -225,14 +229,17 @@ sistema para entregar esse resultado.
 A geração consome créditos do Higgsfield:
 
 - **Imagem:** 2 créditos.
-- **Vídeo** (clipe de 4 segundos, mudo no free): 4 créditos.
+- **Vídeo** (clipe de 4 segundos com `--duration 4`, mudo no free): 4 créditos.
 - **Reel de 6 cenas:** 6 imagens × 2 + 6 vídeos × 4 = **36 créditos**.
+
+> ⚠️ O `veo3_1_lite` custa **8 créditos no default** (`duration=8`). A skill `gera-video`
+> sempre passa `--duration 4` pra ficar em 4 créditos — não gere vídeo sem isso.
 
 No **plano free** são **10 créditos por dia**, compartilhados entre imagem e vídeo. Então um
 reel completo de 6 cenas não cabe num dia só: dá para fazer aos poucos (uns 4 dias) ou assinar
 um plano pago para sair de uma vez.
 
-No free, o vídeo usa só o modelo `veo3_1_lite` (4 segundos, 720p, sem som, com marca d'água).
+No free, o vídeo usa só o modelo `veo3_1_lite` (4 segundos, 9:16, sem som, com marca d'água).
 Os outros modelos exigem plano pago. O reel fica mudo até você colocar trilha por fora.
 
 Planos pagos mudam com o tempo; confira os valores atuais direto no Higgsfield antes de
@@ -240,10 +247,10 @@ decidir.
 
 ## Sobre os pedidos de permissão do Claude Code
 
-O FFmpeg e as ferramentas do Higgsfield já vêm pré-autorizados no projeto. Se o Claude Code
-ainda pedir confirmação para rodar o FFmpeg ou ler a pasta de referências na primeira vez,
-**aceite.** São as permissões que o gerador precisa para funcionar. Não clique "Negar" por
-reflexo.
+O FFmpeg e o Higgsfield CLI (`higgsfield`/`hf`) já vêm pré-autorizados no projeto. Se o Claude
+Code ainda pedir confirmação para rodar o FFmpeg, o `higgsfield`, ou ler a pasta de referências
+na primeira vez, **aceite.** São as permissões que o gerador precisa para funcionar. Não clique
+"Negar" por reflexo.
 
 ## Projetos (uma pasta por marca)
 
@@ -301,14 +308,16 @@ confere mais de uma centena de itens de uma vez (a contagem cresce conforme o pr
   pedidos de imagem/vídeo, e está registrado em `.claude/settings.json`.
 - **Preflight e custos** — testa que a trava de crédito bloqueia saldo insuficiente e libera
   quando cabe, e ancora os custos canônicos (imagem 2, vídeo 4, teto 10/dia).
-- **Conexão Higgsfield** — confere que `.mcp.json` existe e é JSON válido.
+- **Migração pro CLI** — confere que `.mcp.json` não declara mais o servidor MCP do Higgsfield
+  (a geração é via CLI) e que os arquivos operacionais não referenciam os tools MCP antigos.
 - **Projetos e identidade** — valida cada projeto (`projects/*`): `identidade-visual/` tem 1-3
   imagens, `marca.md` e `narrativa.md` têm as seções, anchor canônico. Projeto `ativo` bloqueia
   se falhar; `rascunho` só avisa; `arquivado` é pulado. O HUB compartilhado é validado à parte.
 - **Pipeline e cadência** — testa que o checkpoint é read-only, que a cadência bloqueia após 2
   fluxos e reseta com revisão.
 - **RBAC e permissões** — confere que os agentes folha não têm Bash/Task/MCP, que o
-  `settings.json` expõe só as tools certas, e que as skills declaram seus `allowed-tools`.
+  `settings.json` expõe só as tools certas (incluindo o Higgsfield CLI via Bash), e que as
+  skills declaram seus `allowed-tools`.
 - **Schemas e shot-lists** — valida cada shot-list de exemplo contra o contrato formal
   (`schemas/*.json`, por um validador próprio sem dependências), confere paths de referência,
   coerência de timing (`0-4`, `4-8`, ...) e faz lint de prompt (9:16, anchor, texto fora de CTA).
@@ -318,8 +327,8 @@ confere mais de uma centena de itens de uma vez (a contagem cresce conforme o pr
   fonte da legenda tem cadeia de fallback por OS (não quebra se faltar o Arial no Windows).
 - **Ledger de crédito** — roundtrip da trilha de auditoria, com os custos vindos da fonte única
   (`custos.cjs`), não recodificados.
-- **Superfície do curl** — que a permissão foi reduzida às duas formas provadas (`curl -L` para
-  download, `curl -X PUT --data-binary` para upload) e não há mais `curl` aberto.
+- **Superfície do curl** — que a permissão foi reduzida à forma provada (`curl -L` para
+  download) e não há mais `curl` aberto (o upload agora é do CLI, `higgsfield upload create`).
 - **Decisões registradas** — que o arco de 6 cenas está documentado como template (não mandato).
 - **Marcadores e templates** — que todo `project.json` (projetos e templates) valida contra o
   schema, e que os moldes de `templates/` têm o scaffold completo (checados por presença).
@@ -335,10 +344,14 @@ permissão ou helpers quebrados.
 
 - **"FFmpeg não encontrado"**: Não está instalado ou não está no PATH. Rode `/setup` (Passo
   2) para ver o comando de instalação do seu sistema. No Windows: `winget install Gyan.FFmpeg`.
-- **"As ferramentas do Higgsfield não aparecem"**: Você conectou mas não reiniciou. Feche e
-  abra o Claude Code de novo: o serviço só carrega no início da sessão.
-- **"Erro de autenticação no meio do fluxo"**: O login do Higgsfield expirou. Rode `/setup` a
-  partir do Passo 1 para reconectar e reinicie o Claude Code.
+- **"Higgsfield não conectado / não autenticado"**: Peça pro Jotaro conectar — ele roda
+  `higgsfield auth login`, você aprova no navegador, e segue na hora (sem reiniciar). Se o CLI
+  nem estiver instalado, o `/setup` instala (`npm install -g @higgsfield/cli`).
+- **"Troquei de conta e o saldo está errado"**: O CLI ainda está na conta antiga. Peça pro
+  Jotaro reconectar (`higgsfield auth login`) na conta nova — ele confere o email e o saldo com
+  `higgsfield account status` e dispara o run na sequência. Sem reiniciar o Claude Code.
+- **"Erro de autenticação no meio do fluxo"**: O login do Higgsfield expirou. O Jotaro
+  reautentica (`higgsfield auth login`) e retoma do checkpoint — nada se perde.
 - **"Crédito insuficiente"**: O reel não cabe no saldo de hoje. Faça por partes (o Jotaro
   retoma de onde parou no dia seguinte) ou assine um plano pago.
 - **"O vídeo está sem som"**: Normal no free: o `veo3_1_lite` gera clipe mudo. Coloque trilha

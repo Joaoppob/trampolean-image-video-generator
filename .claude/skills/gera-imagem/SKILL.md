@@ -1,16 +1,25 @@
 ---
 name: gera-imagem
-description: Gera uma imagem 9:16 no Higgsfield (nano_banana_pro) com a identidade visual da marca, usando as imagens de referência de RAG/identidade-visual/ como condicionamento. Grava o resultado no save-crystal pra retomada. Use quando o usuário (ou o fluxo /gerarvideo) precisa criar a imagem de uma cena a partir de um prompt + refs.
+description: Gera uma imagem 9:16 no Higgsfield (nano_banana_2 / "Nano Banana Pro") com a identidade visual da marca, usando as imagens de referência de RAG/identidade-visual/ como condicionamento, via Higgsfield CLI. Grava o resultado no save-crystal pra retomada. Use quando o usuário (ou o fluxo /gerarvideo) precisa criar a imagem de uma cena a partir de um prompt + refs.
 argument-hint: "[cena] [prompt]"
-allowed-tools: Bash, Read, mcp__higgsfield__media_upload, mcp__higgsfield__media_confirm, mcp__higgsfield__generate_image, mcp__higgsfield__job_status
+allowed-tools: Bash, Read
 ---
 
 # gera-imagem — uma cena → imagem 9:16 com a cara da marca
 
-Pipeline provado nos spikes: `media_upload` → PUT bytes → `media_confirm` das refs
-→ `generate_image(nano_banana_pro, refs role=image, aspect_ratio 9:16)` → poll →
-download. **2 créditos/imagem.** Sem `create_character` (isso é pago — a
-consistência vem das referências).
+Pipeline (Higgsfield CLI): `upload create` das refs → `generate create nano_banana_2
+--image <ids> --aspect_ratio 9:16 --wait --json` → parse do resultado → download.
+**2 créditos/imagem.** Sem Soul/character (isso é pago — a consistência vem das
+referências passadas em `--image`).
+
+> **Pré-requisito:** o CLI autenticado (`higgsfield account status` mostra a conta certa).
+> Se não, é `/setup` (passo do `higgsfield auth login`). O Jotaro resolve isso sozinho —
+> sem reiniciar o Claude Code.
+
+> **Modelo:** o id do CLI é `nano_banana_2` (nome de exibição "Nano Banana Pro", 2 cr).
+> Se uma release do CLI renomear o modelo e o `generate create` recusar o id, descubra o
+> id atual com `higgsfield model list --image` (procure "Nano Banana Pro") e use o novo
+> `job set type`. Não caia para outro modelo de imagem sem avisar — custo/qualidade mudam.
 
 ## Projeto ativo (multi-projeto)
 
@@ -20,8 +29,8 @@ gastar crédito. Regra de paths:
 
 - Scripts (`pipeline-state.cjs`, `ledger.cjs`) recebem `--root <PROJ>` — eles localizam
   o save-crystal e o ledger **dentro do projeto**.
-- Comandos de shell crus (curl, mkdir, check-download) rodam da raiz do repo, então usam
-  o prefixo completo: `<PROJ>/output/...` e `<PROJ>/RAG/identidade-visual/...`.
+- Comandos de shell crus (higgsfield, curl, mkdir, check-download) rodam da raiz do repo,
+  então usam o prefixo completo: `<PROJ>/output/...` e `<PROJ>/RAG/identidade-visual/...`.
 - Paths da shot-list (`salvar_em`, `referencias_obrigatorias`) são **relativos ao projeto**
   (`output/imagens/...`, `RAG/identidade-visual/...`) — resolva-os contra `<PROJ>/`.
 
@@ -53,59 +62,76 @@ arquivo encontrado, e siga. Só gere de fato quando `existe: false` **E** o arqu
 existe no disco. Limitação: se o usuário renomeou o arquivo, a reconciliação não detecta
 (o path do state não bate com o disco) e a cena será regerada.
 
-### 1. Subir as referências (ou reusar media_ids do run)
+### 1. Subir as referências (ou reusar upload_ids do run)
 
-Para cada ref que ainda não tem `media_id` neste run:
+As refs (mage1-3.png) são as MESMAS pra todas as cenas do run — suba uma vez por arquivo,
+reuse em todas as cenas. O save-crystal guarda os upload_ids por arquivo. Para cada ref que
+ainda não tem `media_id` neste run:
 
-1. Cheque se já foi confirmada antes (chave estável = nome do arquivo sem extensão, ex. `mage1`):
+1. Cheque se já foi subida antes (chave estável = nome do arquivo sem extensão, ex. `mage1`):
    ```bash
    node scripts/pipeline-state.cjs media-get --root <PROJ> --key mage1
    ```
    Se `existe: true`, reuse o `media_id` — **não suba de novo**.
-2. Se não: `mcp__higgsfield__media_upload` (com o filename) → retorna `upload_url`
-   → **PUT os bytes** do arquivo pra essa URL (via
-   `curl -X PUT --data-binary @"<PROJ>/RAG/identidade-visual/mage1.png" "<upload_url>"`)
-   → `mcp__higgsfield__media_confirm` (type apropriado) → retorna o `media_id`.
-3. Grave o media_id pra reuso:
+2. Se não: suba pelo CLI (faz o upload e devolve o id; **não cobra crédito**):
+   ```bash
+   higgsfield upload create "<PROJ>/RAG/identidade-visual/mage1.png" --json
+   ```
+   Pegue o id do upload da saída (é o UUID do media). Em caso de dúvida no campo, rode sem
+   `--json` — o CLI imprime o id em texto.
+3. Grave o id pra reuso:
    ```bash
    node scripts/pipeline-state.cjs media \
-     --root <PROJ> --key mage1 --media-id <MEDIA_ID>
+     --root <PROJ> --key mage1 --media-id <UPLOAD_ID>
    ```
 
-> As refs (mage1-3.png) são as MESMAS pra todas as cenas do run — suba uma vez,
-> reuse em todas. O save-crystal guarda os media_ids por arquivo.
+**Atalho (auto-upload).** As flags de mídia do CLI também aceitam um **path local** direto
+(`--image "<PROJ>/RAG/identidade-visual/mage1.png"`) e sobem o arquivo na hora. É mais simples,
+mas re-sobe a ref a cada cena. Para um run de várias cenas, prefira subir uma vez (passos 1-3)
+e reusar o id; o auto-upload é a saída de emergência se o save-crystal de media se perder.
 
-**Recovery de media_id expirado (run multi-dia).** Os media_ids do save-crystal são
-reusados entre cenas e sessões. Num run retomado dias depois, o Higgsfield pode ter
-expirado o media_id, e o `generate_image` (passo 2) falha com erro de media_id
-inválido/expirado. Os BYTES das refs continuam locais em `<PROJ>/RAG/identidade-visual/`.
-Recovery: re-suba a ref a partir do arquivo local (mesmo procedimento do passo 1.2 — upload +
-confirm), **sobrescreva** a chave no save-crystal com o novo media_id
-(`pipeline-state.cjs media --root <PROJ> --key <nome> --media-id <novo>`), e refaça o
-`generate_image`. **Upload não cobra crédito** — só a geração cobra.
+**Recovery de upload_id expirado (run multi-dia).** Os ids do save-crystal são reusados entre
+cenas e sessões. Num run retomado dias depois, o Higgsfield pode ter expirado o id e o
+`generate create` (passo 2) falha com erro de mídia inválida/expirada. Os BYTES das refs
+continuam locais em `<PROJ>/RAG/identidade-visual/`. Recovery: re-suba a ref a partir do
+arquivo local (mesmo `higgsfield upload create` do passo 1.2), **sobrescreva** a chave no
+save-crystal com o novo id (`pipeline-state.cjs media --root <PROJ> --key <nome> --media-id
+<novo>`), e refaça o `generate create`. **Upload não cobra crédito** — só a geração cobra.
 
 ### 2. Gerar a imagem
 
-Chame `mcp__higgsfield__generate_image` com:
-- `model`: `nano_banana_pro`
-- `aspect_ratio`: `9:16` (redundante com o `vertical 9:16 frame` no texto do prompt — rede de segurança)
-- `medias`: os media_ids das refs, cada um com `role: image`
-- `prompt`: o prompt da cena
-- **NÃO** passe `create_character` / Soul (pago).
+```bash
+higgsfield generate create nano_banana_2 \
+  --prompt "<prompt da cena>" \
+  --aspect_ratio 9:16 \
+  --image <UPLOAD_ID_1> --image <UPLOAD_ID_2> --image <UPLOAD_ID_3> \
+  --wait --wait-timeout 10m \
+  --json > "<PROJ>/output/.last-image-job.json"
+```
 
-### 3. Poll do job
+- `nano_banana_2`: o modelo (2 cr). **NÃO** use Soul/character (pago).
+- `--aspect_ratio 9:16`: redundante com o `vertical 9:16 frame` no texto do prompt — rede de segurança.
+- `--image <id>` repetido: uma flag por ref (vai pro array `input_images` do modelo).
+- `--wait`: bloqueia até o job terminar e já traz o resultado no JSON (sem poll manual).
 
-Use `mcp__higgsfield__job_status` com `sync: true` (≈20s → `completed`). Se vier
-erro de crédito, é o teto batendo — pare e retome quando o pool renovar (o
-preflight já deveria ter avisado).
+### 3. Parse do resultado + download
 
-### 4. Download do resultado
+Extraia `job_id`, `status` e a URL do asset da saída JSON com o parser defensivo:
 
-Pegue o `rawUrl` do job completado e baixe:
+```bash
+node scripts/lib/hf-result.cjs < "<PROJ>/output/.last-image-job.json"
+```
+
+Devolve `{ job_id, status, url, all_urls }`. Confirme `status` completo/sucesso e pegue `url`.
+Se a geração vier com **erro de crédito**, é o teto batendo — pare e retome quando o pool
+renovar (o preflight já deveria ter avisado). Se `url` vier `null` mas `status` completo,
+inspecione o JSON cru (`<PROJ>/output/.last-image-job.json`) e pegue a URL do asset à mão.
+
+Download:
 
 ```bash
 node -e "require('fs').mkdirSync('<PROJ>/output/imagens',{recursive:true})"
-curl -L "<rawUrl>" -o "<PROJ>/output/imagens/cena-<NN>-<tag>.png"
+curl -L "<url>" -o "<PROJ>/output/imagens/cena-<NN>-<tag>.png"
 ```
 
 (Use o `salvar_em` da shotlist, prefixado com `<PROJ>/`; ex:
@@ -120,10 +146,10 @@ node scripts/lib/check-download.cjs "<PROJ>/output/imagens/cena-<NN>-<tag>.png"
 ```
 
 Se vier `ok: false`, o download falhou (arquivo vazio ou truncado): **NÃO grave no
-save-crystal** — trate como falha de download e re-tente o `curl -L` com o mesmo `rawUrl`
-(mesmo job_id, não custa crédito extra). Só siga para o passo 5 quando vier `ok: true`.
+save-crystal** — trate como falha de download e re-tente o `curl -L` com a mesma `url`
+(mesmo job, não custa crédito extra). Só siga para o passo 4 quando vier `ok: true`.
 
-### 5. Save-crystal — gravar SEMPRE após cada imagem
+### 4. Save-crystal — gravar SEMPRE após cada imagem
 
 ```bash
 node scripts/pipeline-state.cjs set \
@@ -136,9 +162,10 @@ node scripts/pipeline-state.cjs set \
 
 O `--path` fica **relativo ao projeto** (`output/imagens/...`) — o save-crystal já vive
 dentro de `<PROJ>/`, então o path não repete o prefixo. Isso é o que permite retomar um
-run sem requeimar crédito, e mantém o state isolado por projeto.
+run sem requeimar crédito, e mantém o state isolado por projeto. O `--job-id` é o do parser
+(passo 3) — é ele que a `gera-video` reusa como `--start-image` (image-to-video sem re-upload).
 
-### 6. Ledger de crédito — registrar o gasto (trilha de auditoria)
+### 5. Ledger de crédito — registrar o gasto (trilha de auditoria)
 
 Só aqui, **depois de ter gerado de fato** (gasto real de crédito). Nunca registre
 numa retomada/skip (quando `existe: true` ou reconciliou do disco) — lá não houve gasto:
@@ -156,12 +183,13 @@ projeto. O crédito vem de `custos.cjs`. Total: `node scripts/lib/ledger.cjs sum
 ## Retorno
 
 `{ path da imagem, job_id }`. O `job_id` é a entrada da skill `gera-video`
-(image-to-video reusa o job sem re-upload).
+(image-to-video reusa o job como `--start-image` sem re-upload).
 
 ## Pegadinhas Windows
 
-- `curl` está no PATH do Windows 10+ (curl.exe nativo). Em PUT de bytes binários,
-  use `--data-binary @"<path>"` (com as aspas se o path tiver espaço — e o repo do
-  produto tem espaço no nome: "Trampolean Image and Video Generator").
+- `curl` está no PATH do Windows 10+ (curl.exe nativo). Para download use `-L` (segue redirect).
+  **O upload de refs agora é do CLI** (`higgsfield upload create`) — não há mais `curl -X PUT`.
+- Paths com espaço precisam de aspas — o repo do produto tem espaço no nome
+  ("Trampolean Image and Video Generator"). Sempre aspeie `"<PROJ>/RAG/identidade-visual/mage1.png"`.
 - Paths de referência são **relativos ao projeto ativo**
   (`<PROJ>/RAG/identidade-visual/mage1.png`), nunca `../../../` (P0.3).

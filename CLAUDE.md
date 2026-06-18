@@ -108,6 +108,32 @@ Shorts. O fluxo tem 4 etapas:
 3. **Vídeo:** anima cada imagem em clipe, via Higgsfield.
 4. **Montagem:** junta os clipes num reel 9:16, com legenda opcional, via FFmpeg.
 
+A geração (etapas 2 e 3) usa o **Higgsfield CLI** (`higgsfield ...` via Bash) — não o MCP.
+O FFmpeg (etapa 4) é local.
+
+---
+
+## Conta e autenticação (você resolve, sem reiniciar nada)
+
+O Higgsfield é acessado pelo **CLI** (`higgsfield`/`hf`), não por MCP. Isso muda o que você
+consegue fazer **sozinho** — e é a diferença que importa pro usuário:
+
+- **Você dispara o login.** Quando não há auth (ou expirou), você roda `higgsfield auth login`.
+  Abre o navegador; o usuário só aprova na conta certa. **Sem reiniciar o Claude Code** — a
+  auth vale na mesma sessão, na hora.
+- **Você enxerga qual conta está ativa.** `higgsfield account status` devolve email + plano +
+  créditos. Sempre confira o **email** antes de gastar — é a conta que vai pagar.
+- **Você resolve troca de conta.** Se o usuário trocou de conta no Higgsfield e o saldo não
+  bate (a conta ativa no CLI é a antiga), é só `higgsfield auth login` de novo na conta nova e
+  reconferir o `account status`. Nada de "reconecte via /mcp e reinicie" — isso acabou.
+- **Limite honesto:** o clique de login no navegador é do usuário (não dá pra automatizar, nem
+  deveria). Mas disparar, detectar a conta errada, reautenticar, confirmar o saldo e seguir —
+  tudo isso é você, na mesma conversa.
+
+Quando o usuário relatar "reconectei e ainda dá zero", "troquei de conta", "saldo errado" ou
+"não autenticado", **não mande ele mexer em `/mcp` nem reiniciar**: conduza `higgsfield auth
+login` + `higgsfield account status`. O passo a passo está no `/setup`.
+
 ---
 
 ## Projetos (escolha antes de gerar)
@@ -153,10 +179,11 @@ Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há e
 3. **Pergunte quando o pedido for vago.** Se o usuário não descreve cena, personagem ou estilo
    com clareza, faça **até 3 perguntas específicas** antes de gerar. Formato: "Eu entendi, mas
    você não me explicou direito como quer a imagem: [perguntas]". Não gere no escuro.
-4. **Sempre avise sobre o Higgsfield e o custo.** Toda geração depende do **Higgsfield MCP
-   conectado** (sem ele, nada de imagem ou vídeo). Cada disparo consome crédito: **imagem = 2
-   créditos, vídeo = 4 créditos, teto de 10 créditos por dia no plano free**. Diga isso sempre
-   que for gerar.
+4. **Sempre avise sobre o Higgsfield e o custo.** Toda geração depende do **Higgsfield CLI
+   autenticado** (`higgsfield account status` mostra a conta e o saldo; sem auth, nada de
+   imagem ou vídeo). Cada disparo consome crédito: **imagem = 2 créditos, vídeo = 4 créditos
+   (com `--duration 4`; o default do CLI é 8s = 8 créditos), teto de 10 créditos por dia no
+   plano free**. Diga isso sempre que for gerar.
 5. **Fricção removível.** No primeiro uso, guie devagar: explique cada passo. Antes de decidir
    o nível de detalhe, leia `node scripts/jotaro-profile.cjs status --root .`. Depois que o
    usuário completar um run inteiro, registre com `node scripts/jotaro-profile.cjs mark-run

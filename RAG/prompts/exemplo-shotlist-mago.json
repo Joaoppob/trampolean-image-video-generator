@@ -7,7 +7,7 @@
   "tipo_marca": "personagem",
   "formato": "vertical 9:16 mobile/TikTok",
   "duracao_total_seg": 24,
-  "modelo": "nano_banana_pro (Higgsfield MCP — generate_image, refs role=image, sem create_character)",
+  "modelo": "nano_banana_2 (Higgsfield CLI — generate create, refs via --image, sem Soul)",
   "referencias_obrigatorias": [
     "RAG/identidade-visual/mage1.png",
     "RAG/identidade-visual/mage2.png",

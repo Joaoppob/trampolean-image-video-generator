@@ -75,7 +75,7 @@ Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json` e do contrat
   "cliente": "...",
   "formato": "vertical 9:16 mobile/TikTok",
   "duracao_total_seg": 24,
-  "modelo": "nano_banana_pro",
+  "modelo": "nano_banana_2",
   "referencias_obrigatorias": ["RAG/identidade-visual/..."],
   "anchor_personagem": "...",
   "cenas": [

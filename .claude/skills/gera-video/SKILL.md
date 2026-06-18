@@ -1,21 +1,33 @@
 ---
 name: gera-video
-description: Transforma a imagem de uma cena (via job_id da gera-imagem) num clipe de vídeo 9:16 curto no Higgsfield, usando SÓ veo3_1_lite (único modelo de vídeo no free tier). Grava no save-crystal pra retomada. Use depois de gera-imagem, na etapa image-to-video do pipeline.
+description: Transforma a imagem de uma cena (via job_id da gera-imagem) num clipe de vídeo 9:16 curto no Higgsfield, usando SÓ veo3_1_lite (único modelo de vídeo no free tier), via Higgsfield CLI. Grava no save-crystal pra retomada. Use depois de gera-imagem, na etapa image-to-video do pipeline.
 argument-hint: "[cena] [job_id-da-imagem]"
-allowed-tools: Bash, Read, mcp__higgsfield__generate_video, mcp__higgsfield__job_status
+allowed-tools: Bash, Read
 ---
 
 # gera-video — imagem → clipe 9:16
 
-Pipeline provado: `generate_video(veo3_1_lite, input = job_id da imagem)` → poll →
-download. **4 créditos/clipe** (4s, 720p, mudo). O input é o `job_id` da imagem —
-**sem re-upload** (a imagem já está no Higgsfield).
+Pipeline (Higgsfield CLI): `generate create veo3_1_lite --start-image <job_id da imagem>
+--duration 4 --aspect_ratio 9:16 --wait --json` → parse → download. **4 créditos/clipe**
+(4s, 9:16, mudo). O `--start-image` aceita o `job_id` da imagem (image-to-video, **sem
+re-upload** — a imagem já está no Higgsfield).
+
+> **Pré-requisito:** CLI autenticado (`higgsfield account status` mostra a conta certa).
+> Se não, `/setup`. O Jotaro resolve sozinho, sem reiniciar o Claude Code.
+
+## ⚠️ `--duration 4` é OBRIGATÓRIO (senão custa o dobro)
+
+O `veo3_1_lite` tem `duration` ∈ {4, 6, 8} e o **default do CLI é 8** (= **8 créditos**).
+O nosso clipe é de 4s = **4 créditos**. **Sempre passe `--duration 4`** — esquecer dobra o
+custo silenciosamente (8 cr/clipe estoura o teto free de 10/dia num único clipe). O
+`custos.cjs`/preflight assume 4 cr, que só vale com `--duration 4`. Mantenha `generate_audio`
+no default (`false` — clipe mudo, o som entra na montagem se for o caso).
 
 ## Projeto ativo (multi-projeto)
 
 Escopo do projeto ativo `<PROJ>` (ex.: `projects/TraceDefense`), confirmado pelo Jotaro
-antes de gastar. Scripts recebem `--root <PROJ>`; shell cru (curl/mkdir/check-download) usa
-o prefixo `<PROJ>/output/...`; o `--path` do save-crystal fica relativo ao projeto
+antes de gastar. Scripts recebem `--root <PROJ>`; shell cru (higgsfield/curl/mkdir/check-download)
+usa o prefixo `<PROJ>/output/...`; o `--path` do save-crystal fica relativo ao projeto
 (`output/clips/...`).
 
 ## ⚠️ Só veo3_1_lite no free
@@ -26,20 +38,25 @@ de queimar crédito ou erro chato):
 
 | Modelo | Status no free |
 |--------|----------------|
-| `veo3_1_lite` | ✅ funciona — 4cr, 4s, 720p, mudo |
-| Seedance 2.0 | ❌ "Requires basic plan or higher" |
-| Kling 3.0 | ❌ "Requires basic plan or higher" |
-| Wan 2.6 | ❌ 13cr (acima do teto diário) |
-| Grok Imagine 1.5 | ❌ 12.5cr (acima do teto diário) |
+| `veo3_1_lite` | ✅ funciona — 4cr a `--duration 4`, 9:16, mudo |
+| Seedance 2.0 (`seedance_2_0`) | ❌ "Requires basic plan or higher" |
+| Kling 3.0 (`kling3_0`) | ❌ "Requires basic plan or higher" |
+| Wan 2.6 (`wan2_6`) | ❌ acima do teto diário |
+| Grok Video (`grok_video`) | ❌ acima do teto diário |
 
 Se `veo3_1_lite` estiver indisponível na sessão, **erro amigável e PARE** — não
 caia pra Seedance/Kling/Grok/Wan na esperança de que funcione.
+
+> **Modelo:** o id `veo3_1_lite` é o do catálogo do CLI ("Google Veo 3.1 Lite"). Se uma
+> release renomear e o `generate create` recusar, confirme o id atual com
+> `higgsfield model list --video` (procure "Veo 3.1 Lite"). Não troque por outro modelo
+> de vídeo — no free só esse roda.
 
 ## Entrada
 
 - `cena` — número da cena (índice no save-crystal).
 - `job_id` da imagem (saída da `gera-imagem`) — OU `path` da imagem se precisar
-  re-subir (caminho raro; o normal é reusar o job_id).
+  re-subir (caminho raro; o normal é reusar o job_id como `--start-image`).
 
 ## Procedimento
 
@@ -63,24 +80,37 @@ do state não bate com o disco) e a cena será regerada.
 
 ### 1. Gerar o vídeo
 
-Chame `mcp__higgsfield__generate_video` com:
-- `model`: `veo3_1_lite` (e SÓ esse)
-- input: o `job_id` da imagem da cena (image-to-video, sem re-upload)
-- aspecto/duração default do modelo (4s, 9:16).
+```bash
+higgsfield generate create veo3_1_lite \
+  --start-image <JOB_ID_DA_IMAGEM> \
+  --duration 4 \
+  --aspect_ratio 9:16 \
+  --wait --wait-timeout 20m --wait-interval 5s \
+  --json > "<PROJ>/output/.last-video-job.json"
+```
 
-Se o tool recusar `veo3_1_lite` especificamente (não por crédito, mas por
-indisponibilidade do modelo), retorne erro amigável e PARE.
+- `veo3_1_lite` (e SÓ esse no free).
+- `--start-image <JOB_ID_DA_IMAGEM>`: image-to-video reusando o job da imagem, sem re-upload
+  (a flag aceita upload id **ou** job id). Se só tiver o path da imagem, passe o path (auto-upload).
+- `--duration 4`: **obrigatório** (ver aviso acima — sem isso, 8 cr).
+- `--wait`: vídeo demora mais que imagem (~minutos); o `--wait` bloqueia até terminar.
 
-### 2. Poll do job
+Se o CLI recusar `veo3_1_lite` especificamente (não por crédito, mas por indisponibilidade
+do modelo), retorne erro amigável e PARE.
 
-`mcp__higgsfield__job_status` com `sync: true`. Vídeo demora mais que imagem
-(~minutos). Se erro de crédito → teto batendo, pause e retome.
+### 2. Parse do resultado + download
 
-### 3. Download
+```bash
+node scripts/lib/hf-result.cjs < "<PROJ>/output/.last-video-job.json"
+```
+
+Devolve `{ job_id, status, url, all_urls }`. Confirme `status` de sucesso e pegue `url`. Se
+vier **erro de crédito** → teto batendo, pause e retome. Se `url` vier `null` mas status
+completo, inspecione o JSON cru (`<PROJ>/output/.last-video-job.json`) e pegue a URL à mão.
 
 ```bash
 node -e "require('fs').mkdirSync('<PROJ>/output/clips',{recursive:true})"
-curl -L "<rawUrl>" -o "<PROJ>/output/clips/cena-<NN>-<tag>.mp4"
+curl -L "<url>" -o "<PROJ>/output/clips/cena-<NN>-<tag>.mp4"
 ```
 
 **Guard de download zero-bytes — cheque ANTES de gravar no save-crystal.** Um curl que falhou
@@ -92,10 +122,10 @@ node scripts/lib/check-download.cjs "<PROJ>/output/clips/cena-<NN>-<tag>.mp4"
 ```
 
 Se vier `ok: false`, o download falhou (clipe vazio ou truncado): **NÃO grave no save-crystal**
-— trate como falha de download e re-tente o `curl -L` com o mesmo `rawUrl` (mesmo job_id, não
-custa crédito extra). Só siga para o passo 4 quando vier `ok: true`.
+— trate como falha de download e re-tente o `curl -L` com a mesma `url` (mesmo job, não
+custa crédito extra). Só siga para o passo 3 quando vier `ok: true`.
 
-### 4. Save-crystal — gravar SEMPRE após cada clipe
+### 3. Save-crystal — gravar SEMPRE após cada clipe
 
 ```bash
 node scripts/pipeline-state.cjs set \
@@ -105,7 +135,7 @@ node scripts/pipeline-state.cjs set \
   --prompt-tag <tag>
 ```
 
-### 5. Ledger de crédito — registrar o gasto (trilha de auditoria)
+### 4. Ledger de crédito — registrar o gasto (trilha de auditoria)
 
 Só **depois de ter gerado de fato** (gasto real). Nunca numa retomada/skip
 (quando `existe: true` ou reconciliou do disco) — lá não houve gasto:
@@ -125,7 +155,7 @@ save-crystal. Crédito vem de `custos.cjs`. Total: `node scripts/lib/ledger.cjs 
 
 ## Pegadinhas Windows
 
-- `curl` nativo (curl.exe). Para download use `-L` (segue redirect do rawUrl).
+- `curl` nativo (curl.exe). Para download use `-L` (segue redirect da URL do asset).
 - O save-crystal é o MESMO state de `gera-imagem` (`<PROJ>/output/.pipeline-state.json`):
   imagem e vídeo da mesma cena ficam sob a mesma chave de cena, em sub-registros
   `imagem` / `video`.

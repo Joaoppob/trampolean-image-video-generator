@@ -3,27 +3,61 @@
 > Leitor primario: Jotaro. Use como referencia rapida quando algo falhar.
 > Cada entrada tem: sintoma → causa provavel → o que dizer ao usuario → proximo passo.
 
-## Conexao e autenticacao
+## Conexao e autenticacao (Higgsfield CLI)
 
-### Higgsfield nao aparece (tools MCP indisponiveis)
+> O Higgsfield agora e o **CLI** (`higgsfield`/`hf`), nao MCP. Voce (Jotaro) conduz auth e
+> troca de conta **sozinho, sem reiniciar o Claude Code**. Nunca mande o usuario mexer em
+> `/mcp` nem reiniciar — isso e do mundo antigo (MCP).
 
-**Sintoma:** `mcp__higgsfield__*` nao aparece na sessao. `/creditos` nao retorna nada.
+### CLI nao instalado
 
-**Causa:** Higgsfield nao foi conectado OU o Claude Code nao foi reiniciado depois da primeira conexao.
+**Sintoma:** `higgsfield --version` da "command not found".
 
-**Resposta:** "O Higgsfield nao esta conectado nesta sessao. Se voce ja conectou ele antes, e so reiniciar o Claude Code — o servico so carrega no inicio da sessao. Se nunca conectou, rode `/setup` (Passo 1) para fazer o login."
+**Causa:** o `@higgsfield/cli` ainda nao foi instalado nesta maquina.
 
-**Proximo passo:** `/setup` Passo 1 → reiniciar Claude Code → `/creditos` para confirmar.
+**Resposta:** "O Higgsfield CLI ainda nao esta instalado aqui. Vou instalar rapidinho com `npm install -g @higgsfield/cli` e a gente conecta na sequencia."
+
+**Proximo passo:** `/setup` Passo 1a (`npm install -g @higgsfield/cli`) → `higgsfield --version`.
+
+### Nao autenticado
+
+**Sintoma:** `higgsfield account status` retorna "Not authenticated". `/creditos` nao retorna saldo.
+
+**Causa:** ninguem fez login ainda, ou o login foi removido (`auth logout`).
+
+**Resposta:** "O Higgsfield ainda nao esta logado. Vou abrir o login pra voce — voce so aprova no navegador, na conta que tem os creditos. Nao precisa reiniciar nada."
+
+**Proximo passo:** voce roda `higgsfield auth login` (abre o navegador) → usuario aprova →
+`higgsfield account status` confirma email + saldo.
+
+### Conta errada / troquei de conta e o saldo nao bate (caso comum)
+
+**Sintoma:** `higgsfield account status` mostra um **email diferente** do esperado, ou o saldo
+da zero/errado depois que o usuario trocou de conta no site do Higgsfield.
+
+**Causa:** o CLI continua autenticado na conta **anterior** — trocar de conta no site/app NAO
+troca a conta do CLI automaticamente. (Era exatamente o ponto cego do MCP antigo; aqui a saida
+e simples.)
+
+**Resposta:** "Aqui eu ainda estou vendo a conta `<email atual>` (com `<N>` creditos). Voce
+trocou de conta no Higgsfield? Vou reautenticar na conta nova — voce so aprova no navegador, e
+eu confirmo o saldo na hora. Sem reiniciar."
+
+**Proximo passo:** voce roda `higgsfield auth login` → usuario aprova **na conta nova** →
+`higgsfield account status` confirma que o email e os creditos mudaram → segue o fluxo.
 
 ### Erro de autenticacao no meio do fluxo
 
-**Sintoma:** Ferramentas do Higgsfield retornam erro de auth depois de ja terem funcionado.
+**Sintoma:** um comando do Higgsfield retorna erro de auth depois de ja ter funcionado.
 
-**Causa:** O login OAuth expirou (sessao muito longa ou token vencido).
+**Causa:** o login expirou (sessao muito longa ou token vencido).
 
-**Resposta:** "O login do Higgsfield expirou durante a sessao. Vamos reconectar: rode `/setup` a partir do Passo 1 e depois reinicie o Claude Code. Se tiver um run em andamento, nao se preocupe — o checkpoint salva o que ja foi gerado."
+**Resposta:** "O login do Higgsfield expirou no meio do caminho. Vou reautenticar agora — voce
+aprova no navegador e seguimos. Se tinha um run em andamento, relaxa: o checkpoint salvou o que
+ja foi gerado."
 
-**Proximo passo:** `/setup` Passo 1 → reiniciar → `/gerarvideo` retoma do save-crystal.
+**Proximo passo:** `higgsfield auth login` → `higgsfield account status` confirma →
+`/gerarvideo` retoma do save-crystal.
 
 ---
 
@@ -39,7 +73,7 @@
 
 ### Erro de credito no meio da geracao (depois do preflight)
 
-**Sintoma:** `mcp__higgsfield__job_status` retorna erro de credito depois de algumas cenas ja terem sido geradas.
+**Sintoma:** `higgsfield generate create`/`wait` retorna erro de credito depois de algumas cenas ja terem sido geradas.
 
 **Causa:** O teto diario bateu no meio do run (o preflight estimou, mas o saldo real pode variar).
 
@@ -85,33 +119,33 @@
 
 ### Imagem gerada mas com erro de download
 
-**Sintoma:** Job completou (`status: completed`) mas `curl` falhou no download (URL inacessivel ou timeout).
+**Sintoma:** Job completou (`status` de sucesso) mas `curl` falhou no download (URL inacessivel ou timeout).
 
-**Resposta:** "A imagem foi gerada no Higgsfield mas o download falhou. Vou tentar baixar de novo com o mesmo job_id — isso nao gasta credito extra."
+**Resposta:** "A imagem foi gerada no Higgsfield mas o download falhou. Vou tentar baixar de novo com o mesmo job (a URL do asset) — isso nao gasta credito extra."
 
-**Proximo passo:** repetir o `curl -L <rawUrl>` do job ja pago.
+**Proximo passo:** repetir o `curl -L "<url-do-asset>"` (do `hf-result.cjs` ou de `higgsfield generate get <job_id> --json`) — o job ja foi pago.
 
-### generate_image falha com erro de media_id (run retomado dias depois)
+### generate create falha com erro de upload/media (run retomado dias depois)
 
-**Sintoma:** `generate_image` retorna erro de media_id invalido/expirado num run que foi retomado depois de dias (multi-dia). As cenas anteriores funcionaram; agora a mesma ref nao e aceita.
+**Sintoma:** `higgsfield generate create` retorna erro de mídia invalida/expirada num run retomado depois de dias (multi-dia). As cenas anteriores funcionaram; agora a mesma ref nao e aceita.
 
-**Causa:** O media_id da referencia expirou no Higgsfield entre as sessoes. O save-crystal guarda o media_id, mas o servico ja o descartou.
+**Causa:** O upload id da referencia expirou no Higgsfield entre as sessoes. O save-crystal guarda o id, mas o servico ja o descartou.
 
 **Resposta:** "A referencia da sua marca expirou no Higgsfield desde a ultima sessao. Vou re-subir a imagem de referencia (que esta salva aqui na sua maquina) e seguir — isso nao gasta credito, so a geracao em si cobra."
 
-**Proximo passo:** re-subir a ref a partir do arquivo local em `projects/<projeto>/RAG/identidade-visual/` (upload + confirm), sobrescrever o media_id no save-crystal, e refazer o `generate_image`. Upload nao cobra credito.
+**Proximo passo:** re-subir a ref do arquivo local em `projects/<projeto>/RAG/identidade-visual/` (`higgsfield upload create <arquivo>`), sobrescrever o id no save-crystal (`pipeline-state.cjs media`), e refazer o `generate create`. Upload nao cobra credito.
 
 ### Modelo de video recusado (nao e o veo3_1_lite)
 
-**Sintoma:** `generate_video` com outro modelo retorna erro de plano.
+**Sintoma:** `higgsfield generate create <outro_modelo>` (video) retorna erro de plano.
 
-**Resposta:** "Esse modelo de video so funciona em plano pago. No free, o unico disponivel e o `veo3_1_lite` (4 segundos, 720p, mudo)."
+**Resposta:** "Esse modelo de video so funciona em plano pago. No free, o unico disponivel e o `veo3_1_lite` (4 segundos com `--duration 4`, 9:16, mudo)."
 
-**Proximo passo:** regerar com `veo3_1_lite`.
+**Proximo passo:** regerar com `veo3_1_lite --duration 4`.
 
 ### veo3_1_lite indisponivel
 
-**Sintoma:** `generate_video` com `veo3_1_lite` retorna erro de indisponibilidade (nao de credito).
+**Sintoma:** `higgsfield generate create veo3_1_lite` retorna erro de indisponibilidade (nao de credito), ou o modelo nao aparece em `higgsfield model list --video`.
 
 **Causa:** O modelo foi descontinuado ou esta fora do ar temporariamente.
 
@@ -179,7 +213,7 @@
 
 **Causa:** O repo tem espaco no nome. As skills ja tratam isso com aspas nos comandos.
 
-**Resposta:** (interno — Jotaro nao reporta isso ao usuario) Use aspas duplas em todos os paths e `--data-binary "@<path>"` no curl com o `@` e aspas.
+**Resposta:** (interno — Jotaro nao reporta isso ao usuario) Use aspas duplas em todos os paths, inclusive em `higgsfield upload create "<path com espaco>"` e `curl -L "<url>" -o "<dest com espaco>"`.
 
 ---
 

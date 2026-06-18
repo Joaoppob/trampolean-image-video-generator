@@ -2,14 +2,16 @@
 /**
  * preflight.js — calculo deterministico de custo de um run Higgsfield.
  *
- * NAO chama o MCP nem a rede. Recebe o saldo REAL (descoberto pelo agente
- * via mcp__higgsfield__balance / show_plans_and_credits) e o numero de cenas,
+ * NAO chama o CLI nem a rede. Recebe o saldo REAL (descoberto pelo agente
+ * via `higgsfield account status --json` -> campo credits) e o numero de cenas,
  * e devolve a decisao de seguir ou parar.
  *
- * Custos fixos (free tier, provados nos spikes de 2026-06-17):
- *   - imagem (nano_banana_pro) = 2 creditos
- *   - video  (veo3_1_lite, 4s) = 4 creditos
+ * Custos fixos (free tier, confirmados ao vivo no CLI 2026-06-18):
+ *   - imagem (nano_banana_2)            = 2 creditos
+ *   - video  (veo3_1_lite, --duration 4)= 4 creditos
  * Teto free = 10 creditos/dia, pool compartilhado img+video.
+ * ATENCAO: veo3_1_lite custa 8 cr no default (duration=8); o 4 so vale com
+ * --duration 4, que a skill gera-video sempre passa.
  *
  * Uso:
  *   node preflight.js --cenas <N> [--saldo <S>] [--com-video true|false] [--teto-dia 10]

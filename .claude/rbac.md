@@ -11,8 +11,9 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 - As tools de cada folha são um subconjunto das tools do orquestrador (folha ⊆ Jotaro).
 - Folha não orquestra: nenhuma folha tem `Task`, logo nenhuma folha spawna outra.
 - Só o Jotaro spawna, e só via `Task`, e só as duas folhas declaradas.
-- Capacidade de agir sobre o mundo (Bash, MCP, Skill) é privilégio exclusivo do Jotaro.
-  As folhas só leem e pensam; quem executa é o nível 0.
+- Capacidade de agir sobre o mundo (Bash, Skill) é privilégio exclusivo do Jotaro.
+  As folhas só leem e pensam; quem executa é o nível 0. (O Higgsfield agora é o **CLI**,
+  invocado via `Bash(higgsfield:*)` — não há mais servidor MCP no projeto.)
 
 ---
 
@@ -20,8 +21,10 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 
 - **escopo:** criação de imagem/vídeo neste gerador — nada além.
 - **tools:** `Read`, `Glob`, `Grep`, `Bash(ffmpeg, ffprobe, node, where, which)`,
-  `Bash(curl -L, curl -X PUT --data-binary)` — só as duas formas de curl que o produto
-  realmente usa (ver "Superfície do curl"), `Task`, `Skill`, `mcp__higgsfield__*`.
+  `Bash(higgsfield:*, hf:*)` — o Higgsfield CLI (auth, account, upload, generate),
+  `Bash(npm install -g @higgsfield/cli:*)` — instalar o CLI no `/setup`,
+  `Bash(curl -L)` — só a forma de download que o produto usa (ver "Superfície do curl"),
+  `Task`, `Skill`.
 - **pode_spawnar:** `[rag, prompt-smith]`.
 - **contrato_entrada:** pedido do usuário em linguagem natural.
 - **contrato_saida:** reel gerado OU redirect educado (taxonomia de recusa do `CLAUDE.md`).
@@ -78,11 +81,11 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 | Glob                  |   ✓    |  ✓  |      ✓       |
 | Grep                  |   ✓    |  ✓  |      ✓       |
 | Bash (lista restrita) |   ✓    |  —  |      —       |
+| Bash(higgsfield/hf)   |   ✓    |  —  |      —       |
 | Task                  |   ✓    |  —  |      —       |
 | Skill                 |   ✓    |  —  |      —       |
-| mcp__higgsfield__*    |   ✓    |  —  |      —       |
 
-Leitura (Read/Glob/Grep): todos. Ação (Bash/Task/Skill/MCP): só o Jotaro.
+Leitura (Read/Glob/Grep): todos. Ação (Bash/Task/Skill): só o Jotaro.
 Cada coluna de folha é subconjunto da coluna do Jotaro — narrowing monotônico satisfeito.
 
 ---
@@ -101,16 +104,16 @@ no orquestrador, que opera sobre dados estruturados, não sobre conteúdo bruto 
 
 ## Superfície do curl (decisão M11)
 
-**Decisão:** o `settings.json` autoriza só as duas formas de curl que o pipeline executa,
+**Decisão:** o `settings.json` autoriza só a forma de curl que o pipeline executa,
 não um `curl` aberto:
 
-- `Bash(curl -L:*)` — download do resultado (`curl -L "<rawUrl>" -o <dest>`), em
+- `Bash(curl -L:*)` — download do resultado (`curl -L "<url-do-asset>" -o <dest>`), em
   `gera-imagem` e `gera-video`.
-- `Bash(curl -X PUT --data-binary:*)` — PUT dos bytes da referência pra URL pré-assinada
-  do Higgsfield (`gera-imagem`, passo 1).
 
-Qualquer outra forma (`curl -O`, `curl -d`, `curl <host>` direto, etc.) deixa de ser
-pré-aprovada e passa a pedir confirmação — superfície reduzida às operações provadas.
+O **upload de referências** deixou de usar curl: agora é `higgsfield upload create <arquivo>`
+(o CLI faz o PUT internamente). Por isso a forma `curl -X PUT --data-binary` saiu da allowlist
+— uma superfície a menos. Qualquer outra forma de curl (`curl -O`, `curl -d`, `curl <host>`
+direto, etc.) deixa de ser pré-aprovada e passa a pedir confirmação.
 
 **Limite do harness (confirmado):** o casamento de permissão de Bash no Claude Code é por
 **prefixo de comando** (`Bash(cmd:*)` = "começa com `cmd`, resto curinga`"). Ele **não
