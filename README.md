@@ -53,6 +53,7 @@ Ou use os comandos diretos:
 
 | Comando | O que faz |
 |---------|-----------|
+| `/tutorial` | Tour guiado pra quem chegou agora (explica, simula, ajuda no 1º passo). Não gasta crédito. |
 | `/explica-fluxo` | Explica as 4 etapas do gerador. |
 | `/setup` | Configuração de primeira vez (Higgsfield, FFmpeg, saldo). |
 | `/duvidas` | Tira dúvidas sobre o sistema e os custos. |
