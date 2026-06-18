@@ -4,6 +4,7 @@
   "data": "2026-06-17",
   "round": 1,
   "objetivo": "exemplo de shot-list para servico com prova visual",
+  "tipo_marca": "servico",
   "formato": "vertical 9:16 mobile/TikTok",
   "duracao_total_seg": 20,
   "modelo": "nano_banana_pro (Higgsfield MCP - generate_image, refs role=image, sem create_character)",

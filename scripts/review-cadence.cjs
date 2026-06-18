@@ -4,9 +4,12 @@
 const fs = require('fs');
 const path = require('path');
 const parseArgs = require('./lib/parse-args.cjs');
+const config = require('./lib/config.cjs');
 
 const STATE_REL = path.join('.claude', 'state', '.review-cadence.json');
-const SUGGEST_AFTER = 2;
+// CONFIG editavel (lib/config.cjs), nao FATO ancorado: quem redistribui o
+// produto pode mudar a cadencia sem quebrar nenhum check do verify.
+const SUGGEST_AFTER = config.REVIEW_SUGGEST_AFTER;
 
 function statePath(root) {
   return path.resolve(root || '.', STATE_REL);

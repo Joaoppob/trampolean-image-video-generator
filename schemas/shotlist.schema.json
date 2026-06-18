@@ -21,6 +21,11 @@
     "data": { "type": "string" },
     "round": { "type": "integer" },
     "objetivo": { "type": "string" },
+    "tipo_marca": {
+      "type": "string",
+      "enum": ["personagem", "produto", "servico"],
+      "description": "Opcional. Natureza do sujeito da marca: personagem (mascote/avatar), produto (objeto fisico) ou servico (identidade visual sem personagem literal). Orienta a leitura de anchor_personagem; arquivos sem este campo continuam validos."
+    },
     "formato": {
       "type": "string",
       "pattern": "9:16"
@@ -44,7 +49,8 @@
     },
     "anchor_personagem": {
       "type": "string",
-      "minLength": 40
+      "minLength": 40,
+      "description": "Anchor visual do SUJEITO da marca: personagem, produto OU identidade visual (nao exige um personagem literal). Em marca sem personagem, enumera os tracos distintivos do produto ou da identidade que devem reaparecer em cada cena. Nome historico mantido por compatibilidade de contrato."
     },
     "cenas": {
       "type": "array",

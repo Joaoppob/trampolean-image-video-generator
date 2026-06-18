@@ -75,6 +75,18 @@ node -e "require('fs').mkdirSync('output/clips',{recursive:true})"
 curl -L "<rawUrl>" -o "output/clips/cena-<NN>-<tag>.mp4"
 ```
 
+**Guard de download zero-bytes — cheque ANTES de gravar no save-crystal.** Um curl que falhou
+em silêncio grava 0 bytes como sucesso, e a montagem (FFmpeg) quebra depois com erro opaco.
+Valide o clipe:
+
+```bash
+node scripts/lib/check-download.cjs "output/clips/cena-<NN>-<tag>.mp4"
+```
+
+Se vier `ok: false`, o download falhou (clipe vazio ou truncado): **NÃO grave no save-crystal**
+— trate como falha de download e re-tente o `curl -L` com o mesmo `rawUrl` (mesmo job_id, não
+custa crédito extra). Só siga para o passo 4 quando vier `ok: true`.
+
 ### 4. Save-crystal — gravar SEMPRE após cada clipe
 
 ```bash

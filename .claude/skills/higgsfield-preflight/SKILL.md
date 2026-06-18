@@ -82,8 +82,10 @@ O script imprime JSON:
 
 No free tier, `veo3_1_lite` é o **único** modelo de vídeo — ponto único de falha (SPOF):
 sem ele não há reel. O cálculo de custo acima é determinístico e offline; ele NÃO sabe se o
-modelo de vídeo está disponível agora. Por isso a sonda de disponibilidade é **procedimento
-do operador**, não lógica do script.
+modelo de vídeo está disponível agora — **o script não tem rede**. Por isso a checagem de
+disponibilidade do `veo3_1_lite` é **responsabilidade do operador via MCP** (consultar a
+lista/tabela de modelos do Higgsfield), não lógica do script. O preflight calcula custo; a
+disponibilidade do modelo de vídeo é um **gate à parte, obrigatório antes da 1ª imagem**.
 
 Quando o run **inclui vídeo** (`--com-video` não é `false`):
 

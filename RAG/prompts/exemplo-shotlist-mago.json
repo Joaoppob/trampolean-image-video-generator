@@ -4,6 +4,7 @@
   "data": "2026-06-16",
   "round": 1,
   "objetivo": "exemplo de shot-list: gate de consistencia de personagem por referencia (anchor + 3 refs)",
+  "tipo_marca": "personagem",
   "formato": "vertical 9:16 mobile/TikTok",
   "duracao_total_seg": 24,
   "modelo": "nano_banana_pro (Higgsfield MCP — generate_image, refs role=image, sem create_character)",

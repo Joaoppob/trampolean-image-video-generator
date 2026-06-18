@@ -258,6 +258,10 @@ Arquivos de estado local (não versionados, ficam na sua máquina):
 - `.claude/state/.jotaro-profile.json` — lembra se você já completou um run e prefere modo expert.
 - `output/.pipeline-state.json` — checkpoint que salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
 
+> Nota de manutenção: o helper canônico do checkpoint é `scripts/pipeline-state.cjs`; as cópias em
+> `.claude/skills/gera-imagem/scripts/` e `.claude/skills/gera-video/scripts/` são apenas *shims* que
+> delegam ao canônico — não as edite achando que são a fonte. O `scripts/verify.cjs` checa essa topologia.
+
 ## Quer ver antes de gerar
 
 A pasta `examples/` traz um reel pronto (o mago do Trace Defense) e uma imagem de exemplo. É a

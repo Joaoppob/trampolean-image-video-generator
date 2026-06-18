@@ -91,6 +91,16 @@
 
 **Proximo passo:** repetir o `curl -L <rawUrl>` do job ja pago.
 
+### generate_image falha com erro de media_id (run retomado dias depois)
+
+**Sintoma:** `generate_image` retorna erro de media_id invalido/expirado num run que foi retomado depois de dias (multi-dia). As cenas anteriores funcionaram; agora a mesma ref nao e aceita.
+
+**Causa:** O media_id da referencia expirou no Higgsfield entre as sessoes. O save-crystal guarda o media_id, mas o servico ja o descartou.
+
+**Resposta:** "A referencia da sua marca expirou no Higgsfield desde a ultima sessao. Vou re-subir a imagem de referencia (que esta salva aqui na sua maquina) e seguir — isso nao gasta credito, so a geracao em si cobra."
+
+**Proximo passo:** re-subir a ref a partir do arquivo local em `RAG/identidade-visual/` (upload + confirm), sobrescrever o media_id no save-crystal, e refazer o `generate_image`. Upload nao cobra credito.
+
 ### Modelo de video recusado (nao e o veo3_1_lite)
 
 **Sintoma:** `generate_video` com outro modelo retorna erro de plano.

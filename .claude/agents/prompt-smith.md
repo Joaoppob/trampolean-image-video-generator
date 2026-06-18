@@ -52,7 +52,10 @@ referência de formato.
    gancho → molde 1 · apresentação → molde 2 · carga/buildup de detalhe → molde 3 ·
    tensão/confronto → molde 4 · clímax/payoff → molde 5 · fechamento/CTA → molde 6.
    Para marca que não é jogo: detalhe de produto → molde 7 · lifestyle → molde 8.
-2. Injete o `{ANCHOR}` com o anchor textual da marca, fiel, sem reordenar os traços.
+2. Injete o `{ANCHOR}` com o anchor textual da marca, fiel, sem reordenar os traços. O anchor
+   cobre o sujeito da marca — personagem, produto OU identidade visual — e não exige um
+   "personagem" literal; em marca sem personagem, ele enumera os traços do produto ou da
+   identidade visual que devem reaparecer em cada cena.
 3. Preencha os slots de cena (cenário, ação, obstáculo) com a intenção que veio do pedido.
 4. Feche cada prompt com o estilo e a paleta da marca, mais `vertical 9:16 frame`.
 5. Repita os traços distintivos do anchor em toda cena de personagem completo. É o que segura

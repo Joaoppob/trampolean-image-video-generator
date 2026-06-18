@@ -60,6 +60,14 @@ Para cada ref que ainda não tem `media_id` neste run:
 > As refs (mage1-3.png) são as MESMAS pra todas as cenas do run — suba uma vez,
 > reuse em todas. O save-crystal guarda os media_ids por arquivo.
 
+**Recovery de media_id expirado (run multi-dia).** Os media_ids do save-crystal são
+reusados entre cenas e sessões. Num run retomado dias depois, o Higgsfield pode ter
+expirado o media_id, e o `generate_image` (passo 2) falha com erro de media_id
+inválido/expirado. Os BYTES das refs continuam locais em `RAG/identidade-visual/`. Recovery:
+re-suba a ref a partir do arquivo local (mesmo procedimento do passo 1.2 — upload + confirm),
+**sobrescreva** a chave no save-crystal com o novo media_id (`media --key <nome> --media-id <novo>`),
+e refaça o `generate_image`. **Upload não cobra crédito** — só a geração cobra.
+
 ### 2. Gerar a imagem
 
 Chame `mcp__higgsfield__generate_image` com:
@@ -85,6 +93,18 @@ curl -L "<rawUrl>" -o "output/imagens/cena-<NN>-<tag>.png"
 ```
 
 (Use o `salvar_em` da shotlist se vier; ex: `output/imagens/cena-02-aparicao.png`.)
+
+**Guard de download zero-bytes — cheque ANTES de gravar no save-crystal.** Um curl que
+falhou em silêncio (URL expirada, timeout) grava 0 bytes como se tivesse dado certo, e o
+pipeline só quebra depois, no FFmpeg, com erro opaco. Valide o arquivo:
+
+```bash
+node scripts/lib/check-download.cjs "output/imagens/cena-<NN>-<tag>.png"
+```
+
+Se vier `ok: false`, o download falhou (arquivo vazio ou truncado): **NÃO grave no
+save-crystal** — trate como falha de download e re-tente o `curl -L` com o mesmo `rawUrl`
+(mesmo job_id, não custa crédito extra). Só siga para o passo 5 quando vier `ok: true`.
 
 ### 5. Save-crystal — gravar SEMPRE após cada imagem
 

@@ -62,11 +62,16 @@ Avise que tudo depende do Higgsfield conectado. **Se o saldo não cobre o run in
 informe o custo. Ofereça gerar por partes (o checkpoint permite retomar amanhã) ou um plano
 pago. Peça o ok antes de gastar.
 
-**Confirme o modelo de vídeo antes de gastar.** No free, o `veo3_1_lite` é o único modelo de
-vídeo — ponto único de falha: sem ele não há reel. Como o loop (Passo 6) cobra a imagem antes
-do vídeo, confirme que o `veo3_1_lite` está disponível na conexão Higgsfield atual **agora,
-antes de gerar a primeira imagem**. Se estiver indisponível, **avise e pare aqui** — não gere
-N imagens para depois descobrir que o vídeo é impossível (crédito de imagem gasto não volta).
+**GATE OBRIGATÓRIO — confirme o `veo3_1_lite` ANTES da primeira imagem.** Isto é um gate, não
+uma sugestão. No free, o `veo3_1_lite` é o único modelo de vídeo — ponto único de falha: sem
+ele não há reel. O preflight é offline e determinístico (não tem rede), então **a checagem de
+disponibilidade é sua, via MCP do Higgsfield**: consulte a lista/tabela de modelos disponíveis
+do Higgsfield (o tool de modelos da integração) e confirme que o `veo3_1_lite` aparece como
+disponível **agora**, antes de gerar qualquer imagem. Como o loop (Passo 6) cobra a imagem
+antes do vídeo, pular este gate gastaria crédito de imagem por um reel que não pode ser
+montado. Se o `veo3_1_lite` **não** estiver disponível e o objetivo é um reel, **PARE aqui,
+antes de gerar a primeira imagem** — avise o usuário e não dispare nenhuma geração de imagem
+(crédito de imagem gasto não volta). Só prossiga ao Passo 5 depois que este gate passar.
 
 ## Passo 5: monte a shot-list
 

@@ -58,7 +58,9 @@ Todos os campos são obrigatórios. Nenhum campo extra é permitido.
 
 - **refs**: array de paths das imagens de referência encontradas (relativos à raiz). Mínimo 1, máximo 3.
 - **anchor_textual**: o bloco em inglês de `marca.md`, copiado fiel. É o que viaja em cada
-  cena. Não reescreva nem traduza: copie como está. Mínimo 80 caracteres.
+  cena. Não reescreva nem traduza: copie como está. Mínimo 80 caracteres. O anchor cobre o
+  sujeito da marca — personagem, produto ou identidade visual — e não exige um "personagem"
+  literal; em marca sem personagem, ele enumera os traços do produto/identidade visual.
 - **estilo**: o medium e o tratamento visual. Mínimo 10 caracteres.
 - **paleta**: array de strings com as cores-chave da marca. Mínimo 1 cor.
 - **narrativa_resumo**: 2 a 3 linhas: o mundo, os obstáculos, o arco de um reel. Mínimo 20 caracteres.
