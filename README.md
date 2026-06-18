@@ -33,17 +33,22 @@ resolve na hora, sem reiniciar.
 
 ## Onde colocar suas imagens
 
-Coloque de 1 a 3 imagens do seu personagem ou produto em:
+Cada marca ou campanha vive numa pasta própria em `projects/<nome>/`. Para começar, copie um
+molde de `templates/` (escolha pelo tipo: `brand-personagem`, `brand-produto`, `brand-servico`)
+para `projects/<seu-projeto>/`:
 
 ```
-RAG/identidade-visual/
+projects/<seu-projeto>/
+  RAG/
+    identidade-visual/   ← coloque aqui 1 a 3 imagens do seu personagem/produto
+    marca.md             ← descreva sua marca (nome, anchor, estilo, paleta)
+    narrativa.md         ← a história e o tom
+  project.json           ← { nome, tipo_marca, status: "ativo" }
 ```
 
-São as imagens de referência: o que mantém a cara igual em todas as cenas. Depois, descreva
-sua marca em `RAG/marca.md` e sua história em `RAG/narrativa.md` (há um exemplo pronto lá, o
-mago do jogo Trace Defense, troque pelo seu). Use `RAG/marca-template.md` e
-`RAG/narrativa-template.md` como base quando for colocar outra marca. Detalhes em
-`RAG/README.md`.
+As imagens de referência são o que mantém a cara igual em todas as cenas. Há um projeto demo
+pronto em `projects/TraceDefense/` (o mago do jogo Trace Defense) pra você ver como fica.
+Detalhes em `templates/README.md` e `projects/README.md`.
 
 ## Como gerar
 
@@ -287,7 +292,7 @@ Arquivos de estado local (não versionados, ficam na sua máquina):
 - `.claude/state/.review-cadence.json` — contador de revisão (global, do produto).
 - `.claude/state/.jotaro-profile.json` — lembra se você já completou um run e prefere modo expert (global).
 - `projects/<projeto>/output/.pipeline-state.json` — checkpoint por projeto: salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
-- `projects/<projeto>/output/.credit-ledger.jsonl` — trilha de auditoria do crédito por projeto: uma linha por geração (append-only, imutável). Responde "quanto este projeto gastou, quando, em quê". O `/creditos` lê o total daqui.
+- `projects/<projeto>/output/.credit-ledger.jsonl` — trilha de auditoria do crédito por projeto: uma linha por geração (append-only, imutável). Responde "quanto este projeto gastou, quando, em quê". O `/creditos` cruza o saldo real da conta (via `higgsfield account status`) com o ledger do projeto para dar o panorama completo.
 
 > Nota de manutenção: o helper canônico do checkpoint é `scripts/pipeline-state.cjs`; as cópias em
 > `.claude/skills/gera-imagem/scripts/` e `.claude/skills/gera-video/scripts/` são apenas *shims* que

@@ -27,6 +27,10 @@ const fs = require('fs');
 // (1 KB) e folgado o bastante para nunca dar falso-positivo num arquivo valido
 // e apertado o bastante para pegar truncamento/zero-bytes. Resposta de erro
 // HTTP salva como arquivo costuma ter < 1 KB.
+// RACIONAL: o menor PNG 1080x1920 via nano_banana_2 (~50-200 KB mesmo para cenas
+// minimalistas), e o menor MP4 via veo3_1_lite (~100+ KB). O threshold de 1 KB
+// e ~50x menor que o menor asset real — seguro para nunca rejeitar resultado
+// valido, mas captura curl que salvou HTML de erro ou arquivo truncado.
 const MIN_BYTES = 1024;
 
 function main() {

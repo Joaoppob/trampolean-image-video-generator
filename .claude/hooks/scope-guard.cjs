@@ -71,6 +71,10 @@ var JAILBREAK = [
   /\bsystem\s*:/,
   /novas?\s+instrucoes|nova\s+persona|novo\s+papel/,
   /finja\s+que\s+voce|pretenda\s+ser|aja\s+como\s+se\s+voce/,
+  /you\s+are\s+now|you\s+will\s+now\s+(act|be)/,
+  /new\s+instructions?\s*(:|from)/,
+  /from\s+now\s+on\s+you\s+(are|will)/,
+  /reset\s+(your\s+)?(instructions?|memory|context)/,
 ];
 
 var IN_DOMAIN = [

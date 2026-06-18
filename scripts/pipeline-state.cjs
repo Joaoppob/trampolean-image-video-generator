@@ -44,22 +44,125 @@ function emptyState() {
   };
 }
 
+// Tenta extrair registros individuais de cenas de um state JSON corrompido.
+// Cada bloco "cena N": { imagem: { job_id, path }, video: { job_id, path } }
+// e recuperado via regex linha a linha — nao depende de parse completo.
+function rescueCenas(raw) {
+  if (typeof raw !== 'string') return null;
+  const cenas = {};
+  // procura blocos de cena dentro de "cenas": { ... }
+  const cenaRe = /"(\d+)"\s*:\s*\{/g;
+  let m;
+  while ((m = cenaRe.exec(raw)) !== null) {
+    const num = m[1];
+    const start = m.index;
+    // encontra o fechamento balanceado de chaves a partir da posicao
+    let depth = 0;
+    let end = start;
+    let inString = false;
+    let esc = false;
+    for (let i = start; i < raw.length; i++) {
+      const ch = raw[i];
+      if (esc) { esc = false; continue; }
+      if (ch === '\\') { esc = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+    }
+    if (end <= start) continue;
+    const block = raw.slice(start, end);
+    // extrai job_id e path de cada sub-registro (imagem/video) do bloco
+    const registro = {};
+    for (const tipo of ['imagem', 'video']) {
+      const sub = extractSubRecord(block, tipo);
+      if (sub) registro[tipo] = sub;
+    }
+    if (Object.keys(registro).length > 0) cenas[num] = registro;
+  }
+  return Object.keys(cenas).length > 0 ? cenas : null;
+}
+
+function extractSubRecord(block, tipo) {
+  // localiza o trecho "imagem": { ... } ou "video": { ... }
+  const subRe = new RegExp('"' + tipo + '"\\s*:\\s*\\{');
+  const m = subRe.exec(block);
+  if (!m) return null;
+  const start = m.index;
+  let depth = 0;
+  let end = start;
+  let inString = false;
+  let esc = false;
+  for (let i = start; i < block.length; i++) {
+    const ch = block[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { esc = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+  }
+  if (end <= start) return null;
+  const sub = block.slice(start, end);
+  const jobId = extractString(sub, 'job_id');
+  const pathVal = extractString(sub, 'path');
+  if (!jobId && !pathVal) return null;
+  return { job_id: jobId || null, path: pathVal || null };
+}
+
+function extractString(text, key) {
+  const re = new RegExp('"' + key + '"\\s*:\\s*"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"');
+  const m = re.exec(text);
+  return m ? m[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') : null;
+}
+
 function load(root) {
   const p = statePath(root);
   if (!fs.existsSync(p)) return emptyState();
+  let raw;
   try {
-    const raw = fs.readFileSync(p, 'utf8');
+    raw = fs.readFileSync(p, 'utf8');
     const obj = JSON.parse(raw);
     if (!obj.cenas) obj.cenas = {};
     if (!obj.refs_media) obj.refs_media = {};
     return obj;
   } catch (e) {
-    // state corrompido: nao apaga (pode ter job_ids caros). Faz backup e zera.
+    // state corrompido: tenta salvar registros individuais de cenas antes de zerar.
+    // Job_ids sao caros — perder um force regeracao com credito extra.
+    if (!raw) {
+      try { fs.copyFileSync(p, p + '.corrupt-' + Date.now()); } catch (_) { /* ignore */ }
+      process.stderr.write(`[pipeline-state] state ilegivel em ${p}: nao foi possivel ler o arquivo.\n`);
+      return emptyState();
+    }
+    const rescued = rescueCenas(raw);
+    const recovered = rescued
+      ? Object.keys(rescued).length
+      : 0;
     try {
       fs.copyFileSync(p, p + '.corrupt-' + Date.now());
     } catch (_) {
       /* ignore */
     }
+    if (recovered > 0) {
+      const st = emptyState();
+      st.cenas = rescued;
+      const recoveryPath = p + '.recovered-' + Date.now();
+      try {
+        fs.writeFileSync(recoveryPath, JSON.stringify(st, null, 2) + '\n', 'utf8');
+      } catch (_) {
+        /* ignore */
+      }
+      process.stderr.write(
+        `[pipeline-state] state corrompido em ${p}: ` +
+        `${recovered} cena(s) recuperadas (salvas em ${recoveryPath}). ` +
+        `Backup do original em ${p}.corrupt-*. Verifique antes de retomar.\n`
+      );
+      return emptyState();
+    }
+    process.stderr.write(
+      `[pipeline-state] state corrompido em ${p}: ` +
+      `nao foi possivel recuperar nenhuma cena. Backup em ${p}.corrupt-*.\n`
+    );
     return emptyState();
   }
 }

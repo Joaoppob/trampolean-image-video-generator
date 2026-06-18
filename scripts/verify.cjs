@@ -734,6 +734,78 @@ function checkPipelineStateDedup() {
   }
 }
 
+function checkPipelineStateSalvage() {
+  const script = path.join(ROOT, 'scripts', 'pipeline-state.cjs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-state-salvage-'));
+  try {
+    const statePath = path.join(tmp, 'output', '.pipeline-state.json');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    // simula JSON truncado com uma cena parcialmente intacta
+    const corrupt = '{"versao":1,"cenas":{"1":{"imagem":{"job_id":"abc-123","path":"output/imagens/cena-01.png"},"video":{"job_id":"def-456","path":"output/clips/cena-01.mp4"}}},"3":{"imagem":{INCOMPLETO';
+    fs.writeFileSync(statePath, corrupt, 'utf8');
+    const r = spawnSync('node', [script, 'get', '--root', tmp, '--cena', '1', '--tipo', 'imagem'], {
+      cwd: ROOT, encoding: 'utf8', windowsHide: true,
+    });
+    const json = safeJson(r.stdout);
+    const warned = (r.stderr || '').includes('recuperadas');
+    if (json && json.existe === false && warned) pass('pipeline-state salvage warns on corrupt state');
+    else fail('pipeline-state salvage warns on corrupt state', `stdout=${r.stdout} stderr=${r.stderr}`);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function checkLedgerCorruptionWarning() {
+  const script = path.join(ROOT, 'scripts', 'lib', 'ledger.cjs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-ledger-corrupt-'));
+  try {
+    const ledgerPathArg = path.join(tmp, 'output', '.credit-ledger.jsonl');
+    fs.mkdirSync(path.dirname(ledgerPathArg), { recursive: true });
+    fs.writeFileSync(ledgerPathArg,
+      '{"ts":"2026-06-18T00:00:00Z","tipo":"imagem","cena":1,"job_id":"j1","creditos":2}\n' +
+      '{linha corrompida}\n' +
+      '{"ts":"2026-06-18T00:00:01Z","tipo":"video","cena":1,"job_id":"jv1","creditos":4}\n',
+      'utf8'
+    );
+    const r = spawnSync('node', [script, 'summary', '--root', tmp], {
+      cwd: ROOT, encoding: 'utf8', windowsHide: true,
+    });
+    const json = safeJson(r.stdout);
+    const warned = (r.stderr || '').includes('corrompida');
+    if (json && json.total_creditos === 6 && warned) pass('ledger warns on corrupt lines');
+    else fail('ledger warns on corrupt lines', `stdout=${r.stdout} stderr=${r.stderr}`);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function checkVeo3GateDocumented() {
+  try {
+    const gerarvideo = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'gerarvideo.md'), 'utf8');
+    const preflightSkill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'higgsfield-preflight', 'SKILL.md'), 'utf8');
+    const hasGate = /GATE OBRIGATORIO|gate obrigatorio|ANTES da primeira imagem/i.test(gerarvideo) &&
+      /veo3_1_lite/.test(gerarvideo);
+    const hasSpof = /SPOF/i.test(preflightSkill) && /veo3_1_lite/.test(preflightSkill);
+    if (hasGate && hasSpof) pass('veo3_1_lite SPOF gate documented in gerarvideo + preflight');
+    else fail('veo3_1_lite SPOF gate documented in gerarvideo + preflight', `gate=${hasGate} spof=${hasSpof}`);
+  } catch (e) {
+    fail('veo3_1_lite SPOF gate documented', e.message);
+  }
+}
+
+function checkCheckDownloadThreshold() {
+  try {
+    const src = fs.readFileSync(path.join(ROOT, 'scripts', 'lib', 'check-download.cjs'), 'utf8');
+    if (/MIN_BYTES/.test(src) && /1024/.test(src) && /truncad/.test(src)) {
+      pass('check-download threshold documented');
+    } else {
+      fail('check-download threshold documented', 'MIN_BYTES or rationale missing');
+    }
+  } catch (e) {
+    fail('check-download threshold documented', e.message);
+  }
+}
+
 function safeJson(s) {
   try {
     return JSON.parse(s);
@@ -1088,6 +1160,10 @@ checkTemplates();
 checkPipelineStateProjectIsolation();
 checkLedgerNotContaminated();
 checkHubBrandAgnostic();
+checkPipelineStateSalvage();
+checkLedgerCorruptionWarning();
+checkVeo3GateDocumented();
+checkCheckDownloadThreshold();
 checkDocs();
 
 const failed = results.filter((r) => !r.ok);

@@ -78,18 +78,24 @@ function cmdAppend(root, args) {
 function readEntries(root) {
   const p = ledgerPath(root);
   if (!fs.existsSync(p)) return [];
-  return fs
-    .readFileSync(p, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch (_) {
-        return null; // linha corrompida: ignora, nao derruba a auditoria
-      }
-    })
-    .filter(Boolean);
+  const raw = fs.readFileSync(p, 'utf8');
+  const lines = raw.split('\n').filter(Boolean);
+  const entries = [];
+  let skipped = 0;
+  for (const line of lines) {
+    try {
+      entries.push(JSON.parse(line));
+    } catch (_) {
+      skipped++;
+    }
+  }
+  if (skipped > 0) {
+    process.stderr.write(
+      `[ledger] ${skipped} linha(s) corrompida(s) ignoradas em ${p} — ` +
+      `o total reportado pode estar abaixo do gasto real.\n`
+    );
+  }
+  return entries;
 }
 
 function cmdSummary(root, dia) {
