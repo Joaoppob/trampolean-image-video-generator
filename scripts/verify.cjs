@@ -663,6 +663,22 @@ function checkDocs() {
   } catch (e) {
     fail('editor-video docs have no dead approach label', e.message);
   }
+
+  try {
+    const claude = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8');
+    const hasTrampoleanIdentity = /agente de IA/i.test(claude) && /Trampolean/i.test(claude);
+    const asksTeamMember = /com qual membro (da equipe|do time)/i.test(claude);
+    if (hasTrampoleanIdentity && asksTeamMember) {
+      pass('Jotaro onboarding identifies Trampolean team member');
+    } else {
+      fail(
+        'Jotaro onboarding identifies Trampolean team member',
+        'CLAUDE.md must present Jotaro as Trampolean AI agent and ask which team member is speaking'
+      );
+    }
+  } catch (e) {
+    fail('Jotaro onboarding identifies Trampolean team member', e.message);
+  }
 }
 
 function checkMcpConfig() {

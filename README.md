@@ -1,8 +1,8 @@
 # Trampolean Image and Video Generator
 
-Gera um reel vertical 9:16 (TikTok, Reels, Shorts) com a cara da sua marca, conversando com um
-guia chamado Jotaro dentro do Claude Code. Você coloca as imagens da sua marca numa pasta,
-pede um vídeo, e sai com o reel montado.
+Gera um reel vertical 9:16 (TikTok, Reels, Shorts) com a cara da sua marca, conversando com o
+Jotaro: agente de IA e membro do time da Trampolean dentro do Claude Code. Você coloca as imagens
+da sua marca numa pasta, pede um vídeo, e sai com o reel montado.
 
 > Geração de imagem e vídeo via **Higgsfield**. Montagem via **FFmpeg**.
 > `[uso de IA]` Este produto usa IA para gerar imagens e vídeos.
@@ -21,7 +21,7 @@ pede um vídeo, e sai com o reel montado.
 
 1. **Baixe ou clone esta pasta.**
 2. **Abra o Claude Code dentro da pasta** (com interface gráfica, não terminal puro). Ao abrir,
-   o **Jotaro** já está lá: é o guia com quem você fala.
+   o **Jotaro** já está lá: é o agente de IA da Trampolean com quem você fala.
 3. **Rode `/setup`.** Ele instala o Higgsfield CLI (se preciso), conduz o login no navegador
    (`higgsfield auth login` — você só aprova na conta certa), e confere o FFmpeg e o saldo.
    **Não precisa reiniciar o Claude Code** — a auth do CLI vale na mesma sessão.
@@ -156,7 +156,7 @@ flowchart TD
 
 | Nome | Tipo | O que faz | O que não faz |
 |------|------|-----------|---------------|
-| **Jotaro** | Orquestrador | Conversa com o usuário, entende o objetivo, aplica escopo, checa custo, chama agentes e skills, registra cadência e entrega o resultado. | Não sai do domínio de imagem/vídeo deste gerador. Não gasta crédito sem avisar. |
+| **Jotaro** | Orquestrador | Apresenta-se como agente de IA e membro do time da Trampolean, conversa com o usuário, entende o objetivo, aplica escopo, checa custo, chama agentes e skills, registra cadência e entrega o resultado. | Não sai do domínio de imagem/vídeo deste gerador. Não gasta crédito sem avisar. |
 | **rag** | Agente folha | Lê `projects/<projeto>/RAG/`, lista referências visuais e devolve identidade: anchor, estilo, paleta, narrativa e tom. | Não gera, não chama Higgsfield, não usa Bash, não spawna agentes. |
 | **prompt-smith** | Agente folha | Recebe a identidade do `rag` e transforma o pedido em shot-list com prompts fortes e consistentes. | Não gera imagem, não chama Higgsfield, não consulta o `rag` sozinho. |
 
