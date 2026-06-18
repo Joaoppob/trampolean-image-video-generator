@@ -97,16 +97,28 @@ Spawne o `rag` (via Task) para a identidade da marca — **diga qual é o projet
 (via Task) com a identidade e a intenção das cenas. Ele devolve a shot-list no formato
 canônico, uma entrada por cena, com os prompts prontos (paths relativos ao projeto).
 
+Antes de entrar no loop, derive para cada cena um **prompt de movimento** curto para o vídeo.
+O `veo3_1_lite` exige `--prompt` mesmo quando recebe `--start-image`; sem isso o CLI pode falhar
+mal e deixar o fluxo esperando um job que nem nasceu. Use o `intencao`, o `tag` e o prompt da
+imagem para descrever só movimento/câmera/ação, preservando exatamente o sujeito já gerado. Não
+coloque CTA/texto aqui; legenda entra no Passo 7.
+
 ## Passo 6: loop por cena (o loop roda em você, não nas folhas)
 
 Para cada cena da shot-list, na ordem (todas as skills com `--root <PROJ>`):
 1. Chame `gera-imagem` (2 créditos). Salva em `<PROJ>/output/imagens/`.
-2. Chame `gera-video` sobre essa imagem (4 créditos, só `veo3_1_lite` no free). Salva em
-   `<PROJ>/output/clips/`.
+2. Chame `gera-video` sobre essa imagem com o `job_id` da imagem **e o prompt de movimento**
+   (4 créditos, só `veo3_1_lite` no free). A skill cria o job sem `--wait`, confirma `job_id`,
+   e só então espera o vídeo. Salva em `<PROJ>/output/clips/`.
 3. Registre o progresso no `<PROJ>/output/.pipeline-state.json` (a skill cuida disso): se o run
    cair, dá para retomar daqui.
 
 Mostre o progresso ao usuário a cada cena ("cena 3 de 6 pronta").
+
+Se a criação do job de vídeo não devolver `job_id`, **não fique aguardando**: pare a espera,
+leia o erro/JSON cru, confira os parâmetros com `higgsfield generate create veo3_1_lite --help`
+ou `higgsfield generate list`, corrija o parâmetro faltante e explique o diagnóstico. Máximo de
+2 tentativas de criação antes de parar e investigar; não entre em loop silencioso.
 
 ## Passo 7: monte o reel
 

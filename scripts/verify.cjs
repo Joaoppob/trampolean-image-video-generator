@@ -809,6 +809,54 @@ function checkVeo3GateDocumented() {
   }
 }
 
+function checkVideoPromptAndWaitGuard() {
+  try {
+    const skill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'gera-video', 'SKILL.md'), 'utf8');
+    const command = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'gerarvideo.md'), 'utf8');
+    const troubleshooting = fs.readFileSync(path.join(ROOT, 'RAG', 'troubleshooting.md'), 'utf8');
+
+    const skillRequiresPrompt =
+      /--prompt "<PROMPT_DE_MOVIMENTO>"/.test(skill) &&
+      /obrigat.rio para.*Veo 3\.1 Lite/i.test(skill);
+    const skillCreatesBeforeWait =
+      /Criar o job.*sem `--wait`/is.test(skill) &&
+      /generate wait <JOB_ID_VIDEO>/i.test(skill);
+    const skillStopsOnMissingJob =
+      /Se n.o houver `job_id`, \*\*n.o espere\*\*/i.test(skill) &&
+      /M.ximo de 2 tentativas/i.test(skill);
+    const commandPassesMotionPrompt =
+      /prompt de movimento/i.test(command) &&
+      /n.o fique aguardando/i.test(command) &&
+      /M.ximo de\s*2 tentativas/i.test(command);
+    const troubleshootingCoversHang =
+      /Video pendurado sem job criado/i.test(troubleshooting) &&
+      /exige `--prompt`/i.test(troubleshooting);
+
+    if (
+      skillRequiresPrompt &&
+      skillCreatesBeforeWait &&
+      skillStopsOnMissingJob &&
+      commandPassesMotionPrompt &&
+      troubleshootingCoversHang
+    ) {
+      pass('video flow requires motion prompt and avoids blind wait');
+    } else {
+      fail(
+        'video flow requires motion prompt and avoids blind wait',
+        JSON.stringify({
+          skillRequiresPrompt,
+          skillCreatesBeforeWait,
+          skillStopsOnMissingJob,
+          commandPassesMotionPrompt,
+          troubleshootingCoversHang,
+        })
+      );
+    }
+  } catch (e) {
+    fail('video flow requires motion prompt and avoids blind wait', e.message);
+  }
+}
+
 function checkCheckDownloadThreshold() {
   try {
     const src = fs.readFileSync(path.join(ROOT, 'scripts', 'lib', 'check-download.cjs'), 'utf8');
@@ -1179,6 +1227,7 @@ checkHubBrandAgnostic();
 checkPipelineStateSalvage();
 checkLedgerCorruptionWarning();
 checkVeo3GateDocumented();
+checkVideoPromptAndWaitGuard();
 checkCheckDownloadThreshold();
 checkDocs();
 

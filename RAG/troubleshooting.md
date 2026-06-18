@@ -143,6 +143,26 @@ ja foi gerado."
 
 **Proximo passo:** regerar com `veo3_1_lite --duration 4`.
 
+### Video pendurado sem job criado
+
+**Sintoma:** o Jotaro disparou animacao de video, ficou muitos minutos aguardando, mas
+`higgsfield generate list` nao mostra job de video novo; o saldo segue igual e so existe o job
+da imagem.
+
+**Causa provavel:** o `veo3_1_lite` exige `--prompt` mesmo em image-to-video. Se o comando for
+criado so com `--start-image` e `--wait`, o CLI pode falhar mal ou deixar a sessao esperando sem
+job real.
+
+**Resposta:** "Achei o problema: o job de video nao nasceu, entao nao adiantava esperar. Vou
+criar do jeito certo agora: primeiro gero o job rapido, com `--prompt` de movimento e sem
+`--wait`; quando o Higgsfield devolver o `job_id`, eu acompanho esse job ate concluir."
+
+**Proximo passo:** criar sem wait e com prompt:
+`higgsfield generate create veo3_1_lite --start-image <job_id_imagem> --prompt "<movimento>" --duration 4 --aspect_ratio 9:16 --json`.
+Se retornar `job_id`, esperar esse job com `higgsfield generate wait <job_id> --json`. Se nao
+retornar `job_id`, nao aguardar: ler erro/JSON cru, conferir `higgsfield generate create
+veo3_1_lite --help`, corrigir flags e tentar no maximo mais uma vez.
+
 ### veo3_1_lite indisponivel
 
 **Sintoma:** `higgsfield generate create veo3_1_lite` retorna erro de indisponibilidade (nao de credito), ou o modelo nao aparece em `higgsfield model list --video`.
