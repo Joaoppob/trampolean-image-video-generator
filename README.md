@@ -157,7 +157,7 @@ flowchart TD
 | Nome | Tipo | O que faz | O que não faz |
 |------|------|-----------|---------------|
 | **Jotaro** | Orquestrador | Conversa com o usuário, entende o objetivo, aplica escopo, checa custo, chama agentes e skills, registra cadência e entrega o resultado. | Não sai do domínio de imagem/vídeo deste gerador. Não gasta crédito sem avisar. |
-| **rag** | Agente folha | Lê `RAG/`, lista referências visuais e devolve identidade: anchor, estilo, paleta, narrativa e tom. | Não gera, não chama Higgsfield, não usa Bash, não spawna agentes. |
+| **rag** | Agente folha | Lê `projects/<projeto>/RAG/`, lista referências visuais e devolve identidade: anchor, estilo, paleta, narrativa e tom. | Não gera, não chama Higgsfield, não usa Bash, não spawna agentes. |
 | **prompt-smith** | Agente folha | Recebe a identidade do `rag` e transforma o pedido em shot-list com prompts fortes e consistentes. | Não gera imagem, não chama Higgsfield, não consulta o `rag` sozinho. |
 
 > No mapa da orquestração, *Leitor de identidade* = `rag` e *Diretor de prompts* = `prompt-smith`
@@ -177,8 +177,9 @@ flowchart TD
 - **Scope-lock:** a defesa primária é o `CLAUDE.md` (role lock, árvore de recusa, re-grounding por
   turno); o hook `scope-guard.cjs` reforça, bloqueando jailbreak e off-topic e liberando imagem/vídeo.
 - **RBAC:** só o Jotaro age sobre o mundo (Bash/Task/Skill — inclui o Higgsfield CLI via Bash); `rag` e `prompt-smith` são folhas de
-  leitura/síntese sem capacidade de ação. A quarentena do `rag` (lê conteúdo da `RAG/`, mas não age) é
-  a defesa real contra prompt-injection indireta.
+  leitura/síntese sem capacidade de ação. A quarentena do `rag` (lê só o `RAG/` do projeto ativo, em
+  `projects/<projeto>/RAG/`, mas não age) é a defesa real contra prompt-injection indireta. O `RAG/`
+  da raiz é o HUB compartilhado de prompts, revisão e troubleshooting.
 - **Memória do progresso:** o gerador lembra quais cenas já foram criadas para não gastar crédito duas vezes refazendo a mesma etapa.
 - **Cadência de revisão:** o gerador conta quantos fluxos foram concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
 - **Modo expert:** Jotaro lembra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
