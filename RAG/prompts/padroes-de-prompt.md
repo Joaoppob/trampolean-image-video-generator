@@ -150,7 +150,7 @@ Fluxo dentro do `prompt-smith`. O `rag` entrega, o `prompt-smith` monta. Nenhum 
 spawna subagente.
 
 ```
-1. rag lê RAG/identidade-visual/ + RAG/marca.md + RAG/narrativa.md
+1. rag lê projects/<projeto>/RAG/ (identidade-visual/ + marca.md + narrativa.md)
    → devolve o SPOKE = { anchor_textual, paleta, estilo, refs[] }
 2. prompt-smith escolhe o molde do HUB pela intenção da cena
    (gancho → 1, apresentação → 2, carga → 3, confronto → 4, clímax → 5, fechamento → 6)
@@ -170,5 +170,6 @@ O contrato formal fica em `schemas/shotlist.schema.json`.
 No free tier, cada clipe `veo3_1_lite` tem 4 segundos. Use janelas como `0-4`, `4-8`,
 `8-12` e deixe `duracao_total_seg` igual ao fim da ultima cena.
 
-**Paths de referência sempre relativos à raiz do repo** (`RAG/identidade-visual/mage1.png`),
-nunca `../../../mage1.png`. É o formato canônico do produto.
+**Paths de referência sempre relativos ao projeto ativo** (`RAG/identidade-visual/mage1.png`),
+nunca `../../../mage1.png`. A skill de geração resolve contra `projects/<projeto>/`. É o
+formato canônico do produto.

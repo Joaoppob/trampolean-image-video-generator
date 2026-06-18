@@ -359,6 +359,7 @@ function checkSchemas() {
     'pipeline-state.schema.json',
     'jotaro-profile.schema.json',
     'review-cadence.schema.json',
+    'project.schema.json',
   ];
   for (const name of required) {
     const file = path.join(schemaDir, name);
@@ -787,42 +788,189 @@ function checkCurlNarrowed() {
 }
 
 // M12 — decisao consciente: arco de 6 cenas e template, nao mandato.
+// A narrativa do demo (TraceDefense) carrega a decisao; os templates apontam pra ela.
 function checkArcDecision() {
+  const narrPath = path.join(ROOT, 'projects', 'TraceDefense', 'RAG', 'narrativa.md');
   try {
-    const narr = fs.readFileSync(path.join(ROOT, 'RAG', 'narrativa.md'), 'utf8');
+    const narr = fs.readFileSync(narrPath, 'utf8');
     if (/Decisão de arco/.test(narr) && /template, não mandato/.test(narr)) {
       pass('arc decision documented (6 scenes = template, not mandate)');
     } else {
-      fail('arc decision documented (6 scenes = template, not mandate)', 'sentinel ausente em RAG/narrativa.md');
+      fail('arc decision documented (6 scenes = template, not mandate)', 'sentinel ausente em projects/TraceDefense/RAG/narrativa.md');
     }
   } catch (e) {
     fail('arc decision documented', e.message);
   }
 }
 
-// Fixtures (decisao consciente) — o demo rodavel (personagem) tem refs reais no
-// disco; exemplos de produto/servico sao TEMPLATES de formato, cujas refs o
-// usuario fornece (nao viajam no repo, e nem caberiam: identidade-visual/ guarda
-// so a marca ativa, no maximo 3 refs — ver validate-rag.cjs). Aqui travamos: o
-// demo nao pode perder a arte em silencio; o template nao e cobrado por isso.
-function checkExampleRefsExist() {
-  const dir = path.join(ROOT, 'RAG', 'prompts');
-  const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
-  for (const file of files) {
+// ---------- multi-projeto: marcadores, templates e isolamento ----------
+
+function listProjectDirs() {
+  const dir = path.join(ROOT, 'projects');
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => path.join(dir, d.name))
+    .filter((p) => fs.existsSync(path.join(p, 'project.json')));
+}
+
+// project.json de cada projeto e template valida contra o schema.
+function checkProjectMarkers() {
+  let schema;
+  try {
+    schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'project.schema.json'), 'utf8'));
+  } catch (e) {
+    fail('project.schema.json readable', e.message);
+    return;
+  }
+  const markers = walk(path.join(ROOT, 'projects'), (p) => path.basename(p) === 'project.json')
+    .concat(walk(path.join(ROOT, 'templates'), (p) => path.basename(p) === 'project.json'));
+  if (markers.length === 0) {
+    fail('project markers exist', 'nenhum project.json encontrado em projects/ ou templates/');
+    return;
+  }
+  for (const file of markers) {
     const json = safeJson(fs.readFileSync(file, 'utf8'));
-    if (!json || !Array.isArray(json.referencias_obrigatorias)) continue;
-    const isTemplate = json.tipo_marca === 'produto' || json.tipo_marca === 'servico';
-    for (const ref of json.referencias_obrigatorias) {
-      if (isTemplate) {
-        // refs ilustrativas, fornecidas pelo usuario — existencia nao exigida.
-        pass(`example ref is user-supplied template ${rel(file)} -> ${ref}`);
-      } else if (fs.existsSync(path.join(ROOT, ref))) {
-        pass(`demo ref exists ${rel(file)} -> ${ref}`);
-      } else {
-        fail(`demo ref exists ${rel(file)} -> ${ref}`, 'demo rodável perdeu a arte de referência no disco');
-      }
+    if (!json) {
+      fail(`project.json valid JSON ${rel(file)}`, 'parse falhou');
+      continue;
+    }
+    const { valid, errors } = validateSchema(schema, json);
+    if (valid) pass(`project.json valid ${rel(file)}`);
+    else fail(`project.json valid ${rel(file)}`, errors.join('; '));
+  }
+}
+
+// templates sao scaffolds: checados por PRESENCA, nunca validados semanticamente.
+function checkTemplates() {
+  const dir = path.join(ROOT, 'templates');
+  if (!fs.existsSync(dir)) {
+    fail('templates/ exists', 'pasta templates/ ausente');
+    return;
+  }
+  const tdirs = fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+  if (tdirs.length === 0) {
+    fail('templates have scaffolds', 'nenhum molde brand-* em templates/');
+    return;
+  }
+  for (const t of tdirs) {
+    for (const f of ['project.json', 'RAG/marca.md', 'RAG/narrativa.md']) {
+      if (fs.existsSync(path.join(dir, t, f))) pass(`template ${t} tem ${f}`);
+      else fail(`template ${t} tem ${f}`, 'arquivo do scaffold ausente');
     }
   }
+}
+
+// Risco 2 (Smaug): idempotencia cross-projeto. Todo path gravado no save-crystal
+// de um projeto deve resolver DENTRO daquele projeto — pega state escrito com
+// --root errado ou contaminado por outro projeto.
+function checkPipelineStateProjectIsolation() {
+  let any = false;
+  for (const projDir of listProjectDirs()) {
+    const statePath = path.join(projDir, 'output', '.pipeline-state.json');
+    if (!fs.existsSync(statePath)) continue;
+    any = true;
+    const state = safeJson(fs.readFileSync(statePath, 'utf8'));
+    const name = path.basename(projDir);
+    if (!state || !state.cenas) {
+      pass(`pipeline-state isolation ${name} (sem cenas)`);
+      continue;
+    }
+    const projAbs = path.resolve(projDir);
+    let escaped = null;
+    for (const cena of Object.values(state.cenas)) {
+      for (const tipo of ['imagem', 'video']) {
+        const p = cena[tipo] && cena[tipo].path;
+        if (!p) continue;
+        const abs = path.resolve(projDir, p);
+        const cmp = process.platform === 'win32' ? abs.toLowerCase() : abs;
+        const root = process.platform === 'win32' ? projAbs.toLowerCase() : projAbs;
+        if (!cmp.startsWith(root + path.sep)) escaped = p;
+      }
+    }
+    if (escaped) fail(`pipeline-state isolation ${name}`, `path escapa do projeto: ${escaped}`);
+    else pass(`pipeline-state isolation ${name}`);
+  }
+  if (!any) pass('pipeline-state isolation (nenhum state no disco)');
+}
+
+// Risco 1 (Smaug): ledger contaminado. As entradas do ledger de um projeto devem
+// ter marca == nome do projeto (pega gasto registrado no projeto errado).
+function checkLedgerNotContaminated() {
+  let any = false;
+  for (const projDir of listProjectDirs()) {
+    const ledgerPath = path.join(projDir, 'output', '.credit-ledger.jsonl');
+    if (!fs.existsSync(ledgerPath)) continue;
+    any = true;
+    const name = path.basename(projDir);
+    const lines = fs.readFileSync(ledgerPath, 'utf8').split('\n').filter(Boolean);
+    let bad = null;
+    for (const line of lines) {
+      const e = safeJson(line);
+      if (e && e.marca && e.marca !== name) bad = e.marca;
+    }
+    if (bad) fail(`ledger not contaminated ${name}`, `entrada com marca "${bad}" no ledger de ${name}`);
+    else pass(`ledger not contaminated ${name}`);
+  }
+  if (!any) pass('ledger not contaminated (nenhum ledger no disco)');
+}
+
+// Risco 3 (Smaug): HUB contaminado com conteudo de marca. Nenhum traco distintivo
+// do anchor de um projeto ATIVO pode aparecer nos arquivos do HUB (que sao
+// brand-agnostic). Reusa a ideia do distinctiveTokens do checkAnchorTraits.
+function checkHubBrandAgnostic() {
+  const STOP = new Set([
+    'same', 'from', 'the', 'with', 'and', 'character', 'reference', 'images', 'image',
+    'style', 'colors', 'color', 'frame', 'vertical', 'mobile', 'cartoon', 'saturated',
+    'bold', 'outlines', 'soft', 'shadows', 'premium', 'lifestyle', 'product', 'photography',
+    'modern', 'clean', 'minimal', 'service', 'brand', 'identity', 'warm', 'neutral', 'palette',
+  ]);
+  const tokens = (text) =>
+    new Set(
+      String(text || '')
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter((w) => /^[a-z]+$/.test(w) && w.length >= 5 && !STOP.has(w))
+    );
+
+  // anchors distintivos dos projetos ATIVOS — SÓ o bloco do anchor canônico
+  // (a lista de traços em inglês: wizard, staff, crystal...), não a prosa inteira
+  // do marca.md, senão palavras genéricas dariam falso-positivo.
+  const { extractAnchor } = require('./validate-rag.cjs');
+  const anchorTokens = new Set();
+  for (const projDir of listProjectDirs()) {
+    const status = safeJson(fs.readFileSync(path.join(projDir, 'project.json'), 'utf8'));
+    if (!status || status.status !== 'ativo') continue;
+    // o demo (TraceDefense) é o exemplo didático do HUB: seus traços PODEM aparecer
+    // ali. A trava é contra marca de cliente real vazando pro HUB compartilhado.
+    if (status.demo === true) continue;
+    const marcaPath = path.join(projDir, 'RAG', 'marca.md');
+    if (!fs.existsSync(marcaPath)) continue;
+    const anchor = extractAnchor(fs.readFileSync(marcaPath, 'utf8'));
+    for (const t of tokens(anchor)) anchorTokens.add(t);
+  }
+  if (anchorTokens.size === 0) {
+    pass('HUB brand-agnostic (nenhum anchor ativo pra comparar)');
+    return;
+  }
+  // arquivos do HUB que devem ser brand-agnostic
+  const hubDirs = [path.join(ROOT, 'RAG', 'prompts'), path.join(ROOT, 'RAG', 'review')];
+  let leak = null;
+  for (const dir of hubDirs) {
+    if (!fs.existsSync(dir)) continue;
+    // exclui os exemplos: shot-lists de exemplo legitimamente carregam marca (mago)
+    for (const file of walk(dir, (p) => /\.md$/.test(p))) {
+      const hubTokens = tokens(fs.readFileSync(file, 'utf8'));
+      const overlap = [...anchorTokens].filter((t) => hubTokens.has(t));
+      if (overlap.length >= 3) leak = `${rel(file)}: ${overlap.slice(0, 5).join(', ')}`;
+    }
+  }
+  if (leak) fail('HUB brand-agnostic', `traços de marca vazaram no HUB — ${leak}`);
+  else pass('HUB brand-agnostic');
 }
 
 checkCjsSyntax();
@@ -845,7 +993,11 @@ checkEditorOutputAndFont();
 checkLedger();
 checkCurlNarrowed();
 checkArcDecision();
-checkExampleRefsExist();
+checkProjectMarkers();
+checkTemplates();
+checkPipelineStateProjectIsolation();
+checkLedgerNotContaminated();
+checkHubBrandAgnostic();
 checkDocs();
 
 const failed = results.filter((r) => !r.ok);

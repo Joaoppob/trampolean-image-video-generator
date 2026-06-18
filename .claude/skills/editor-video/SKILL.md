@@ -27,7 +27,7 @@ node .claude/skills/editor-video/scripts/concat-reel.cjs --check
 ```bash
 node .claude/skills/editor-video/scripts/concat-reel.cjs \
   --clips "output/clips/cena-01-hook.mp4,output/clips/cena-02-aparicao.mp4,..." \
-  --root . \
+  --root <PROJ> \
   [--legenda "BAIXE AGORA"] \
   [--legenda-estilo caixa|contorno] \
   [--legenda-inicio 3 --legenda-fim 8] \
@@ -36,8 +36,9 @@ node .claude/skills/editor-video/scripts/concat-reel.cjs \
 ```
 
 - `--clips`: lista separada por vírgula, **na ordem narrativa das cenas**. Paths
-  relativos ao `--root` ou absolutos.
-- `--root`: raiz do repo (`.`). A saída vai pra `<root>/output/reels/`.
+  **relativos ao projeto** (`output/clips/...`) — o `--root` resolve contra o projeto.
+- `--root`: o **projeto ativo** `<PROJ>` (ex.: `projects/TraceDefense`). A saída vai pra
+  `<PROJ>/output/reels/`, e os clipes em `--clips` são resolvidos contra `<PROJ>/`.
 - `--legenda`: texto do CTA (opcional). Omita pra reel sem legenda.
 - `--legenda-estilo`: `caixa` (default, caixa semi-transparente — mais legível pra
   CTA) ou `contorno` (outline estilo TikTok, mais limpo).

@@ -40,18 +40,19 @@ Diga, em linguagem simples:
     pago para sair de uma vez.
 - Quantas cenas dá para fazer hoje com o que ele tem.
 
-## Gasto já registrado (ledger local)
+## Gasto já registrado (ledger por projeto)
 
-O Higgsfield diz o saldo; o **ledger local** diz o que *este projeto* já gastou. Se houver
-trilha de auditoria, mostre o histórico de gasto deste diretório (não custa nada, é leitura):
+O Higgsfield diz o saldo da conta; o **ledger** diz o que *um projeto* já gastou. O gasto é
+por projeto, então pergunte de qual o usuário quer ver (ou liste `projects/` e some os que
+interessam). Para o projeto `<PROJ>` (não custa nada, é leitura):
 
 ```bash
-node scripts/lib/ledger.cjs summary --root .
+node scripts/lib/ledger.cjs summary --root <PROJ>
 ```
 
 Devolve `total_creditos`, `por_dia`, `por_tipo` e `alertas` (dias que passaram do teto free).
-Use pra responder "quanto já gastei aqui?" e cruzar com o saldo do Higgsfield. Se o arquivo
-não existir ainda (`n_entries: 0`), é só porque nenhum run gastou crédito neste diretório.
+Use pra responder "quanto já gastei no projeto X?" e cruzar com o saldo do Higgsfield. Se o
+arquivo não existir ainda (`n_entries: 0`), é só porque nenhum run gastou crédito nesse projeto.
 
 ## Custo honesto
 

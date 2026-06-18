@@ -244,12 +244,31 @@ ainda pedir confirmação para rodar o FFmpeg ou ler a pasta de referências na 
 **aceite.** São as permissões que o gerador precisa para funcionar. Não clique "Negar" por
 reflexo.
 
+## Projetos (uma pasta por marca)
+
+O gerador é **multi-projeto**. Cada marca/campanha vive numa pasta autocontida, e o Jotaro
+**pergunta pra qual projeto gerar** antes de gastar crédito — não há projeto fixo escondido.
+
+```
+projects/<nome>/
+  RAG/  marca.md · narrativa.md · identidade-visual/   ← identidade da marca
+  output/  imagens/ clips/ reels/ + checkpoint + ledger ← saídas, isoladas por projeto
+  project.json  { nome, tipo_marca, status: ativo|rascunho|arquivado }
+
+templates/   moldes em branco pra começar uma marca nova (brand-personagem/produto/servico)
+RAG/         HUB compartilhado, brand-agnostic (moldes de prompt, revisão, troubleshooting)
+```
+
+Projetos não se misturam: o crédito e o output de um nunca caem em outro. `TraceDefense/` é o
+demo rodável (o mago, com refs reais). Para uma marca nova, copie um molde de `templates/`
+(ver `templates/README.md` e `projects/README.md`).
+
 ## Onde ficam os resultados
 
 ```
-output/imagens/   imagens geradas
-output/clips/      clipes de vídeo
-output/reels/      o reel final montado (reel-<data-hora-UTC>.mp4)
+projects/<projeto>/output/imagens/   imagens geradas
+projects/<projeto>/output/clips/      clipes de vídeo
+projects/<projeto>/output/reels/      o reel final montado (reel-<data-hora-UTC>.mp4)
 ```
 
 > O nome do reel usa data-hora em **UTC** (sufixo `Z`), então não é ambíguo entre fusos nem
@@ -257,10 +276,10 @@ output/reels/      o reel final montado (reel-<data-hora-UTC>.mp4)
 
 Arquivos de estado local (não versionados, ficam na sua máquina):
 
-- `.claude/state/.review-cadence.json` — contador de revisão.
-- `.claude/state/.jotaro-profile.json` — lembra se você já completou um run e prefere modo expert.
-- `output/.pipeline-state.json` — checkpoint que salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
-- `output/.credit-ledger.jsonl` — trilha de auditoria do crédito: uma linha por geração (append-only, imutável). Responde "quanto este run gastou, quando, em quê". O `/creditos` lê o total daqui.
+- `.claude/state/.review-cadence.json` — contador de revisão (global, do produto).
+- `.claude/state/.jotaro-profile.json` — lembra se você já completou um run e prefere modo expert (global).
+- `projects/<projeto>/output/.pipeline-state.json` — checkpoint por projeto: salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
+- `projects/<projeto>/output/.credit-ledger.jsonl` — trilha de auditoria do crédito por projeto: uma linha por geração (append-only, imutável). Responde "quanto este projeto gastou, quando, em quê". O `/creditos` lê o total daqui.
 
 > Nota de manutenção: o helper canônico do checkpoint é `scripts/pipeline-state.cjs`; as cópias em
 > `.claude/skills/gera-imagem/scripts/` e `.claude/skills/gera-video/scripts/` são apenas *shims* que
@@ -282,8 +301,9 @@ confere mais de uma centena de itens de uma vez (a contagem cresce conforme o pr
 - **Preflight e custos** — testa que a trava de crédito bloqueia saldo insuficiente e libera
   quando cabe, e ancora os custos canônicos (imagem 2, vídeo 4, teto 10/dia).
 - **Conexão Higgsfield** — confere que `.mcp.json` existe e é JSON válido.
-- **Pasta RAG** — valida que `identidade-visual/` tem imagens, que `marca.md` e `narrativa.md`
-  têm todas as seções, e que o anchor textual é canônico.
+- **Projetos e identidade** — valida cada projeto (`projects/*`): `identidade-visual/` tem 1-3
+  imagens, `marca.md` e `narrativa.md` têm as seções, anchor canônico. Projeto `ativo` bloqueia
+  se falhar; `rascunho` só avisa; `arquivado` é pulado. O HUB compartilhado é validado à parte.
 - **Pipeline e cadência** — testa que o checkpoint é read-only, que a cadência bloqueia após 2
   fluxos e reseta com revisão.
 - **RBAC e permissões** — confere que os agentes folha não têm Bash/Task/MCP, que o
@@ -299,8 +319,13 @@ confere mais de uma centena de itens de uma vez (a contagem cresce conforme o pr
   (`custos.cjs`), não recodificados.
 - **Superfície do curl** — que a permissão foi reduzida às duas formas provadas (`curl -L` para
   download, `curl -X PUT --data-binary` para upload) e não há mais `curl` aberto.
-- **Decisões registradas** — que o arco de 6 cenas está documentado como template (não mandato)
-  e que o demo rodável (mago) não perdeu suas imagens de referência.
+- **Decisões registradas** — que o arco de 6 cenas está documentado como template (não mandato).
+- **Marcadores e templates** — que todo `project.json` (projetos e templates) valida contra o
+  schema, e que os moldes de `templates/` têm o scaffold completo (checados por presença).
+- **Isolamento entre projetos** — que o checkpoint de um projeto só referencia paths dentro
+  dele (pega `--root` errado) e que a trilha de crédito não foi contaminada por outro projeto.
+- **HUB brand-agnostic** — que nenhum traço de marca de um cliente vazou pros arquivos do HUB
+  compartilhado (o demo é exceção: é o exemplo didático).
 
 Se a revisão falhar, o Jotaro não gasta crédito até corrigir. Isso evita gerar com hook,
 permissão ou helpers quebrados.

@@ -99,7 +99,7 @@
 
 **Resposta:** "A referencia da sua marca expirou no Higgsfield desde a ultima sessao. Vou re-subir a imagem de referencia (que esta salva aqui na sua maquina) e seguir — isso nao gasta credito, so a geracao em si cobra."
 
-**Proximo passo:** re-subir a ref a partir do arquivo local em `RAG/identidade-visual/` (upload + confirm), sobrescrever o media_id no save-crystal, e refazer o `generate_image`. Upload nao cobra credito.
+**Proximo passo:** re-subir a ref a partir do arquivo local em `projects/<projeto>/RAG/identidade-visual/` (upload + confirm), sobrescrever o media_id no save-crystal, e refazer o `generate_image`. Upload nao cobra credito.
 
 ### Modelo de video recusado (nao e o veo3_1_lite)
 
@@ -125,17 +125,17 @@
 
 ### Pasta RAG vazia
 
-**Sintoma:** `RAG/identidade-visual/` nao tem imagens. `validate-rag.cjs` falha.
+**Sintoma:** `projects/<projeto>/RAG/identidade-visual/` nao tem imagens. `validate-rag.cjs --project <projeto>` falha.
 
-**Resposta:** "A pasta de referencias visuais esta vazia. Para gerar com a cara da sua marca, coloque de 1 a 3 imagens do seu personagem ou produto em `RAG/identidade-visual/`. Sem isso, eu gero imagem generica, sem consistencia entre cenas."
+**Resposta:** "A pasta de referencias visuais deste projeto esta vazia. Para gerar com a cara da sua marca, coloque de 1 a 3 imagens do seu personagem ou produto em `projects/<projeto>/RAG/identidade-visual/`. Sem isso, eu gero imagem generica, sem consistencia entre cenas."
 
-**Proximo passo:** usuario coloca imagens → `validate-rag.cjs` para conferir.
+**Proximo passo:** usuario coloca imagens → `validate-rag.cjs --project <projeto>` para conferir.
 
 ### Marca ou narrativa incompletas
 
 **Sintoma:** `validate-rag.cjs` reporta secoes faltando em `marca.md` ou `narrativa.md`.
 
-**Resposta:** "Sua marca ainda esta incompleta: [listar o que falta, ex: 'falta a secao de estilo visual', 'a narrativa so tem 1 secao, precisa de pelo menos 3']. Use `RAG/marca-template.md` e `RAG/narrativa-template.md` como base para preencher."
+**Resposta:** "Sua marca ainda esta incompleta: [listar o que falta, ex: 'falta a secao de estilo visual', 'a narrativa so tem 1 secao, precisa de pelo menos 3']. Os moldes em `templates/brand-*/RAG/` (marca.md e narrativa.md) servem de base para preencher."
 
 **Proximo passo:** usuario completa → `validate-rag.cjs` para conferir.
 
@@ -145,11 +145,11 @@
 
 ### Run interrompido (save-crystal)
 
-**Sintoma:** `output/.pipeline-state.json` existe com cenas ja geradas.
+**Sintoma:** `projects/<projeto>/output/.pipeline-state.json` existe com cenas ja geradas.
 
-**Resposta:** "Tem um run em andamento com [N] cenas ja geradas. Quer retomar de onde parou (sem regerar o que ja foi feito, credito gasto nao volta) ou comecar um run novo?"
+**Resposta:** "Tem um run em andamento neste projeto com [N] cenas ja geradas. Quer retomar de onde parou (sem regerar o que ja foi feito, credito gasto nao volta) ou comecar um run novo?"
 
-**Proximo passo:** se retomar, pular cenas com `existe: true` no save-crystal. Se comecar novo, apagar `output/.pipeline-state.json`.
+**Proximo passo:** se retomar, pular cenas com `existe: true` no save-crystal. Se comecar novo, apagar `projects/<projeto>/output/.pipeline-state.json`.
 
 ### Cadencia de revisao bloqueando
 

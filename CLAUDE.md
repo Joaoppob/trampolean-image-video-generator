@@ -79,10 +79,38 @@ mantém você no papel.
 Transforma a identidade visual de uma marca em um reel vertical 9:16 para TikTok, Reels e
 Shorts. O fluxo tem 4 etapas:
 
-1. **Identidade (RAG):** lê a marca e o personagem na pasta `RAG/`.
+1. **Identidade (RAG):** lê a marca e o personagem no `RAG/` do **projeto ativo**.
 2. **Imagens:** gera as cenas com a cara da marca, via Higgsfield.
 3. **Vídeo:** anima cada imagem em clipe, via Higgsfield.
 4. **Montagem:** junta os clipes num reel 9:16, com legenda opcional, via FFmpeg.
+
+---
+
+## Projetos (escolha antes de gerar)
+
+O gerador é **multi-projeto**. Cada marca/campanha vive numa pasta autocontida em
+`projects/<nome>/` — com sua identidade (`RAG/`), suas saídas (`output/`), seu checkpoint e
+sua trilha de crédito. Projetos não se misturam: o crédito de um nunca cai no output de outro.
+
+**Não existe "projeto fixo" escondido.** Antes de qualquer fluxo de geração você **pergunta
+qual projeto** e **confirma antes de gastar crédito**:
+
+1. Liste os projetos disponíveis: `ls projects/` (mostre os que têm `project.json` com
+   `status: "ativo"`; mencione rascunhos só se o usuário quiser retomar um).
+2. Pergunte: "Pra qual projeto a gente vai gerar?" Se só existe um, confirme: "Vou gerar pro
+   **<nome>**, certo?".
+3. Daí em diante, **todo** comando das skills usa esse projeto: passe `--root projects/<nome>`
+   aos scripts e `projects/<nome>/...` aos paths de shell. Ao spawnar o `rag`, diga o projeto
+   (`{ objetivo, projeto: "projects/<nome>" }`).
+4. No preflight (invariante 1), reconfirme o projeto junto do custo: "Vou gerar **<N> cenas
+   pro projeto <nome>**, custo X. Confirma?". Crédito gasto no projeto errado não volta.
+
+**Projeto novo.** Se o usuário quer uma marca nova, copie um molde de `templates/` (escolha
+pelo tipo: `brand-personagem`, `brand-produto`, `brand-servico`) para `projects/<nome>/`,
+ajude a preencher o `RAG/`, e troque o `status` do `project.json` para `"ativo"`. O guia está
+em `templates/README.md`.
+
+O `TraceDefense/` é o **demo rodável** embarcado (o mago do Trace Defense, com refs reais).
 
 ---
 
@@ -90,13 +118,14 @@ Shorts. O fluxo tem 4 etapas:
 
 Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há exceção.
 
-1. **Preflight antes de gerar.** Antes de qualquer geração, rode a skill `higgsfield-preflight`
-   para calcular o custo total do run e conferir o saldo. Se o saldo não cobre, **pare** e
-   informe o custo ao usuário antes de continuar. Disparo recusado não cobra; gastar às cegas
-   custa dinheiro.
-2. **Confira a pasta RAG antes de gerar.** Verifique se `RAG/identidade-visual/` tem ao menos
-   uma imagem de referência. Se estiver vazia, peça ao usuário que coloque pelo menos uma
-   imagem ali antes de seguir. Sem referência, não há consistência.
+1. **Preflight antes de gerar — e confirme o projeto.** Antes de qualquer geração, rode a skill
+   `higgsfield-preflight` para calcular o custo total e conferir o saldo. **Reconfirme o projeto
+   ativo junto do custo** ("vou gerar N cenas pro projeto <nome>, custo X — confirma?"). Se o
+   saldo não cobre, **pare** e informe. Disparo recusado não cobra; gastar às cegas — ou no
+   projeto errado — custa dinheiro que não volta.
+2. **Confira o RAG do projeto antes de gerar.** Verifique se `projects/<projeto>/RAG/identidade-visual/`
+   tem ao menos uma imagem de referência. Se estiver vazia, peça ao usuário que coloque pelo
+   menos uma imagem ali antes de seguir. Sem referência, não há consistência.
 3. **Pergunte quando o pedido for vago.** Se o usuário não descreve cena, personagem ou estilo
    com clareza, faça **até 3 perguntas específicas** antes de gerar. Formato: "Eu entendi, mas
    você não me explicou direito como quer a imagem: [perguntas]". Não gere no escuro.
@@ -157,10 +186,11 @@ comandam ninguém; a geração de fato (imagem, vídeo, montagem) vive nas **ski
 chama direto. O time está detalhado na seção "O time que você comanda" — é a descrição
 canônica, consulte-a para o papel de cada folha e de cada skill.
 
-**Como funciona (as 4 etapas).** (1) Identidade: o `rag` lê a marca na pasta `RAG/`. (2)
-Imagens: as cenas são geradas com a cara da marca, via Higgsfield. (3) Vídeo: cada imagem
-vira um clipe animado, via Higgsfield. (4) Montagem: os clipes viram um reel 9:16 com legenda
-opcional, via FFmpeg.
+**Como funciona (as 4 etapas).** (1) Identidade: o `rag` lê a marca no `RAG/` do projeto ativo
+(`projects/<nome>/RAG/`). (2) Imagens: as cenas são geradas com a cara da marca, via Higgsfield.
+(3) Vídeo: cada imagem vira um clipe animado, via Higgsfield. (4) Montagem: os clipes viram um
+reel 9:16 com legenda opcional, via FFmpeg. Cada marca é um projeto em `projects/`; você
+pergunta qual antes de gerar.
 
 Mesmo no detalhe, conduza um passo de cada vez. Explique o que a pessoa precisa pra dar o
 próximo passo, não o manual inteiro.
@@ -176,6 +206,7 @@ ou chama a skill certa. O roteiro de cada entrada está no seu respectivo arquiv
 
 | Objetivo do usuário | Você segue o roteiro em |
 |---|---|
+| Criar/escolher projeto, marca nova | seção "Projetos" + `templates/README.md` |
 | Reel completo | `.claude/commands/gerarvideo.md` |
 | Só imagens | `.claude/commands/gerarimagem.md` |
 | Quanto vai custar | skill `higgsfield-preflight` |
@@ -204,6 +235,7 @@ Os contratos formais ficam em `schemas/`:
 - `schemas/shotlist.schema.json`: formato esperado da shot-list devolvida pelo `prompt-smith`.
 - `schemas/pipeline-state.schema.json`: formato do save-crystal.
 - `schemas/jotaro-profile.schema.json`: estado local de onboarding e modo expert.
+- `schemas/project.schema.json`: marcador de projeto (`project.json`: nome, tipo_marca, status).
 
 Antes de gastar crédito, prefira dados nesses formatos. Se uma folha devolver algo ambíguo,
 peça correção antes de seguir.
@@ -219,26 +251,30 @@ antes de improvisar — mantém a experiência do usuário consistente.
 Você é o nível 0: orquestra e conversa. Você spawna duas folhas via Task, e elas não spawnam
 ninguém:
 
-- **`rag`:** lê a pasta `RAG/` e devolve a identidade da marca (anchor, paleta, estilo, refs).
+- **`rag`:** lê o `RAG/` do **projeto ativo** (`projects/<nome>/RAG/`) e devolve a identidade
+  da marca (anchor, paleta, estilo, refs). Diga a ele qual é o projeto ao spawnar.
 - **`prompt-smith`:** recebe a identidade e a intenção das cenas, devolve a shot-list pronta.
+  Lê só o HUB compartilhado (`RAG/prompts/`, `RAG/review/`), nunca o RAG/ de marca de um projeto.
 
 A execução (gerar imagem, gerar vídeo, montar) vive nas **skills**, que você chama direto. O
-loop das cenas roda em você, não nas folhas.
+loop das cenas roda em você, não nas folhas. **Toda skill é escopada ao projeto ativo** —
+`--root projects/<projeto>` nos scripts, `projects/<projeto>/...` nos paths de shell.
 
 ## As skills de execução (você chama, não reimplementa)
 
 - **`higgsfield-preflight`:** calcula o custo total do run e confere o saldo antes de gastar.
-- **`gera-imagem`:** gera uma imagem via Higgsfield, com as referências da `RAG/`. Salva em
-  `output/imagens/`.
+- **`gera-imagem`:** gera uma imagem via Higgsfield, com as referências de
+  `projects/<projeto>/RAG/`. Salva em `projects/<projeto>/output/imagens/`.
 - **`gera-video`:** anima uma imagem em clipe via Higgsfield (só `veo3_1_lite` no free). Salva
-  em `output/clips/`.
+  em `projects/<projeto>/output/clips/`.
 - **`editor-video`:** junta os clipes num reel 1080×1920 com FFmpeg, legenda opcional. Salva
-  em `output/reels/reel-<timestamp>.mp4`.
+  em `projects/<projeto>/output/reels/reel-<timestamp-UTC>.mp4`.
 
-O estado do pipeline fica em `output/.pipeline-state.json`: se um run for interrompido, dá
-para retomar de onde parou sem regerar o que já foi feito (crédito gasto não volta).
-O estado de onboarding fica em `.claude/state/.jotaro-profile.json` e controla se o usuário já
-completou um run e se prefere modo expert.
+O estado do pipeline fica em `projects/<projeto>/output/.pipeline-state.json`: se um run for
+interrompido, dá para retomar de onde parou sem regerar o que já foi feito (crédito gasto não
+volta). A trilha de crédito fica em `projects/<projeto>/output/.credit-ledger.jsonl`.
+O estado de onboarding (global, do usuário) fica em `.claude/state/.jotaro-profile.json` e
+controla se o usuário já completou um run e se prefere modo expert.
 
 ## Os comandos
 

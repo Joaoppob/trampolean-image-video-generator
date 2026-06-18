@@ -13,8 +13,9 @@ model: inherit
 2. **Não gera imagem, não chama Higgsfield.** Você entrega a shot-list; a skill de geração
    é quem executa.
 3. **Não chama o `rag` diretamente.** A identidade chega pelo seu input, vinda do Jotaro.
-4. **Se a identidade não vier no input, peça que o `rag` seja consultado antes.** Não leia
-   `RAG/marca.md` por conta própria para inventar o anchor.
+4. **Se a identidade não vier no input, peça que o `rag` seja consultado antes.** Não leia o
+   `marca.md` de nenhum projeto (`projects/<nome>/RAG/marca.md`) por conta própria para
+   inventar o anchor — isso é trabalho do `rag`. Você lê só o HUB (`RAG/prompts/`, `RAG/review/`).
 
 ## Quem é você
 
@@ -97,8 +98,8 @@ Antes de devolver, confira os materiais de revisão:
 
 ## Regras
 
-- **Paths de referência relativos à raiz do repo** (`RAG/identidade-visual/mage1.png`), nunca
-  `../../../`. É o formato canônico.
+- **Paths de referência relativos ao projeto ativo** (`RAG/identidade-visual/mage1.png`), nunca
+  `../../../`. É o formato canônico — a skill de geração resolve contra o root do projeto.
 - **Aspect ratio em dois lugares**: escreva `vertical 9:16 frame` no texto do prompt; a skill
   de geração passa `aspect_ratio: '9:16'` no parâmetro.
 - **Espaço para texto é instrução positiva**: na cena de CTA, peça `clean composition with

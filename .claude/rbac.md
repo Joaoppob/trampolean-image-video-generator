@@ -37,13 +37,14 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 
 ## rag (folha de leitura)
 
-- **escopo:** ler a pasta `RAG/` e devolver a identidade da marca.
+- **escopo:** ler o `RAG/` do **projeto ativo** (`projects/<nome>/RAG/`) e devolver a identidade da marca.
 - **tools:** `Read`, `Glob`, `Grep` — **SEM Bash, SEM MCP, SEM Task, SEM Skill.**
 - **pode_spawnar:** nenhum.
-- **contrato_entrada:** `{ objetivo: "ler identidade da marca" }`.
+- **contrato_entrada:** `{ objetivo: "ler identidade da marca", projeto: "projects/<nome>" }`.
 - **contrato_saida:** `{ refs, anchor_textual, estilo, paleta, narrativa_resumo, tom }`.
-- **fronteira:** não gera, não anima, não chama skills nem Higgsfield. Não lê fora de `RAG/`.
-  Devolve o anchor fiel, sem reescrever nem inferir.
+- **fronteira:** não gera, não anima, não chama skills nem Higgsfield. Não lê fora do `RAG/` do
+  projeto passado na entrada (nem o RAG/ de outro projeto, nem o HUB). Devolve o anchor fiel,
+  sem reescrever nem inferir.
 
 ---
 
@@ -55,11 +56,11 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 - **contrato_entrada:** `{ identidade: <saída do rag>, intencao: <descrição das cenas> }`.
 - **contrato_saida:** shot-list JSON (schema de `RAG/prompts/exemplo-shotlist-mago.json`).
 - **fronteira:** não gera imagem, não chama Higgsfield, não chama o `rag` diretamente.
-  Pode ler `RAG/prompts/` para usar os moldes do HUB, mas não lê `RAG/marca.md`,
-  `RAG/narrativa.md` nem `RAG/identidade-visual/` para inferir identidade. Se a identidade
-  não vier no input, informa que o `rag` deve ser consultado antes.
+  Pode ler o HUB (`RAG/prompts/`, `RAG/review/`) para usar os moldes, mas não lê o `RAG/` de
+  marca de nenhum projeto (`projects/<nome>/RAG/marca.md|narrativa.md|identidade-visual/`) para
+  inferir identidade. Se a identidade não vier no input, informa que o `rag` deve ser consultado antes.
 
-  > **Natureza da fronteira:** A restrição de path (`RAG/prompts/` apenas) é
+  > **Natureza da fronteira:** A restrição de path (HUB `RAG/prompts/` + `RAG/review/` apenas) é
   > **instrucional**, não técnica — o `tools:` do agente concede `Read` irrestrito
   > porque o harness Claude Code não permite granularidade de path por agente.
   > A defesa real contra prompt-injection em `RAG/` está na quarentena do `rag`

@@ -9,12 +9,17 @@ Roda toda a validacao pre-geracao sem disparar nada no Higgsfield. E util pra qu
 o plano completo, conferir se a RAG esta pronta, e saber exatamente quanto vai custar — tudo
 sem gastar credito.
 
-## Passo 1: validacao da RAG
+## Passo 0: escolha o projeto
 
-Rode o validador deterministico da pasta RAG:
+Liste `projects/` e pergunte qual projeto simular. Chame de `<PROJ>` o root escolhido
+(ex.: `projects/TraceDefense`).
+
+## Passo 1: validacao da RAG do projeto
+
+Rode o validador deterministico da identidade do projeto:
 
 ```bash
-node scripts/validate-rag.cjs --root .
+node scripts/validate-rag.cjs --project <PROJ>
 ```
 
 Se falhar, mostre o que falta (imagens, secoes da marca, anchor) e pare. Sem RAG pronta, nao
@@ -35,8 +40,9 @@ Isso NAO gasta credito — e so consulta de saldo e calculo deterministico.
 
 ## Passo 3: identidade e shot-list
 
-Spawne o `rag` para ler a identidade da marca. Depois spawne o `prompt-smith` com a
-identidade e a intencao das cenas. Ele devolve a shot-list completa, com prompts prontos.
+Spawne o `rag` para ler a identidade da marca — diga o projeto no spawn
+(`{ objetivo, projeto: "<PROJ>" }`). Depois spawne o `prompt-smith` com a identidade e a
+intencao das cenas. Ele devolve a shot-list completa, com prompts prontos.
 
 Mostre ao usuario o resumo:
 - Campanha e cliente
@@ -52,8 +58,8 @@ Isso NAO gasta credito — os agentes so leem e sintetizam.
 Confira:
 - Higgsfield conectado? Se nao, aponte `/setup`.
 - FFmpeg instalado? (`ffmpeg -version`). Se nao, aponte `/setup` Passo 2.
-- `output/imagens/` e `output/clips/` existem (crie se nao).
-- As referencias em `RAG/identidade-visual/` batem com a shot-list.
+- `<PROJ>/output/imagens/` e `<PROJ>/output/clips/` existem (crie se nao).
+- As referencias em `<PROJ>/RAG/identidade-visual/` batem com a shot-list.
 
 ## Fechamento
 

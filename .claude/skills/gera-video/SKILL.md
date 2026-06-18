@@ -11,6 +11,13 @@ Pipeline provado: `generate_video(veo3_1_lite, input = job_id da imagem)` → po
 download. **4 créditos/clipe** (4s, 720p, mudo). O input é o `job_id` da imagem —
 **sem re-upload** (a imagem já está no Higgsfield).
 
+## Projeto ativo (multi-projeto)
+
+Escopo do projeto ativo `<PROJ>` (ex.: `projects/TraceDefense`), confirmado pelo Jotaro
+antes de gastar. Scripts recebem `--root <PROJ>`; shell cru (curl/mkdir/check-download) usa
+o prefixo `<PROJ>/output/...`; o `--path` do save-crystal fica relativo ao projeto
+(`output/clips/...`).
+
 ## ⚠️ Só veo3_1_lite no free
 
 `veo3_1_lite` é o **único** modelo de vídeo que roda no free tier. Os outros
@@ -40,13 +47,14 @@ caia pra Seedance/Kling/Grok/Wan na esperança de que funcione.
 
 ```bash
 node scripts/pipeline-state.cjs get \
-  --root . --cena <N> --tipo video
+  --root <PROJ> --cena <N> --tipo video
 ```
 
 Se `existe: true`, **NÃO regere** — reuse o `path` do clipe e siga.
 
 **Reconciliação state-vs-disco.** Se `get` retorna `existe: false` MAS o clipe da cena
-já existe no disco em `output/clips/` (cheque com `fs.existsSync`), **NÃO regere** — o
+já existe no disco em `<PROJ>/output/clips/` (cheque com `fs.existsSync("<PROJ>/" + path)`),
+**NÃO regere** — o
 crédito já foi gasto num run anterior cujo state se perdeu. Em vez disso, reconstrua o
 registro no state com um `set` usando `--job-id recovered-from-disk` e o `--path` do
 clipe encontrado, e siga. Só gere de fato quando `existe: false` **E** o clipe não existe
@@ -71,8 +79,8 @@ indisponibilidade do modelo), retorne erro amigável e PARE.
 ### 3. Download
 
 ```bash
-node -e "require('fs').mkdirSync('output/clips',{recursive:true})"
-curl -L "<rawUrl>" -o "output/clips/cena-<NN>-<tag>.mp4"
+node -e "require('fs').mkdirSync('<PROJ>/output/clips',{recursive:true})"
+curl -L "<rawUrl>" -o "<PROJ>/output/clips/cena-<NN>-<tag>.mp4"
 ```
 
 **Guard de download zero-bytes — cheque ANTES de gravar no save-crystal.** Um curl que falhou
@@ -80,7 +88,7 @@ em silêncio grava 0 bytes como sucesso, e a montagem (FFmpeg) quebra depois com
 Valide o clipe:
 
 ```bash
-node scripts/lib/check-download.cjs "output/clips/cena-<NN>-<tag>.mp4"
+node scripts/lib/check-download.cjs "<PROJ>/output/clips/cena-<NN>-<tag>.mp4"
 ```
 
 Se vier `ok: false`, o download falhou (clipe vazio ou truncado): **NÃO grave no save-crystal**
@@ -91,7 +99,7 @@ custa crédito extra). Só siga para o passo 4 quando vier `ok: true`.
 
 ```bash
 node scripts/pipeline-state.cjs set \
-  --root . --cena <N> --tipo video \
+  --root <PROJ> --cena <N> --tipo video \
   --job-id <JOB_ID_VIDEO> \
   --path "output/clips/cena-<NN>-<tag>.mp4" \
   --prompt-tag <tag>
@@ -104,11 +112,11 @@ Só **depois de ter gerado de fato** (gasto real). Nunca numa retomada/skip
 
 ```bash
 node scripts/lib/ledger.cjs append \
-  --root . --tipo video --cena <N> --job-id <JOB_ID_VIDEO> --marca "<cliente-ou-marca>"
+  --root <PROJ> --tipo video --cena <N> --job-id <JOB_ID_VIDEO> --marca "<projeto>"
 ```
 
-Trilha append-only em `output/.credit-ledger.jsonl`, separada do save-crystal. Crédito
-vem de `custos.cjs`. Total do run: `node scripts/lib/ledger.cjs summary --root .`.
+Trilha append-only em `<PROJ>/output/.credit-ledger.jsonl`, dentro do projeto e separada do
+save-crystal. Crédito vem de `custos.cjs`. Total: `node scripts/lib/ledger.cjs summary --root <PROJ>`.
 
 ## Retorno
 
@@ -118,6 +126,6 @@ vem de `custos.cjs`. Total do run: `node scripts/lib/ledger.cjs summary --root .
 ## Pegadinhas Windows
 
 - `curl` nativo (curl.exe). Para download use `-L` (segue redirect do rawUrl).
-- O save-crystal é o MESMO state de `gera-imagem` (`output/.pipeline-state.json`):
+- O save-crystal é o MESMO state de `gera-imagem` (`<PROJ>/output/.pipeline-state.json`):
   imagem e vídeo da mesma cena ficam sob a mesma chave de cena, em sub-registros
   `imagem` / `video`.

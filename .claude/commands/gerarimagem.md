@@ -5,13 +5,19 @@ argument-hint: "[descrição da cena]"
 
 # /gerarimagem
 
-Gera imagens com a cara da marca. O protocolo abaixo é obrigatório, na ordem. Não pule o
-preflight nem a checagem da RAG: são invariantes do Jotaro.
+Gera imagens com a cara da marca. O protocolo abaixo é obrigatório, na ordem. Não pule a
+escolha do projeto, o preflight nem a checagem da RAG: são invariantes do Jotaro.
+
+## Passo 0: escolha o projeto (obrigatório)
+
+Liste `projects/` (`ls projects/`), mostre os de `status: "ativo"` e pergunte pra qual gerar.
+Chame de `<PROJ>` o root escolhido (ex.: `projects/TraceDefense`) — todos os comandos abaixo
+usam esse `<PROJ>`. Marca nova: copie de `templates/` (ver "Projetos" no `CLAUDE.md`).
 
 ## Passo 1: entenda o estado
 
 Antes de tudo, confira:
-- Perfil de uso:
+- Perfil de uso (estado global do usuário, não do projeto):
   ```bash
   node scripts/jotaro-profile.cjs status --root .
   ```
@@ -23,9 +29,9 @@ Antes de tudo, confira:
   Se `pode_iniciar_fluxo: false`, rode o protocolo de `/revisao` antes de gastar crédito.
   Se a revisão falhar, pare e corrija antes de gerar.
 - O Higgsfield está conectado? Se não, aponte `/setup` e pare.
-- A pasta `RAG/identidade-visual/` tem ao menos uma imagem? **Se estiver vazia, pare** e peça
-  ao usuário que coloque pelo menos uma referência ali (veja `RAG/README.md`). Sem referência,
-  não há consistência.
+- A pasta `<PROJ>/RAG/identidade-visual/` tem ao menos uma imagem? **Se estiver vazia, pare** e
+  peça ao usuário que coloque pelo menos uma referência ali (veja `RAG/README.md`). Sem
+  referência, não há consistência.
 
 ## Passo 2: entreviste se o pedido for vago
 
@@ -40,25 +46,27 @@ Não gere no escuro. Espere as respostas.
 ## Passo 3: preflight de custo
 
 Rode `higgsfield-preflight` para o número de imagens que vai gerar (cada imagem = 2 créditos).
-Mostre o custo total e o saldo. Avise que a geração depende do Higgsfield conectado. **Se o
-saldo não cobre, pare** e informe o custo antes de continuar. Peça o ok do usuário.
+Mostre o custo total e o saldo, e **reconfirme o projeto `<PROJ>`** junto do custo. Avise que a
+geração depende do Higgsfield conectado. **Se o saldo não cobre, pare** e informe o custo antes
+de continuar. Peça o ok do usuário.
 
 ## Passo 4: busque a identidade
 
-Spawne o agente `rag` (via Task) para ler a pasta `RAG/` e devolver a identidade: anchor
-textual, paleta, estilo e os paths das imagens de referência.
+Spawne o agente `rag` (via Task) para ler o `RAG/` do projeto e devolver a identidade: anchor
+textual, paleta, estilo e os paths das referências. **Diga o projeto no spawn**
+(`{ objetivo: "ler identidade da marca", projeto: "<PROJ>" }`).
 
 ## Passo 5: monte o prompt
 
 Spawne o agente `prompt-smith` (via Task), passando a identidade que o `rag` devolveu e a
 intenção da cena. Ele devolve a shot-list no formato canônico, com o prompt pronto e os paths
-de referência relativos à raiz.
+de referência relativos ao projeto.
 
 ## Passo 6: gere
 
-Chame a skill `gera-imagem` para cada cena da shot-list. A skill usa as referências da `RAG/`
-e salva em `output/imagens/`. Depois de gerar, mostre ao usuário o path de cada imagem e
-pergunte se ficou bom ou se quer regerar alguma.
+Chame a skill `gera-imagem` (com `--root <PROJ>`) para cada cena da shot-list. A skill usa as
+referências de `<PROJ>/RAG/` e salva em `<PROJ>/output/imagens/`. Depois de gerar, mostre ao
+usuário o path de cada imagem e pergunte se ficou bom ou se quer regerar alguma.
 
 Depois que o fluxo de imagem terminar com sucesso, registre a cadência:
 

@@ -1,63 +1,46 @@
-# Pasta RAG, a identidade da sua marca
+# Pasta RAG, o HUB compartilhado do gerador
 
-Esta pasta é a memória de marca do gerador. É daqui que o Jotaro tira "quem é o personagem,
-qual a cara da marca, que história contar". Sem isso, ele gera imagem genérica. Com isso, ele
-gera a SUA imagem, consistente entre cenas.
+Esta pasta é o **HUB brand-agnostic** do gerador: o conhecimento de como montar bons prompts,
+os critérios de revisão e o guia de erros. Serve **todos os projetos** por igual e não muda
+de marca pra marca.
 
-Quanto melhor o que estiver aqui, melhor o resultado. Vale o tempo de preencher direito.
+> A **identidade de cada marca** (imagens de referência, `marca.md`, `narrativa.md`) **não fica
+> mais aqui** — vive em `projects/<nome>/RAG/`, isolada por projeto. Veja `projects/README.md`
+> e `templates/README.md`.
 
-## O que vai em cada lugar
-
-### `identidade-visual/`
-As imagens de referência do seu personagem ou produto. **A alavanca mais forte de
-consistência.** Coloque de 1 a 3 imagens do mesmo personagem em ângulos diferentes (frente,
-lado, costas, ou só variações de pose). O modelo usa essas imagens para manter a mesma cara
-em todas as cenas.
-
-- Formato: PNG ou JPG.
-- Quantidade: 1 funciona, 3 funciona melhor. Acima de 3 não ajuda muito.
-- Dica: imagens limpas, fundo simples, personagem bem visível.
-
-Vem com `mage1.png`, `mage2.png`, `mage3.png` (o mago do exemplo Trace Defense). Troque pelas
-suas quando for usar de verdade.
-
-### `marca.md`
-Quem é a marca: o que é o produto, qual o público, qual o personagem central, qual a paleta
-de cores, qual o tom. Editado em texto comum. O Jotaro lê isso para entender com o que está
-lidando.
-
-### `narrativa.md`
-A história que os criativos contam: o mundo, as fases, os inimigos ou obstáculos, o arco de
-um reel (gancho, clímax, fechamento). É o que dá enredo para as cenas.
+## O que vive aqui (HUB, compartilhado)
 
 ### `prompts/`
 A receita de como montar um bom prompt de imagem. Você normalmente não mexe aqui. É o
-conhecimento técnico que o `prompt-smith` usa para transformar a sua marca em prompts que
-funcionam:
+conhecimento técnico que o `prompt-smith` usa para transformar a identidade de uma marca em
+prompts que funcionam:
 
-- `padroes-de-prompt.md`: os 8 moldes de cena reutilizáveis (o HUB).
-- `exemplos.md`: como ler e adaptar o exemplo pronto.
-- `exemplo-shotlist-mago.json`: um reel inteiro de 6 cenas já montado, como referência.
+- `padroes-de-prompt.md`: os 8 moldes de cena reutilizáveis (o coração do HUB).
+- `exemplos.md`: como ler e adaptar uma shot-list pronta.
+- `exemplo-shotlist-mago.json`: um reel inteiro de 6 cenas já montado, como referência de formato.
 - `exemplo-shotlist-produto.json`: exemplo para produto físico.
 - `exemplo-shotlist-servico.json`: exemplo para serviço ou SaaS.
 
 ### `review/`
 Checklists que o Jotaro usa para revisar prompts, imagens, regeneração de cenas e o reel final.
-Eles evitam avaliação improvisada antes de gastar crédito de vídeo ou entregar o arquivo final.
+Evitam avaliação improvisada antes de gastar crédito de vídeo ou entregar o arquivo final.
 
 ### `troubleshooting.md`
 Guia de erros do gerador. Tabela de sintoma → causa → resposta → próximo passo. O Jotaro
 consulta aqui antes de improvisar quando algo falha.
 
-### Templates
-Use `marca-template.md` e `narrativa-template.md` quando for substituir o exemplo por uma
-marca nova.
+## Onde fica a identidade da marca (por projeto)
 
-## Como preencher para a sua marca
+Cada marca é um projeto autocontido em `projects/<nome>/RAG/`:
 
-1. Apague as três imagens do mago em `identidade-visual/` e coloque as suas.
-2. Reescreva `marca.md` com a sua marca (use `marca-template.md` como base).
-3. Reescreva `narrativa.md` com a sua história (use `narrativa-template.md` como base).
-4. Deixe `prompts/` como está. É genérico, serve para qualquer marca.
+- `identidade-visual/`: 1 a 3 imagens de referência (a alavanca mais forte de consistência).
+- `marca.md`: o que é a marca, público, sujeito central, paleta, tom, e o anchor canônico.
+- `narrativa.md`: a história e o arco do reel.
 
-Pronto isso, é só conversar com o Jotaro: "gere um reel de 6 cenas para a minha marca".
+O demo embarcado é `projects/TraceDefense/` (o mago do Trace Defense, com refs reais).
+
+## Começar uma marca nova
+
+Copie um molde de `templates/` (`brand-personagem`, `brand-produto` ou `brand-servico`) para
+`projects/<sua-marca>/`, preencha o `RAG/`, e troque o `status` do `project.json` para
+`"ativo"`. O passo a passo está em `templates/README.md`.

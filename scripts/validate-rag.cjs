@@ -1,6 +1,23 @@
 #!/usr/bin/env node
 'use strict';
 
+/**
+ * validate-rag.cjs — valida identidade de marca (por projeto) e o HUB compartilhado.
+ *
+ * Topologia multi-projeto:
+ *   - Identidade de marca vive em projects/<nome>/RAG/ (marca, narrativa, identidade-visual).
+ *   - O HUB brand-agnostic vive em RAG/ na raiz (prompts, review, troubleshooting, README).
+ *
+ * Modos:
+ *   --project <path>   valida a identidade de UM projeto (ex.: --project projects/TraceDefense)
+ *   --all-projects     varre projects/*: status "ativo" bloqueia, "rascunho" só avisa,
+ *                      "arquivado" é pulado
+ *   --hub              valida só o HUB compartilhado (RAG/ na raiz)
+ *   (sem modo)         valida HUB + all-projects (validação completa do produto) sob --root
+ *
+ * exit 0 = ok; exit 1 = alguma invariante bloqueante falhou. JSON no stdout.
+ */
+
 const fs = require('fs');
 const path = require('path');
 
@@ -39,23 +56,11 @@ function listImages(root) {
     .map((name) => `RAG/identidade-visual/${name}`);
 }
 
-function hasHeading(text, heading) {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^##\\s+${escaped}\\s*$`, 'mi').test(text);
-}
-
-function hasAnyHeading(text) {
-  const m = text.match(/^##\s+.+$/gm);
-  return m ? m.length : 0;
-}
-
 function hasHeadingMatching(text, pattern) {
-  const normalized = text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  const normalized = text.normalize('NFD').replace(/[̀-ͯ]/g, '');
   const escaped = pattern
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`^##\\s+.*${escaped}.*$`, 'mi').test(normalized);
 }
@@ -77,18 +82,52 @@ function extractAnchor(text) {
   return rest.slice(0, fenceEnd).trim();
 }
 
-function validate(root) {
+// ---------- validação de identidade de marca (um projeto) ----------
+function validateProject(projectRoot) {
   const checks = [];
-  function add(ok, name, detail) {
-    checks.push({ ok, name, detail: detail || null });
+  const add = (ok, name, detail) => checks.push({ ok, name, detail: detail || null });
+
+  add(exists(projectRoot, 'project.json'), 'projeto tem project.json');
+  add(exists(projectRoot, 'RAG/marca.md'), 'projeto tem RAG/marca.md');
+  add(exists(projectRoot, 'RAG/narrativa.md'), 'projeto tem RAG/narrativa.md');
+
+  const refs = listImages(projectRoot);
+  add(refs.length >= 1, 'projeto tem ao menos uma imagem de referencia', refs.join(', '));
+  add(refs.length <= 3, 'projeto tem no maximo tres imagens de referencia', refs.join(', '));
+  add(refs.every((ref) => ref.startsWith('RAG/identidade-visual/')), 'paths de refs sao relativos ao projeto');
+
+  if (exists(projectRoot, 'RAG/marca.md')) {
+    const marca = read(projectRoot, 'RAG/marca.md');
+    add(countSections(marca) >= 4, 'marca.md tem ao menos 4 secoes', `${countSections(marca)} encontradas`);
+    for (const kw of ['O que', 'Publico', 'Estilo visual', 'Tom da comunicacao']) {
+      add(hasHeadingMatching(marca, kw), `marca.md contem secao com "${kw}"`);
+    }
+    add(
+      hasHeadingMatching(marca, 'Personagem central') || hasHeadingMatching(marca, 'Produto central'),
+      'marca.md contem secao de personagem ou produto central'
+    );
+    const anchor = extractAnchor(marca);
+    add(anchor.length >= 80, 'marca.md contem anchor textual canonico', anchor.slice(0, 80));
+    add(/vertical 9:16 frame/i.test(anchor), 'anchor textual inclui vertical 9:16 frame');
   }
 
-  const requiredFiles = [
+  if (exists(projectRoot, 'RAG/narrativa.md')) {
+    const narrativa = read(projectRoot, 'RAG/narrativa.md');
+    add(countSections(narrativa) >= 3, 'narrativa.md tem ao menos 3 secoes', `${countSections(narrativa)} encontradas`);
+    for (const kw of ['Historia', 'Cenario', 'Como o']) {
+      add(hasHeadingMatching(narrativa, kw), `narrativa.md contem secao com "${kw}"`);
+    }
+  }
+
+  return { ok: checks.every((c) => c.ok), refs, checks };
+}
+
+// ---------- validação do HUB compartilhado ----------
+function validateHub(repoRoot) {
+  const checks = [];
+  const add = (ok, name, detail) => checks.push({ ok, name, detail: detail || null });
+  const hubFiles = [
     'RAG/README.md',
-    'RAG/marca.md',
-    'RAG/narrativa.md',
-    'RAG/marca-template.md',
-    'RAG/narrativa-template.md',
     'RAG/troubleshooting.md',
     'RAG/prompts/padroes-de-prompt.md',
     'RAG/prompts/exemplos.md',
@@ -100,56 +139,68 @@ function validate(root) {
     'RAG/review/reel-final.md',
     'RAG/review/regeneracao-cena.md',
   ];
+  for (const file of hubFiles) add(exists(repoRoot, file), `HUB tem ${file}`);
+  return { ok: checks.every((c) => c.ok), checks };
+}
 
-  for (const file of requiredFiles) {
-    add(exists(root, file), `arquivo presente: ${file}`);
+function projectStatus(projectRoot) {
+  try {
+    return JSON.parse(read(projectRoot, 'project.json')).status || null;
+  } catch (_) {
+    return null;
   }
+}
 
-  const refs = listImages(root);
-  add(refs.length >= 1, 'RAG tem ao menos uma imagem de referencia', refs.join(', '));
-  add(refs.length <= 3, 'RAG tem no maximo tres imagens de referencia', refs.join(', '));
-  add(refs.every((ref) => ref.startsWith('RAG/identidade-visual/')), 'paths de refs sao relativos');
+function listProjects(repoRoot) {
+  const dir = path.join(repoRoot, 'projects');
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => path.join(dir, d.name))
+    .filter((p) => fs.existsSync(path.join(p, 'project.json')));
+}
 
-  if (exists(root, 'RAG/marca.md')) {
-    const marca = read(root, 'RAG/marca.md');
-    const marcaSections = countSections(marca);
-    add(marcaSections >= 4, 'marca.md tem ao menos 4 secoes', `${marcaSections} encontradas`);
-
-    const marcaUniversal = ['O que', 'Publico', 'Estilo visual', 'Tom da comunicacao'];
-    for (const kw of marcaUniversal) {
-      add(hasHeadingMatching(marca, kw), `marca.md contem secao com "${kw}"`);
+// ---------- scan de todos os projetos respeitando status ----------
+function validateAllProjects(repoRoot) {
+  const projetos = [];
+  let blocked = false;
+  for (const projDir of listProjects(repoRoot)) {
+    const nome = path.basename(projDir);
+    const status = projectStatus(projDir);
+    if (status === 'arquivado') {
+      projetos.push({ nome, status, skipped: true, ok: true });
+      continue;
     }
-
-    const hasPersonagem = hasHeadingMatching(marca, 'Personagem central') ||
-      hasHeadingMatching(marca, 'Produto central');
-    add(hasPersonagem, 'marca.md contem secao de personagem ou produto central');
-
-    const anchor = extractAnchor(marca);
-    add(anchor.length >= 80, 'marca.md contem anchor textual canonico', anchor.slice(0, 80));
-    add(/vertical 9:16 frame/i.test(anchor), 'anchor textual inclui vertical 9:16 frame');
+    const r = validateProject(projDir);
+    // "ativo" bloqueia o produto; "rascunho" (ou status ausente) só avisa.
+    const bloqueia = status === 'ativo';
+    if (!r.ok && bloqueia) blocked = true;
+    projetos.push({ nome, status, ok: r.ok, bloqueia, checks: r.checks, refs: r.refs });
   }
-
-  if (exists(root, 'RAG/narrativa.md')) {
-    const narrativa = read(root, 'RAG/narrativa.md');
-    const narrSections = countSections(narrativa);
-    add(narrSections >= 3, 'narrativa.md tem ao menos 3 secoes', `${narrSections} encontradas`);
-
-    const narrUniversal = ['Historia', 'Cenario', 'Como o'];
-    for (const kw of narrUniversal) {
-      add(hasHeadingMatching(narrativa, kw), `narrativa.md contem secao com "${kw}"`);
-    }
-  }
-
-  const ok = checks.every((c) => c.ok);
-  return { ok, refs, checks };
+  return { ok: !blocked, projetos };
 }
 
 if (require.main === module) {
   const args = parseArgs(process.argv);
-  const root = path.resolve(args.root || '.');
-  const result = validate(root);
+  const repoRoot = path.resolve(args.root || '.');
+  let result;
+
+  if (args.project) {
+    result = validateProject(path.resolve(repoRoot, args.project));
+  } else if (args['all-projects']) {
+    result = validateAllProjects(repoRoot);
+  } else if (args.hub) {
+    result = validateHub(repoRoot);
+  } else {
+    // validação completa do produto: HUB + todos os projetos
+    const hub = validateHub(repoRoot);
+    const all = validateAllProjects(repoRoot);
+    result = { ok: hub.ok && all.ok, hub, projetos: all.projetos };
+  }
+
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   process.exit(result.ok ? 0 : 1);
 }
 
-module.exports = { validate, listImages, extractAnchor };
+module.exports = { validateProject, validateHub, validateAllProjects, listProjects, projectStatus, listImages, extractAnchor };

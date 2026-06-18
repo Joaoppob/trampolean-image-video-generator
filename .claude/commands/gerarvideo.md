@@ -9,10 +9,23 @@ Conduz o pipeline inteiro, das imagens ao reel montado. É o comando de maior cu
 6 cenas gasta 36 créditos. Por isso o protocolo é rigoroso e tem checkpoint de retomada. Siga
 na ordem, sem pular invariante.
 
+## Passo 0: escolha o projeto (obrigatório, antes de tudo)
+
+Não existe projeto fixo. Liste `projects/` e pergunte pra qual o usuário quer gerar:
+
+```bash
+ls projects/
+```
+
+Mostre os de `status: "ativo"`. Pergunte "Pra qual projeto?". Se só houver um, confirme.
+Chame de `<PROJ>` o root escolhido (ex.: `projects/TraceDefense`) — **todos os comandos
+abaixo usam esse `<PROJ>`**. Se o usuário quer uma marca nova, veja "Projetos" no `CLAUDE.md`
+(copiar de `templates/`).
+
 ## Passo 1: entenda o estado e cheque a retomada
 
 Antes de tudo:
-- Veja o perfil de uso:
+- Veja o perfil de uso (estado global do usuário, não do projeto):
   ```bash
   node scripts/jotaro-profile.cjs status --root .
   ```
@@ -26,14 +39,14 @@ Antes de tudo:
 - O Higgsfield está conectado? Se não, aponte `/setup` e pare.
 - O FFmpeg responde (`ffmpeg -version`)? Se não, aponte `/setup` (Passo 2) e pare. Não comece
   a gastar crédito sem o FFmpeg, senão você gera os clipes e não consegue montar.
-- **Existe `output/.pipeline-state.json`?** Se existir, há um run em andamento. Pergunte ao
-  usuário: retomar de onde parou (reaproveitando o que já foi gerado, sem regastar) ou começar
-  um run novo? Crédito gasto não volta: perder o que já existe custa dinheiro. Respeite a
-  escolha dele.
+- **Existe `<PROJ>/output/.pipeline-state.json`?** Se existir, há um run em andamento NESSE
+  projeto. Pergunte ao usuário: retomar de onde parou (reaproveitando o que já foi gerado, sem
+  regastar) ou começar um run novo? Crédito gasto não volta: perder o que já existe custa
+  dinheiro. Respeite a escolha dele.
 
 ## Passo 2: confirme as imagens de referência
 
-Liste o que tem em `RAG/identidade-visual/` e **confirme com o usuário antes de seguir**:
+Liste o que tem em `<PROJ>/RAG/identidade-visual/` e **confirme com o usuário antes de seguir**:
 
 > "Para o reel eu vou usar estas referências: [lista]. Posso seguir com elas?"
 
@@ -54,13 +67,14 @@ cada cena = 1 imagem (2 créditos) + 1 vídeo (4 créditos) = 6 créditos por ce
 cenas = 36 créditos.
 
 Mostre ao usuário, com clareza:
+- **O projeto** pra onde vai gerar (`<PROJ>`) — reconfirme aqui.
 - O custo total do run.
 - O saldo atual.
 - Quantos dias no free isso representa (ex.: 36 créditos = ~4 dias no teto de 10/dia).
 
 Avise que tudo depende do Higgsfield conectado. **Se o saldo não cobre o run inteiro, pare** e
 informe o custo. Ofereça gerar por partes (o checkpoint permite retomar amanhã) ou um plano
-pago. Peça o ok antes de gastar.
+pago. Peça o ok antes de gastar — confirmando projeto **e** custo na mesma frase.
 
 **GATE OBRIGATÓRIO — confirme o `veo3_1_lite` ANTES da primeira imagem.** Isto é um gate, não
 uma sugestão. No free, o `veo3_1_lite` é o único modelo de vídeo — ponto único de falha: sem
@@ -75,26 +89,27 @@ antes de gerar a primeira imagem** — avise o usuário e não dispare nenhuma g
 
 ## Passo 5: monte a shot-list
 
-Spawne o `rag` (via Task) para a identidade da marca. Depois spawne o `prompt-smith` (via Task)
-com a identidade e a intenção das cenas. Ele devolve a shot-list no formato canônico, uma
-entrada por cena, com os prompts prontos.
+Spawne o `rag` (via Task) para a identidade da marca — **diga qual é o projeto** no spawn
+(`{ objetivo: "ler identidade da marca", projeto: "<PROJ>" }`). Depois spawne o `prompt-smith`
+(via Task) com a identidade e a intenção das cenas. Ele devolve a shot-list no formato
+canônico, uma entrada por cena, com os prompts prontos (paths relativos ao projeto).
 
 ## Passo 6: loop por cena (o loop roda em você, não nas folhas)
 
-Para cada cena da shot-list, na ordem:
-1. Chame `gera-imagem` (2 créditos). Salva em `output/imagens/`.
+Para cada cena da shot-list, na ordem (todas as skills com `--root <PROJ>`):
+1. Chame `gera-imagem` (2 créditos). Salva em `<PROJ>/output/imagens/`.
 2. Chame `gera-video` sobre essa imagem (4 créditos, só `veo3_1_lite` no free). Salva em
-   `output/clips/`.
-3. Registre o progresso no `output/.pipeline-state.json` (a skill cuida disso): se o run cair,
-   dá para retomar daqui.
+   `<PROJ>/output/clips/`.
+3. Registre o progresso no `<PROJ>/output/.pipeline-state.json` (a skill cuida disso): se o run
+   cair, dá para retomar daqui.
 
 Mostre o progresso ao usuário a cada cena ("cena 3 de 6 pronta").
 
 ## Passo 7: monte o reel
 
 Pergunte se o usuário quer legenda queimada no fim (ex.: "BAIXE AGORA") e, se sim, qual texto.
-Chame a skill `editor-video` para juntar os clipes num reel 1080×1920 com a legenda opcional.
-O reel sai em `output/reels/reel-<timestamp-UTC>.mp4` (timestamp em UTC, sufixo `Z`).
+Chame a skill `editor-video` (com `--root <PROJ>`) para juntar os clipes num reel 1080×1920 com
+a legenda opcional. O reel sai em `<PROJ>/output/reels/reel-<timestamp-UTC>.mp4` (UTC, sufixo `Z`).
 
 ## Passo 8: entregue
 
@@ -102,19 +117,19 @@ Mostre o path final do reel. Diga que os clipes mudos do free não têm trilha (
 por fora se quiser). Pergunte se ficou bom ou se quer regerar alguma cena (o checkpoint deixa
 regerar só a cena ruim, sem refazer o reel inteiro).
 
-Mostre também o **custo real do run** pela trilha de auditoria (leitura, não gasta):
+Mostre também o **custo real do run** pela trilha de auditoria do projeto (leitura, não gasta):
 
 ```bash
-node scripts/lib/ledger.cjs summary --root .
+node scripts/lib/ledger.cjs summary --root <PROJ>
 ```
 
 O `total_creditos` confirma quanto este run efetivamente consumiu (deve bater com o preflight
 do Passo 4) e os `alertas` avisam se algum dia passou do teto free.
 
-Registre que o usuário completou um run:
+Registre que o usuário completou um run (perfil é estado global do usuário, fica em `--root .`):
 
 ```bash
-node scripts/jotaro-profile.cjs mark-run --root . --marca "<cliente-ou-marca>"
+node scripts/jotaro-profile.cjs mark-run --root . --marca "<projeto>"
 ```
 
 Se ainda não estiver em modo expert, ofereça: "Da próxima vez posso conduzir em modo expert,

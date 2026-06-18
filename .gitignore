@@ -1,20 +1,18 @@
 # === Saídas geradas (não versionar — só os .gitkeep das pastas) ===
-output/*
-!output/imagens/
-!output/clips/
-!output/reels/
-output/imagens/*
-!output/imagens/.gitkeep
-output/clips/*
-!output/clips/.gitkeep
-output/reels/*
-!output/reels/.gitkeep
+# Multi-projeto: output vive em projects/<nome>/output/ (e templates/<nome>/output/).
+# Os globs **/output/ cobrem qualquer projeto/template de uma vez.
+**/output/imagens/*
+!**/output/imagens/.gitkeep
+**/output/clips/*
+!**/output/clips/.gitkeep
+**/output/reels/*
+!**/output/reels/.gitkeep
 
-# === Temporários e estado de pipeline ===
+# === Temporários e estado de pipeline (por projeto) ===
 tmp/
-output/.pipeline-state.json
-output/.pipeline-state.json.corrupt-*
-output/.credit-ledger.jsonl
+**/output/.pipeline-state.json
+**/output/.pipeline-state.json.corrupt-*
+**/output/.credit-ledger.jsonl
 .claude/state/.review-cadence.json
 .claude/state/.jotaro-profile.json
 .claude/state/*.corrupt-*

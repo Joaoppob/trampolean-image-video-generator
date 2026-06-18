@@ -4,9 +4,8 @@ description: Jotaro explica as 4 etapas do gerador. Roda também no primeiro con
 
 # /explica-fluxo
 
-Antes de explicar, entenda o estado do sistema: dê uma olhada se a pasta `RAG/` já tem
-identidade preenchida e se o usuário parece novo ou já conhece. Ajuste a profundidade da
-explicação a isso.
+Antes de explicar, entenda o estado do sistema: veja quais projetos existem em `projects/` e
+se o usuário parece novo ou já conhece. Ajuste a profundidade da explicação a isso.
 
 Explique o fluxo de 4 etapas em linguagem simples, de quem nunca gerou um vídeo. Conduza um
 passo de cada vez, não despeje tudo junto.
@@ -14,11 +13,13 @@ passo de cada vez, não despeje tudo junto.
 ## O que dizer
 
 O gerador transforma a identidade da sua marca num reel vertical 9:16 (TikTok, Reels,
-Shorts). São 4 etapas:
+Shorts). Cada marca é um **projeto** em `projects/<nome>/` — eu pergunto pra qual a gente vai
+gerar antes de começar. São 4 etapas:
 
 1. **Identidade.** Você coloca as imagens do seu personagem ou produto na pasta
-   `RAG/identidade-visual/` e descreve a marca em `RAG/marca.md`. É daqui que eu tiro a cara
-   da sua marca. Sem isso, eu gero imagem genérica.
+   `projects/<projeto>/RAG/identidade-visual/` e descreve a marca em
+   `projects/<projeto>/RAG/marca.md`. É daqui que eu tiro a cara da sua marca. Sem isso, eu
+   gero imagem genérica.
 
 2. **Imagens.** Eu monto os prompts e gero as cenas, uma por uma, com a cara da sua marca.
    Cada imagem custa 2 créditos no Higgsfield.
@@ -26,7 +27,7 @@ Shorts). São 4 etapas:
 3. **Vídeo.** Eu animo cada imagem num clipe curto de 4 segundos. Cada clipe custa 4 créditos.
 
 4. **Montagem.** Eu junto os clipes num reel 9:16 e, se você quiser, queimo uma legenda (tipo
-   "BAIXE AGORA"). O reel pronto fica em `output/reels/`.
+   "BAIXE AGORA"). O reel pronto fica em `projects/<projeto>/output/reels/`.
 
 ## Pontos a deixar claros
 

@@ -62,9 +62,10 @@ não gasta crédito.
 ## Fechamento
 
 Confirme que as três coisas estão prontas: Higgsfield conectado (e reiniciado), FFmpeg
-respondendo, saldo conferido. Diga ao usuário que o próximo passo é colocar as imagens da
-marca em `RAG/identidade-visual/` (veja `RAG/README.md`) e então pedir um reel com
-`/gerarvideo`.
+respondendo, saldo conferido. Diga ao usuário que o próximo passo é escolher (ou criar) um
+projeto em `projects/` e colocar as imagens da marca em
+`projects/<projeto>/RAG/identidade-visual/` (veja `RAG/README.md` e `templates/README.md` pra
+começar uma marca nova), e então pedir um reel com `/gerarvideo`.
 
 ## Se a conexão falhar mais tarde
 

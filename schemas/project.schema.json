@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trampolean.local/schemas/project.schema.json",
+  "title": "Trampolean project marker",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nome", "status"],
+  "properties": {
+    "nome": { "type": "string", "minLength": 1 },
+    "tipo_marca": {
+      "type": "string",
+      "enum": ["personagem", "produto", "servico"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ativo", "rascunho", "arquivado"],
+      "description": "ativo = pronto, validado por inteiro; rascunho = em construção, não bloqueia o verify; arquivado = ignorado no scan."
+    },
+    "demo": {
+      "type": "boolean",
+      "description": "true = projeto demo embarcado (TraceDefense). Seus traços de marca podem aparecer no HUB como exemplo didático; o verify não trata isso como contaminação."
+    },
+    "descricao": { "type": "string" }
+  }
+}
