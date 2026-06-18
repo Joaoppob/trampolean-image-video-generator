@@ -81,7 +81,7 @@ var IN_DOMAIN = [
 ];
 
 var OFFTOPIC = [
-  /\b(codigo|programacao|programar|debug(ar)?|javascript|python|typescript|java\b|c\+\+|sql|html|css|regex|api\b|function\b|stack\s*trace|compil(ar|e|ador))\b/,
+  /\b(codigo|programacao|programar|debug(ar)?|javascript|python|typescript|java\b|c\+\+|sql|html|css|regex|function\b|stack\s*trace|compil(ar|e|ador))\b/,
   /\b(politica|eleicao|presidente|noticia|o\s+que\s+voce\s+acha\s+sobre|sua\s+opiniao)\b/,
   /\b(escrev[ae]\s+(um\s+)?(email|e-mail|texto|redacao|carta|artigo|poema|ensaio)|traduz[ae]?\b|traducao|resum[ae]\s+(este|esse|o)\s+texto)\b/,
 ];

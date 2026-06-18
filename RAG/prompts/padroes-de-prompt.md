@@ -95,7 +95,7 @@ Three-quarter front view, dynamic hero pose. {ANCHOR}. {fundo}, {iluminação}.
 {ESTILO+PALETA}, vertical 9:16.
 ```
 
-### 3. Close de ação ou carga: tensão, detalhe, expectativa
+### 3. Close de ação ou carga: buildup, detalhe, expectativa
 Use para construir expectativa antes do clímax (a magia carregando, o motor ligando).
 ```
 Close-up three-quarter shot. {ANCHOR}. {AÇÃO INTENSA + efeito de partícula ou luz}.

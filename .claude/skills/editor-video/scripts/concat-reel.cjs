@@ -45,7 +45,7 @@ function parseArgs(argv) {
 
 // ---------- 1. CHECK FFMPEG ----------
 function checkFfmpeg() {
-  const probe = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' });
+  const probe = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8', timeout: 5000 });
   if (!probe.error && probe.status === 0) {
     const firstLine = (probe.stdout || '').split('\n')[0].trim();
     return { ok: true, versao: firstLine };
@@ -114,10 +114,14 @@ function fontFileForOs() {
 function escapeDrawtext(text) {
   return String(text)
     .replace(/\\/g, '\\\\') // barra primeiro
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/=/g, '\\=')
     .replace(/:/g, '\\:')
     .replace(/%/g, '%%')
     .replace(/'/g, "'\\''")
-    .replace(/,/g, '\\,');
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, ' ');
 }
 
 // ---------- 2. filter_complex de concat (N clipes) ----------
@@ -268,6 +272,20 @@ function main() {
 
   // valida existencia dos clipes (resolve relativo a root)
   const resolved = clips.map((cl) => (path.isAbsolute(cl) ? cl : path.resolve(root, cl)));
+
+  // guard de path traversal: cada clip resolvido deve ser filho da raiz do repo
+  // nota: symlinks apontando fora da raiz NAO sao cobertos por este guard (sem realpath)
+  const rootAbs = path.resolve(root);
+  const rootCmp = process.platform === 'win32' ? rootAbs.toLowerCase() : rootAbs;
+  const fora = resolved.filter((p) => {
+    const pc = process.platform === 'win32' ? p.toLowerCase() : p;
+    return !pc.startsWith(rootCmp + path.sep);
+  });
+  if (fora.length) {
+    process.stdout.write(JSON.stringify({ ok: false, etapa: 'validacao-clips', erro: 'clip fora da raiz do repo', fora }) + '\n');
+    process.exit(1);
+  }
+
   const faltando = resolved.filter((p) => !fs.existsSync(p));
   if (faltando.length) {
     process.stdout.write(
@@ -325,7 +343,7 @@ function main() {
   }
 
   // 4. executa
-  const run = spawnSync('ffmpeg', ffArgs, { encoding: 'utf8' });
+  const run = spawnSync('ffmpeg', ffArgs, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   if (run.status !== 0) {
     process.stdout.write(
       JSON.stringify(

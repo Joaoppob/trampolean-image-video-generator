@@ -49,8 +49,8 @@ referência de formato.
 ## Como você monta
 
 1. Para cada cena, escolha o molde do HUB pela função narrativa:
-   gancho → molde 1 · apresentação → molde 2 · carga/tensão de detalhe → molde 3 ·
-   confronto → molde 4 · clímax/payoff → molde 5 · fechamento/CTA → molde 6.
+   gancho → molde 1 · apresentação → molde 2 · carga/buildup de detalhe → molde 3 ·
+   tensão/confronto → molde 4 · clímax/payoff → molde 5 · fechamento/CTA → molde 6.
    Para marca que não é jogo: detalhe de produto → molde 7 · lifestyle → molde 8.
 2. Injete o `{ANCHOR}` com o anchor textual da marca, fiel, sem reordenar os traços.
 3. Preencha os slots de cena (cenário, ação, obstáculo) com a intenção que veio do pedido.
@@ -68,6 +68,7 @@ Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json` e do contrat
   "campanha": "...",
   "cliente": "...",
   "formato": "vertical 9:16 mobile/TikTok",
+  "duracao_total_seg": 24,
   "modelo": "nano_banana_pro",
   "referencias_obrigatorias": ["RAG/identidade-visual/..."],
   "anchor_personagem": "...",
@@ -77,6 +78,12 @@ Devolva a shot-list no mesmo schema do `exemplo-shotlist-mago.json` e do contrat
   "gate_consistencia": { "criterio": "...", "passa": "6/6 ou 5/6" }
 }
 ```
+
+> **O schema é a fonte de verdade.** Campos obrigatórios (`schemas/shotlist.schema.json`):
+> `campanha`, `cliente`, `formato`, `duracao_total_seg`, `modelo`, `referencias_obrigatorias`,
+> `anchor_personagem`, `cenas`, `gate_consistencia`. O `duracao_total_seg` é o fim da última
+> cena (no free, nº de cenas × 4s). `data`, `round` e `objetivo` são opcionais. Não invente
+> campos: `additionalProperties: false`.
 
 Antes de devolver, confira os materiais de revisão:
 

@@ -15,4 +15,5 @@ const args = process.argv.slice(2);
 const r = spawnSync('node', [CANONICAL, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 process.stdout.write(r.stdout || '');
 if (r.stderr) process.stderr.write(r.stderr);
-process.exit(r.status || 0);
+if (r.error) { process.stderr.write('[pipeline-state-shim] spawn error: ' + r.error.message + '\n'); process.exit(1); }
+process.exit(r.status !== null ? r.status : 1);

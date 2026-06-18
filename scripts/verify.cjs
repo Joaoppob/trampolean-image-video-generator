@@ -288,7 +288,13 @@ function checkRbacContracts() {
     else fail(`leaf agent restricted tools ${rel(file)}`, forbidden.join(', '));
   }
 
-  const settings = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));
+  } catch (e) {
+    fail('settings.json readable', e.message);
+    return;
+  }
   const allowed = new Set(settings.permissions && settings.permissions.allow ? settings.permissions.allow : []);
   for (const tool of REQUIRED_CORE_TOOLS) {
     if (allowed.has(tool)) pass(`settings allows ${tool}`);
@@ -326,7 +332,13 @@ function checkRbacContracts() {
   };
 
   for (const [relativeFile, required] of Object.entries(requiredBySkill)) {
-    const fm = parseFrontmatter(path.join(ROOT, relativeFile));
+    let fm;
+    try {
+      fm = parseFrontmatter(path.join(ROOT, relativeFile));
+    } catch (e) {
+      fail(`${relativeFile} readable`, e.message);
+      continue;
+    }
     const tools = new Set(toolList(fm['allowed-tools']));
     for (const tool of required) {
       if (tools.has(tool)) pass(`${relativeFile} declares ${tool}`);
@@ -533,20 +545,32 @@ function checkDocs() {
     pass('no stale external fallback references');
   }
 
-  const rbac = fs.readFileSync(path.join(ROOT, '.claude', 'rbac.md'), 'utf8');
-  if (/\bmkdir\b/.test(rbac)) fail('rbac matches settings bash surface', 'mkdir still documented');
-  else pass('rbac matches settings bash surface');
-
-  const creditos = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'creditos.md'), 'utf8');
-  if (/higgsfield-preflight/i.test(creditos) || /sem um run associado/i.test(creditos)) {
-    fail('/creditos is separated from preflight', 'still references preflight as saldo mode');
-  } else {
-    pass('/creditos is separated from preflight');
+  try {
+    const rbac = fs.readFileSync(path.join(ROOT, '.claude', 'rbac.md'), 'utf8');
+    if (/\bmkdir\b/.test(rbac)) fail('rbac matches settings bash surface', 'mkdir still documented');
+    else pass('rbac matches settings bash surface');
+  } catch (e) {
+    fail('rbac matches settings bash surface', e.message);
   }
 
-  const editorSkill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'editor-video', 'SKILL.md'), 'utf8');
-  if (/abordagem A/i.test(editorSkill)) fail('editor-video docs have no dead approach label');
-  else pass('editor-video docs have no dead approach label');
+  try {
+    const creditos = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'creditos.md'), 'utf8');
+    if (/higgsfield-preflight/i.test(creditos) || /sem um run associado/i.test(creditos)) {
+      fail('/creditos is separated from preflight', 'still references preflight as saldo mode');
+    } else {
+      pass('/creditos is separated from preflight');
+    }
+  } catch (e) {
+    fail('/creditos is separated from preflight', e.message);
+  }
+
+  try {
+    const editorSkill = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'editor-video', 'SKILL.md'), 'utf8');
+    if (/abordagem A/i.test(editorSkill)) fail('editor-video docs have no dead approach label');
+    else pass('editor-video docs have no dead approach label');
+  } catch (e) {
+    fail('editor-video docs have no dead approach label', e.message);
+  }
 }
 
 function checkMcpConfig() {
@@ -617,6 +641,11 @@ const failed = results.filter((r) => !r.ok);
 for (const r of results) {
   const prefix = r.ok ? 'PASS' : 'FAIL';
   console.log(`${prefix} ${r.name}${r.detail ? ` :: ${r.detail}` : ''}`);
+}
+
+if (results.length === 0) {
+  console.error('FAIL: nenhum check foi executado — possível falha de setup');
+  process.exit(1);
 }
 
 if (failed.length) {

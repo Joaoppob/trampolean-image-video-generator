@@ -47,6 +47,8 @@
   ],
   "gate_consistencia": {
     "criterio": "produto reconhecivelmente o mesmo em todas as cenas",
-    "passa": "4/4 ou 3/4"
+    "passa": "4/4 ou 3/4",
+    "regerar_cenas_falhas": "2/4 - regerar apenas as cenas falhas com prompt mais especifico e as mesmas referencias",
+    "pausar_para_revisao": "menos de 2/4 - pausar, revisar anchor/referencias com o usuario e nao gastar mais credito no escuro"
   }
 }

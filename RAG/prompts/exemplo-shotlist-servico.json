@@ -55,6 +55,8 @@
   ],
   "gate_consistencia": {
     "criterio": "identidade teal/branco e estilo de interface reconheciveis em todas as cenas",
-    "passa": "5/5 ou 4/5"
+    "passa": "5/5 ou 4/5",
+    "regerar_cenas_falhas": "3/5 - regerar apenas as cenas falhas com prompt mais especifico e as mesmas referencias",
+    "pausar_para_revisao": "menos de 3/5 - pausar, revisar anchor/referencias com o usuario e nao gastar mais credito no escuro"
   }
 }

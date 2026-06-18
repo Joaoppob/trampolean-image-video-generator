@@ -31,6 +31,14 @@ node scripts/pipeline-state.cjs get \
 Se `existe: true` (já tem `job_id` + `path`), **NÃO regere** — crédito não volta.
 Reuse o `job_id`/`path` do registro e siga. Só gere se `existe: false`.
 
+**Reconciliação state-vs-disco.** Se `get` retorna `existe: false` MAS o arquivo
+`salvar_em` da cena já existe no disco (cheque com `fs.existsSync`), **NÃO regere** —
+o crédito já foi gasto num run anterior cujo state se perdeu. Em vez disso, reconstrua
+o registro no state com um `set` usando `--job-id recovered-from-disk` e o `--path` do
+arquivo encontrado, e siga. Só gere de fato quando `existe: false` **E** o arquivo não
+existe no disco. Limitação: se o usuário renomeou o arquivo, a reconciliação não detecta
+(o path do state não bate com o disco) e a cena será regerada.
+
 ### 1. Subir as referências (ou reusar media_ids do run)
 
 Para cada ref que ainda não tem `media_id` neste run:

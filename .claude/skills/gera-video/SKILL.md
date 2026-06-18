@@ -45,6 +45,14 @@ node scripts/pipeline-state.cjs get \
 
 Se `existe: true`, **NÃO regere** — reuse o `path` do clipe e siga.
 
+**Reconciliação state-vs-disco.** Se `get` retorna `existe: false` MAS o clipe da cena
+já existe no disco em `output/clips/` (cheque com `fs.existsSync`), **NÃO regere** — o
+crédito já foi gasto num run anterior cujo state se perdeu. Em vez disso, reconstrua o
+registro no state com um `set` usando `--job-id recovered-from-disk` e o `--path` do
+clipe encontrado, e siga. Só gere de fato quando `existe: false` **E** o clipe não existe
+no disco. Limitação: se o usuário renomeou o arquivo, a reconciliação não detecta (o path
+do state não bate com o disco) e a cena será regerada.
+
 ### 1. Gerar o vídeo
 
 Chame `mcp__higgsfield__generate_video` com:

@@ -58,7 +58,18 @@ function save(root, profile) {
   profile.atualizado_em = new Date().toISOString();
   const tmp = `${p}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(profile, null, 2) + '\n', 'utf8');
-  fs.renameSync(tmp, p);
+  // fallback copy+unlink NAO e atomico (aceitavel: state single-agent sequencial)
+  try {
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    if (e.code === 'EXDEV') {
+      fs.copyFileSync(tmp, p);
+      fs.unlinkSync(tmp);
+      process.stderr.write('[jotaro-profile] EXDEV: fallback copy+unlink para ' + p + '\n');
+    } else {
+      throw e;
+    }
+  }
   return profile;
 }
 

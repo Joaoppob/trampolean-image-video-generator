@@ -88,7 +88,18 @@ function save(root, state) {
   // escrita atomica: tmp + rename (evita state truncado se cair no meio)
   const tmp = p + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(state, null, 2) + '\n', 'utf8');
-  fs.renameSync(tmp, p);
+  // fallback copy+unlink NAO e atomico (aceitavel: state single-agent sequencial)
+  try {
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    if (e.code === 'EXDEV') {
+      fs.copyFileSync(tmp, p);
+      fs.unlinkSync(tmp);
+      process.stderr.write('[pipeline-state] EXDEV: fallback copy+unlink para ' + p + '\n');
+    } else {
+      throw e;
+    }
+  }
 }
 
 function cmdGet(root, cena, tipo) {
@@ -166,7 +177,7 @@ if (require.main === module) {
       };
   }
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-  process.exit(0);
+  process.exit(result && result.erro ? 1 : 0);
 }
 
 module.exports = { load, save, cmdGet, cmdSet, cmdMedia, cmdMediaGet, statePath };

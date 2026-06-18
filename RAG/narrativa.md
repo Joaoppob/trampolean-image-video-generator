@@ -16,8 +16,8 @@ O arco visual de um reel segue essa curva:
 
 1. **Gancho**: a vila sob ataque, a ameaça avançando. Tensão imediata, sem o mago ainda.
 2. **Aparição**: o mago entra em pose heroica. O público reconhece o herói.
-3. **Carga**: o mago ergue o cajado, a magia carrega, o cristal brilha. Expectativa.
-4. **Tensão/confronto**: os inimigos avançam, o mago aparece em desvantagem aparente.
+3. **Tensão/confronto**: os inimigos avançam, o mago aparece em desvantagem aparente.
+4. **Carga**: o mago ergue o cajado, a magia carrega, o cristal brilha. Expectativa.
 5. **Impacto**: o feitiço explode e varre os inimigos. O payoff, a entrega de valor.
 6. **CTA**: pose vitoriosa, vila salva, espaço limpo para a chamada "BAIXE AGORA".
 
@@ -46,6 +46,6 @@ inimigos para trás com motion blur, entrega a sensação de poder.
 ## Como o `prompt-smith` usa esta narrativa
 
 A curva de 6 cenas mapeia direto nos templates do HUB (`prompts/padroes-de-prompt.md`):
-gancho → template 1, aparição → template 2, carga → template 3, tensão/confronto → template 4,
+gancho → template 1, aparição → template 2, tensão/confronto → template 4, carga → template 3,
 impacto → template 5, CTA → template 6. Os inimigos e o cenário preenchem os slots de
 ação e fundo. O efeito de magia é o "efeito principal" do template de payoff.
