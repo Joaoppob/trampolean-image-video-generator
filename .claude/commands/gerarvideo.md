@@ -62,6 +62,12 @@ Avise que tudo depende do Higgsfield conectado. **Se o saldo não cobre o run in
 informe o custo. Ofereça gerar por partes (o checkpoint permite retomar amanhã) ou um plano
 pago. Peça o ok antes de gastar.
 
+**Confirme o modelo de vídeo antes de gastar.** No free, o `veo3_1_lite` é o único modelo de
+vídeo — ponto único de falha: sem ele não há reel. Como o loop (Passo 6) cobra a imagem antes
+do vídeo, confirme que o `veo3_1_lite` está disponível na conexão Higgsfield atual **agora,
+antes de gerar a primeira imagem**. Se estiver indisponível, **avise e pare aqui** — não gere
+N imagens para depois descobrir que o vídeo é impossível (crédito de imagem gasto não volta).
+
 ## Passo 5: monte a shot-list
 
 Spawne o `rag` (via Task) para a identidade da marca. Depois spawne o `prompt-smith` (via Task)

@@ -78,6 +78,23 @@ O script imprime JSON:
   retornar erro de crédito, é o teto batendo — pause e retome quando o pool
   renovar (não é falha do pipeline).
 
+### 4. SPOF do vídeo: confirme o `veo3_1_lite` ANTES de gastar imagem
+
+No free tier, `veo3_1_lite` é o **único** modelo de vídeo — ponto único de falha (SPOF):
+sem ele não há reel. O cálculo de custo acima é determinístico e offline; ele NÃO sabe se o
+modelo de vídeo está disponível agora. Por isso a sonda de disponibilidade é **procedimento
+do operador**, não lógica do script.
+
+Quando o run **inclui vídeo** (`--com-video` não é `false`):
+
+1. Antes de gastar o primeiro crédito de imagem, confirme que o `veo3_1_lite` está disponível
+   na conexão Higgsfield atual (o pipeline hoje cobra a imagem primeiro e só descobriria o
+   vídeo indisponível depois — gastando N imagens à toa).
+2. Se o `veo3_1_lite` estiver **indisponível** e o objetivo é um reel, **avise o usuário e
+   PARE antes de gerar qualquer imagem.** Não adianta produzir as imagens se o vídeo é
+   impossível — o crédito de imagem gasto não volta e o reel não fecha.
+3. Para um run **só de imagens** (`--com-video false`), este passo não se aplica.
+
 ## Combina saldo real + estimativa
 
 A decisão usa **saldo real** (do tool MCP) **e** o **custo estimado** (fórmula fixa

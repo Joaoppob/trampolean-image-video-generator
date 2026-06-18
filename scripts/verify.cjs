@@ -514,6 +514,65 @@ function checkPromptLint() {
   }
 }
 
+function checkAnchorTraits() {
+  // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
+  // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
+  // anchor (provado: a consistencia vem da repeticao dos traços-nucleo, nao do
+  // anchor verbatim — abreviar mantendo os traços funciona, 6/6 no exemplo).
+  // Cenas parcial/ausente (ou sem o campo) sao isentas: nelas o anchor nao
+  // precisa reaparecer.
+  const STOPLIST = new Set([
+    'same', 'from', 'the', 'with', 'and', 'character', 'reference', 'images',
+    'image', 'style', 'colors', 'color', 'frame', 'vertical', 'mobile',
+    'cartoon', 'saturated', 'bold', 'outlines', 'soft', 'shadows', 'premium',
+    'lifestyle', 'product', 'photography', 'modern', 'clean', 'minimal',
+    'service', 'brand', 'identity', 'warm', 'neutral', 'palette',
+  ]);
+  const MIN_TRAITS = 3;
+
+  function distinctiveTokens(text) {
+    const words = String(text || '')
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => /^[a-z]+$/.test(w) && w.length >= 4 && !STOPLIST.has(w));
+    return new Set(words);
+  }
+
+  const dir = path.join(ROOT, 'RAG', 'prompts');
+  const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
+
+  for (const file of files) {
+    const name = rel(file);
+    let json;
+    try {
+      json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (_) {
+      continue; // outros checks ja sinalizam parse quebrado
+    }
+    if (!Array.isArray(json.cenas)) continue;
+
+    const anchorTokens = distinctiveTokens(json.anchor_personagem);
+
+    for (let i = 0; i < json.cenas.length; i++) {
+      const cena = json.cenas[i];
+      if (cena.personagem_visivel !== 'completo') continue; // parcial/ausente/sem campo: isento
+      const promptLower = String(cena.prompt || '').toLowerCase();
+      let hits = 0;
+      for (const token of anchorTokens) {
+        if (promptLower.includes(token)) hits++;
+      }
+      if (hits >= MIN_TRAITS) {
+        pass(`anchor-traits ${name} cena ${cena.n}`);
+      } else {
+        fail(
+          `anchor-traits ${name} cena ${cena.n}`,
+          `só ${hits} traços distintivos do anchor (mín ${MIN_TRAITS})`
+        );
+      }
+    }
+  }
+}
+
 function checkHookRegistered() {
   const settingsPath = path.join(ROOT, '.claude', 'settings.json');
   if (!fs.existsSync(settingsPath)) {
@@ -643,6 +702,7 @@ checkSchemas();
 checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
+checkAnchorTraits();
 checkDocs();
 
 const failed = results.filter((r) => !r.ok);

@@ -55,8 +55,10 @@ referência de formato.
 2. Injete o `{ANCHOR}` com o anchor textual da marca, fiel, sem reordenar os traços.
 3. Preencha os slots de cena (cenário, ação, obstáculo) com a intenção que veio do pedido.
 4. Feche cada prompt com o estilo e a paleta da marca, mais `vertical 9:16 frame`.
-5. Repita o anchor inteiro em toda cena que mostra o personagem. É o que segura a identidade.
-   Em cena de costas ou parcial, liste só o que aparece.
+5. Repita os traços distintivos do anchor em toda cena de personagem completo. É o que segura
+   a identidade. Não precisa ser o anchor verbatim — abreviar mantendo os traços-núcleo
+   funciona (provado 6/6 no exemplo). Em cena de costas ou parcial, liste só os traços do que
+   aparece; em cena onde o personagem não aparece, o anchor não entra.
 
 ## Contrato de saída
 

@@ -61,6 +61,10 @@
             "pattern": "^[0-9]+-[0-9]+$"
           },
           "intencao": { "type": "string", "minLength": 10 },
+          "personagem_visivel": {
+            "type": "string",
+            "enum": ["completo", "parcial", "ausente"]
+          },
           "prompt": {
             "type": "string",
             "minLength": 80,

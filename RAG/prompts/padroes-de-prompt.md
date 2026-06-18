@@ -38,8 +38,12 @@ no gate). Monte o prompt nesta ordem:
 - **Câmera por tipo de plano, não por lente.** Use `establishing shot`, `three-quarter view`,
   `low-angle`, `close-up`, `hero shot`, `over-the-shoulder`. Termos de lente (35mm etc.) esses
   modelos cartoon respeitam pouco.
-- **Repetir o anchor em cada cena é feature, não bug.** O anchor inteiro reaparece em toda
-  cena. É isso que segura a identidade entre frames independentes.
+- **Repetir os traços distintivos do anchor em cada cena é feature, não bug.** Em cada cena de
+  personagem/sujeito **completo**, os traços-núcleo do anchor reaparecem — é isso que segura a
+  identidade entre frames independentes. Não é preciso repetir o anchor verbatim: abreviar
+  mantendo os traços distintivos funciona (provado 6/6 no reel do mago, onde cada cena usa um
+  recorte do anchor, não o bloco inteiro). Em cena **parcial** (de costas, recorte) repita só
+  os traços do que aparece; em cena onde o personagem está **ausente**, o anchor não entra.
 
 ---
 

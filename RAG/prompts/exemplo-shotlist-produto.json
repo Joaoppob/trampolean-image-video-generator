@@ -17,6 +17,7 @@
       "tag": "hook-problema",
       "tempo_seg": "0-4",
       "intencao": "Mostrar o problema antes do produto",
+      "personagem_visivel": "ausente",
       "prompt": "Premium lifestyle product ad style, vertical 9:16 frame. Close shot of a cluttered bathroom counter at warm morning light, ordinary bottles scattered, visual tension and lack of focus, no readable text, no logo, clean cinematic shadows.",
       "salvar_em": "output/imagens/produto-cena-01-hook.png"
     },
@@ -25,6 +26,7 @@
       "tag": "produto-hero",
       "tempo_seg": "4-8",
       "intencao": "Apresentar o produto como solucao",
+      "personagem_visivel": "completo",
       "prompt": "Centered hero product shot. Same premium product from the reference images: compact matte black bottle, copper metallic cap, minimal white label, rounded shoulders, soft studio reflections. Warm neutral background, premium lifestyle product photography style, vertical 9:16 frame.",
       "salvar_em": "output/imagens/produto-cena-02-hero.png"
     },
@@ -33,6 +35,7 @@
       "tag": "detalhe",
       "tempo_seg": "8-12",
       "intencao": "Destacar textura e acabamento",
+      "personagem_visivel": "completo",
       "prompt": "Macro detail shot of the same premium product from the reference images, copper metallic cap catching warm light, matte black surface with subtle texture, shallow depth of field, premium lifestyle product photography style, warm neutral palette, vertical 9:16 frame.",
       "salvar_em": "output/imagens/produto-cena-03-detalhe.png"
     },
@@ -41,7 +44,8 @@
       "tag": "cta-clean",
       "tempo_seg": "12-16",
       "intencao": "Fechamento limpo com espaco para chamada",
-      "prompt": "Final clean composition, same premium product from the reference images centered on a warm stone surface, soft morning light, uncluttered background, empty space at top and bottom for later text overlay, no text, no logo, no UI. Premium lifestyle product photography style, vertical 9:16 frame.",
+      "personagem_visivel": "completo",
+      "prompt": "Final clean composition, same premium product from the reference images: compact matte black bottle, copper metallic cap, minimal white label, rounded shoulders, centered on a warm stone surface, soft morning light, uncluttered background, empty space at top and bottom for later text overlay, no text, no logo, no UI. Premium lifestyle product photography style, vertical 9:16 frame.",
       "salvar_em": "output/imagens/produto-cena-04-cta.png"
     }
   ],
