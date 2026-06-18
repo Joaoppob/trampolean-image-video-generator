@@ -17,27 +17,12 @@
  * Sai com JSON no stdout. exit 0 sempre (a decisao esta no campo pode_prosseguir).
  */
 
-const CUSTO_IMAGEM = 2;
-const CUSTO_VIDEO = 4;
-const TETO_DIA_FREE = 10;
+const custos = require('../../../../scripts/lib/custos.cjs');
+const parseArgs = require('../../../../scripts/lib/parse-args.cjs');
 
-function parseArgs(argv) {
-  const out = {};
-  for (let i = 2; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith('--')) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith('--')) {
-        out[key] = true;
-      } else {
-        out[key] = next;
-        i++;
-      }
-    }
-  }
-  return out;
-}
+const CUSTO_IMAGEM = custos.IMAGEM;
+const CUSTO_VIDEO = custos.VIDEO;
+const TETO_DIA_FREE = custos.TETO_DIA;
 
 function toBool(v, def) {
   if (v === undefined) return def;
@@ -49,7 +34,10 @@ function preflight({ cenas, saldo, comVideo, tetoDia }) {
   if (cenas === undefined || cenas === null || cenas === '') {
     return { erro: 'numero de cenas invalido ou ausente (use --cenas <N>)' };
   }
-  const n = Math.max(0, Math.floor(Number(cenas) || 0));
+  if (!Number.isFinite(Number(cenas))) {
+    return { erro: `numero de cenas invalido: nao e numero (recebido: ${String(cenas)})` };
+  }
+  const n = Math.max(0, Math.floor(Number(cenas)));
   if (n === 0) {
     return { erro: 'numero de cenas deve ser pelo menos 1 (recebido: 0)' };
   }

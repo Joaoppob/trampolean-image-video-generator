@@ -24,24 +24,7 @@ const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-
-function parseArgs(argv) {
-  const out = {};
-  for (let i = 2; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith('--')) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith('--')) {
-        out[key] = true;
-      } else {
-        out[key] = next;
-        i++;
-      }
-    }
-  }
-  return out;
-}
+const parseArgs = require('../../../../scripts/lib/parse-args.cjs');
 
 // ---------- 1. CHECK FFMPEG ----------
 function checkFfmpeg() {

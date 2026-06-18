@@ -3,27 +3,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const parseArgs = require('./lib/parse-args.cjs');
 
 const STATE_REL = path.join('.claude', 'state', '.review-cadence.json');
 const SUGGEST_AFTER = 2;
-
-function parseArgs(argv) {
-  const out = {};
-  for (let i = 3; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith('--')) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith('--')) {
-        out[key] = true;
-      } else {
-        out[key] = next;
-        i++;
-      }
-    }
-  }
-  return out;
-}
 
 function statePath(root) {
   return path.resolve(root || '.', STATE_REL);
@@ -146,7 +129,7 @@ function reset(root) {
 
 if (require.main === module) {
   const sub = process.argv[2] || 'status';
-  const args = parseArgs(process.argv);
+  const args = parseArgs(process.argv, 3);
   const root = args.root || '.';
   let result;
   switch (sub) {

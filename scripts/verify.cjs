@@ -5,6 +5,8 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const validateSchema = require('./lib/validate-schema.cjs');
+const custos = require('./lib/custos.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -354,6 +356,7 @@ function checkSchemas() {
     'shotlist.schema.json',
     'pipeline-state.schema.json',
     'jotaro-profile.schema.json',
+    'review-cadence.schema.json',
   ];
   for (const name of required) {
     const file = path.join(schemaDir, name);
@@ -377,9 +380,35 @@ function parseTempo(value) {
   return { start: Number(m[1]), end: Number(m[2]) };
 }
 
+function checkCustosCanonicos() {
+  // ancora: custos.cjs e a fonte unica de custos. Se alguem mudar um valor sem
+  // querer, o verify sinaliza. Nao grep nos markdown (frágil) — so a constante.
+  const esperado = { IMAGEM: 2, VIDEO: 4, TETO_DIA: 10 };
+  for (const [k, v] of Object.entries(esperado)) {
+    if (custos[k] === v) pass(`custos canonicos ${k}=${v}`);
+    else fail(`custos canonicos ${k}=${v}`, `custos.cjs exporta ${k}=${custos[k]}`);
+  }
+}
+
 function checkShotlists() {
   const dir = path.join(ROOT, 'RAG', 'prompts');
   const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
+
+  // schema real e a fonte de verdade: campos obrigatorios, refs relativas,
+  // cenas nao-vazias, save path, prompt 9:16, minLengths, patterns — tudo
+  // delegado para schemas/shotlist.schema.json via validate-schema.cjs.
+  let shotlistSchema = null;
+  try {
+    shotlistSchema = JSON.parse(
+      fs.readFileSync(path.join(ROOT, 'schemas', 'shotlist.schema.json'), 'utf8')
+    );
+  } catch (e) {
+    fail('shotlist schema loadable', e.message);
+  }
+
+  // duracao por cena (4s) NAO e expressavel no schema: regra do produto, mantida aqui.
+  const DUR = custos.DURACAO_CENA_SEG;
+
   for (const file of files) {
     const name = rel(file);
     let json;
@@ -391,50 +420,28 @@ function checkShotlists() {
       continue;
     }
 
-    const requiredTop = [
-      'campanha',
-      'cliente',
-      'formato',
-      'duracao_total_seg',
-      'modelo',
-      'referencias_obrigatorias',
-      'anchor_personagem',
-      'cenas',
-      'gate_consistencia',
-    ];
-    for (const key of requiredTop) {
-      if (Object.prototype.hasOwnProperty.call(json, key)) pass(`shot-list ${name} has ${key}`);
-      else fail(`shot-list ${name} has ${key}`, 'missing');
+    // validacao estrutural contra o schema real (substitui as regras hand-coded)
+    if (shotlistSchema) {
+      const res = validateSchema(shotlistSchema, json);
+      if (res.valid) pass(`schema-valid ${name}`);
+      else fail(`schema-valid ${name}`, res.errors.join('; '));
     }
 
-    const refs = Array.isArray(json.referencias_obrigatorias) ? json.referencias_obrigatorias : [];
-    if (refs.length >= 1 && refs.every((r) => /^RAG\/identidade-visual\/[^/]+\.(png|jpg|jpeg|webp)$/i.test(r))) {
-      pass(`shot-list refs relative ${name}`);
-    } else {
-      fail(`shot-list refs relative ${name}`, JSON.stringify(refs));
-    }
-
+    // checks NAO cobertos pelo schema: cadencia temporal de DUR s por cena,
+    // cumulativa a partir de 0, e coerencia com duracao_total_seg.
     if (!Array.isArray(json.cenas) || json.cenas.length === 0) {
-      fail(`shot-list scenes nonempty ${name}`, 'missing cenas');
+      // o schema ja sinaliza isso; aqui so evitamos crashar o timing check.
       continue;
     }
-    pass(`shot-list scenes nonempty ${name}`);
-
     let expectedStart = 0;
     let tempoOk = true;
     for (let i = 0; i < json.cenas.length; i++) {
       const cena = json.cenas[i];
       const tempo = parseTempo(cena.tempo_seg);
-      if (!tempo || tempo.start !== expectedStart || tempo.end - tempo.start !== 4) {
+      if (!tempo || tempo.start !== expectedStart || tempo.end - tempo.start !== DUR) {
         tempoOk = false;
       } else {
         expectedStart = tempo.end;
-      }
-      if (!/^output\/imagens\/[^/]+\.png$/.test(String(cena.salvar_em || ''))) {
-        fail(`shot-list save path valid ${name} cena ${i + 1}`, cena.salvar_em);
-      }
-      if (!/9:16/.test(String(cena.prompt || ''))) {
-        fail(`shot-list prompt mentions 9:16 ${name} cena ${i + 1}`, cena.prompt);
       }
     }
     if (tempoOk && json.duracao_total_seg === expectedStart) pass(`shot-list timing coherent ${name}`);
@@ -633,6 +640,7 @@ checkJotaroProfile();
 checkReviewCadence();
 checkRbacContracts();
 checkSchemas();
+checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
 checkDocs();
