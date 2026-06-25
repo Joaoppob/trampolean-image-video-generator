@@ -1,0 +1,57 @@
+{
+  "campanha": "mago-magia-cta-baixar-agora",
+  "cliente": "trace-defense",
+  "plataforma": "tiktok",
+  "formato": "vertical 9:16",
+  "n_cenas": 6,
+  "cenas": [
+    {
+      "n": 1,
+      "beat_narrativo": "gancho",
+      "descricao_visual": "Plano aberto em contra-plongee da vila medieval cartoon sob ataque na hora dourada. Uma horda de monstros estilizados avanca em direcao a camera: slime azul gelatinoso, pequeno dragao vermelho, goblin verde armado com chifres, verme rosa dentado. Torre de castelo de pedra ao fundo, fumaca leve no horizonte. O mago ainda nao aparece: o foco e a ameaca.",
+      "mood": "tenso, ameacador, urgente",
+      "duracao_seg": 4,
+      "personagem_presente": "ausente"
+    },
+    {
+      "n": 2,
+      "beat_narrativo": "desenvolvimento-1",
+      "descricao_visual": "O mago surge em pose heroica, vista de tres-quartos de frente, capa esvoacante ao vento. Caminho de floresta ao fundo com a torre de pedra distante, iluminacao de hora dourada, um leve brilho roxo comecando a despontar no cristal do cajado.",
+      "mood": "heroico, esperanca surgindo",
+      "duracao_seg": 4,
+      "personagem_presente": "completo"
+    },
+    {
+      "n": 3,
+      "beat_narrativo": "desenvolvimento-2",
+      "descricao_visual": "Plano de acao dramatico em contra-plongee. O mago aparece de costas em primeiro plano (chapeu e ombros visiveis, vista parcial do cajado). De frente para a camera, os inimigos avancam agressivamente a meio-passo: slime azul, goblin verde armado com chifres, pequeno dragao vermelho. Chao de batalha na floresta, particulas de poeira no ar, contraluz dramatica.",
+      "mood": "tensao maxima, desvantagem aparente",
+      "duracao_seg": 4,
+      "personagem_presente": "parcial"
+    },
+    {
+      "n": 4,
+      "beat_narrativo": "desenvolvimento-3",
+      "descricao_visual": "Close em tres-quartos do mago carregando a magia. Cajado erguido bem acima da cabeca com as duas maos, cristal roxo no topo emitindo um brilho radiante intenso, particulas douradas reunindo-se e girando ao redor do cristal. Olhos do mago brilhando em ambar fraco, boca entoando o feitico, capa ondulando dramaticamente. Fundo de floresta escura, contraluz roxo-magenta.",
+      "mood": "expectativa, carga de poder",
+      "duracao_seg": 4,
+      "personagem_presente": "completo"
+    },
+    {
+      "n": 5,
+      "beat_narrativo": "climax",
+      "descricao_visual": "Plano aberto de acao. O mago no meio do disparo, as duas maos estendidas para frente, um vortice magico roxo-magenta gigantesco irrompendo das maos, particulas douradas e raios de energia magenta girando. Os monstros (slime azul, goblin verde armado, pequeno dragao vermelho) sao arremessados para tras pelo impacto, com efeitos de impacto e linhas de motion blur. Campo de batalha na floresta iluminado de roxo pelo vortice.",
+      "mood": "payoff explosivo, virada de jogo",
+      "duracao_seg": 4,
+      "personagem_presente": "completo"
+    },
+    {
+      "n": 6,
+      "beat_narrativo": "cta",
+      "descricao_visual": "Pose final de heroi vitorioso, hero shot. O mago de pe em primeiro plano de frente para a camera (corpo inteiro visivel), cajado fincado no chao ao lado dele apontando para cima com o cristal roxo brilhando suavemente. Vila medieval salva e castelo de pedra intacto ao fundo, ceu de amanhecer com gradiente laranja-rosa quente, brilho dourado tranquilo. Composicao limpa com espaco vazio no topo e na base para o texto de CTA ser inserido depois; sem texto, sem logo, sem elementos de UI na imagem.",
+      "mood": "triunfo, alivio, convite final",
+      "duracao_seg": 4,
+      "personagem_presente": "completo"
+    }
+  ]
+}

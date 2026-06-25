@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trampolean.local/schemas/storyboard.schema.json",
+  "title": "Trampolean storyboard contract",
+  "type": "object",
+  "required": ["campanha", "cliente", "plataforma", "cenas"],
+  "properties": {
+    "campanha": { "type": "string" },
+    "cliente": { "type": "string" },
+    "plataforma": { "type": "string" },
+    "formato": { "type": "string", "pattern": "9:16" },
+    "n_cenas": { "type": "integer", "minimum": 1 },
+    "cenas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["n", "beat_narrativo", "descricao_visual", "mood", "duracao_seg"],
+        "properties": {
+          "n": { "type": "integer" },
+          "beat_narrativo": { "type": "string", "description": "Ex: gancho, desenvolvimento-1, cta" },
+          "descricao_visual": { "type": "string", "description": "O que aparece na cena, em linguagem natural PT-BR" },
+          "mood": { "type": "string" },
+          "duracao_seg": { "type": "integer" },
+          "personagem_presente": { "enum": ["completo", "parcial", "ausente"] }
+        }
+      }
+    }
+  }
+}

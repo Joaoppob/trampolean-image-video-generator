@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trampolean.local/schemas/intake.schema.json",
+  "title": "Trampolean intake state contract",
+  "type": "object",
+  "required": ["projeto", "plataforma", "status"],
+  "properties": {
+    "projeto": { "type": "string" },
+    "plataforma": { "enum": ["instagram", "tiktok", "facebook", "youtube", "reels", null] },
+    "objetivo_post": { "type": ["string", "null"] },
+    "tem_roteiro": { "type": "boolean" },
+    "tem_personagem": { "type": "boolean" },
+    "tipo_conteudo": { "type": ["string", "null"] },
+    "referencias_usuario": { "type": "array", "items": { "type": "string" } },
+    "lacunas_pendentes": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["em-andamento", "completo", "abandonado"] }
+  }
+}

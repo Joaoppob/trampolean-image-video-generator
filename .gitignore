@@ -13,6 +13,7 @@ tmp/
 **/output/.pipeline-state.json
 **/output/.pipeline-state.json.corrupt-*
 **/output/.credit-ledger.jsonl
+**/output/.intake-state.json
 .claude/state/.review-cadence.json
 .claude/state/.jotaro-profile.json
 .claude/state/*.corrupt-*

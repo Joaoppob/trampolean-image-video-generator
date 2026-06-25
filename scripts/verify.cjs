@@ -286,6 +286,125 @@ function checkReviewCadence() {
   }
 }
 
+// v0.5 Etapa 1 — Fase 1: intake-state.cjs tem interface status/update/reset
+// funcional (mesmo estilo de checkReviewCadence): status retorna lacunas, update
+// preenche, reset zera. O estado gravado valida contra intake.schema.json.
+function checkIntakeState() {
+  const script = path.join(ROOT, 'scripts', 'intake-state.cjs');
+  if (!fs.existsSync(script)) {
+    fail('intake-state.cjs existe', 'scripts/intake-state.cjs ausente');
+    return;
+  }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-intake-'));
+  function call(args) {
+    const r = spawnSync('node', [script, ...args, '--root', tmp], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+    return JSON.parse(r.stdout);
+  }
+
+  let intakeSchema = null;
+  try {
+    intakeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'intake.schema.json'), 'utf8'));
+  } catch (e) {
+    fail('intake schema loadable', e.message);
+  }
+
+  try {
+    // status inicial: as 4 lacunas obrigatorias pendentes, status em-andamento.
+    const initial = call(['status']);
+    const obrig = ['projeto', 'plataforma', 'objetivo_post', 'tipo_conteudo'];
+    const cobreObrig = obrig.every((c) => initial.lacunas_pendentes.indexOf(c) !== -1);
+    if (cobreObrig && initial.status === 'em-andamento') {
+      pass('intake status lista lacunas obrigatorias');
+    } else {
+      fail('intake status lista lacunas obrigatorias', JSON.stringify(initial));
+    }
+
+    // update preenche um campo e o remove das lacunas.
+    const afterOne = call(['update', '--campo', 'projeto', '--valor', 'TraceDefense']);
+    if (afterOne.projeto === 'TraceDefense' && afterOne.lacunas_pendentes.indexOf('projeto') === -1) {
+      pass('intake update preenche campo e atualiza lacunas');
+    } else {
+      fail('intake update preenche campo e atualiza lacunas', JSON.stringify(afterOne));
+    }
+
+    // preencher os 4 obrigatorios => status completo, sem lacunas.
+    call(['update', '--campo', 'plataforma', '--valor', 'instagram']);
+    call(['update', '--campo', 'objetivo_post', '--valor', 'lancamento']);
+    const complete = call(['update', '--campo', 'tipo_conteudo', '--valor', 'produto']);
+    if (complete.lacunas_pendentes.length === 0 && complete.status === 'completo') {
+      pass('intake completa quando 4 obrigatorios preenchidos');
+    } else {
+      fail('intake completa quando 4 obrigatorios preenchidos', JSON.stringify(complete));
+    }
+
+    // estado gravado valida contra intake.schema.json.
+    if (intakeSchema) {
+      const statePath = path.join(tmp, 'output', '.intake-state.json');
+      const written = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      const res = validateSchema(intakeSchema, written);
+      if (res.valid) pass('intake state grava JSON valido contra intake.schema.json');
+      else fail('intake state grava JSON valido contra intake.schema.json', res.errors.join('; '));
+    }
+
+    // reset zera o estado: volta a ter as lacunas obrigatorias.
+    const reset = call(['reset']);
+    if (reset.lacunas_pendentes.length === obrig.length && reset.status === 'em-andamento' && reset.projeto === '') {
+      pass('intake reset zera o estado');
+    } else {
+      fail('intake reset zera o estado', JSON.stringify(reset));
+    }
+  } catch (e) {
+    fail('intake-state command sequence', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+// v0.5 Etapa 1 — Fase 1: scope-guard cobre os termos de roteirizacao (libera o
+// que antes poderia cair como off-topic). Teste positivo: nao bloqueia.
+function checkScopeGuardRoteirizacao() {
+  const hook = path.join(ROOT, '.claude', 'hooks', 'scope-guard.cjs');
+  const cases = [
+    ['scope-guard allows roteiro request', 'quero um roteiro pro meu post'],
+    ['scope-guard allows storyboard request', 'me ajuda a montar o storyboard'],
+    ['scope-guard allows trend research request', 'preciso de uma pesquisa de tendencia pro instagram'],
+    ['scope-guard allows publico/conteudo request', 'qual tipo de conteudo funciona pro meu publico'],
+  ];
+  for (const [name, prompt] of cases) {
+    const r = spawnSync('node', [hook], {
+      cwd: ROOT,
+      input: JSON.stringify({ prompt }),
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    let blocked = false;
+    try {
+      blocked = JSON.parse(r.stdout || '{}').decision === 'block';
+    } catch (_) {
+      blocked = false;
+    }
+    if (r.status === 0 && blocked === false) pass(name);
+    else fail(name, `stdout=${r.stdout} stderr=${r.stderr} status=${r.status}`);
+  }
+}
+
+// v0.5 Etapa 1 — Fase 1: o comando /roteiro tem frontmatter description.
+function checkRoteiroCommand() {
+  const file = path.join(ROOT, '.claude', 'commands', 'roteiro.md');
+  if (!fs.existsSync(file)) {
+    fail('/roteiro tem frontmatter description', 'commands/roteiro.md ausente');
+    return;
+  }
+  const fm = parseFrontmatter(file);
+  if (fm.description && fm.description.trim().length > 0) pass('/roteiro tem frontmatter description');
+  else fail('/roteiro tem frontmatter description', 'description ausente no frontmatter');
+}
+
 function checkRbacContracts() {
   const agentDir = path.join(ROOT, '.claude', 'agents');
   for (const file of walk(agentDir, (p) => p.endsWith('.md'))) {
@@ -372,6 +491,10 @@ function checkSchemas() {
     'jotaro-profile.schema.json',
     'review-cadence.schema.json',
     'project.schema.json',
+    // v0.5 Etapa 1 (roteirizacao): contratos de dados da Fase 0.
+    'intake.schema.json',
+    'roteiro.schema.json',
+    'storyboard.schema.json',
   ];
   for (const name of required) {
     const file = path.join(schemaDir, name);
@@ -386,6 +509,73 @@ function checkSchemas() {
     } catch (e) {
       fail(`schema valid JSON ${name}`, e.message);
     }
+  }
+}
+
+// v0.5 Etapa 1 — Fase 0: os 3 schemas novos sao parseaveis pelo validador do
+// projeto (so keywords suportadas) e o storyboard de exemplo valida contra o
+// storyboard.schema.json. checkSchemas ja cobre $schema/title; aqui cobrimos
+// que os schemas sao USAVEIS pelo validate-schema.cjs sem keyword nao suportada.
+function checkFase0Schemas() {
+  const novos = ['intake.schema.json', 'roteiro.schema.json', 'storyboard.schema.json'];
+  for (const name of novos) {
+    const file = path.join(ROOT, 'schemas', name);
+    let schema;
+    try {
+      schema = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+      fail(`fase0 schema parseavel ${name}`, e.message);
+      continue;
+    }
+    // validar {} contra o schema exercita o validador sobre cada keyword do
+    // schema; se houver keyword nao suportada, validate-schema.cjs sinaliza
+    // "keyword de schema nao suportada" nos errors.
+    const probe = validateSchema(schema, {});
+    const unsupported = probe.errors.filter((e) => /keyword de schema nao suportada/.test(e));
+    if (unsupported.length === 0) pass(`fase0 schema usa so keywords suportadas ${name}`);
+    else fail(`fase0 schema usa so keywords suportadas ${name}`, unsupported.join('; '));
+  }
+
+  // storyboard de exemplo valida contra o storyboard.schema.json.
+  const sbSchemaPath = path.join(ROOT, 'schemas', 'storyboard.schema.json');
+  const sbExamplePath = path.join(ROOT, 'RAG', 'prompts', 'exemplo-storyboard-mago.json');
+  try {
+    const sbSchema = JSON.parse(fs.readFileSync(sbSchemaPath, 'utf8'));
+    const sbExample = JSON.parse(fs.readFileSync(sbExamplePath, 'utf8'));
+    const res = validateSchema(sbSchema, sbExample);
+    if (res.valid) pass('fase0 storyboard de exemplo valida contra storyboard.schema.json');
+    else fail('fase0 storyboard de exemplo valida contra storyboard.schema.json', res.errors.join('; '));
+  } catch (e) {
+    fail('fase0 storyboard de exemplo valida contra storyboard.schema.json', e.message);
+  }
+}
+
+// v0.5 Etapa 1 — Fase 0: roundtrip de encadeamento E1 -> E2. Prova que cada
+// cena.descricao_visual do storyboard alimenta o prompt-smith como { identidade,
+// intencao } e produz algo compativel com shotlist.schema.json. A logica vive em
+// scripts/lib/roundtrip-e1-e2.cjs; aqui so propagamos seus checks ao verify.
+function checkRoundtripE1E2() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'roundtrip-e1-e2.cjs'));
+  } catch (e) {
+    fail('roundtrip-e1-e2 carrega', e.message);
+    return;
+  }
+  let checks;
+  try {
+    checks = mod.roundtrip();
+  } catch (e) {
+    fail('roundtrip-e1-e2 executa', e.message);
+    return;
+  }
+  if (!Array.isArray(checks) || checks.length === 0) {
+    fail('roundtrip-e1-e2 produz checks', 'nenhum check retornado');
+    return;
+  }
+  for (const c of checks) {
+    if (c.ok) pass(c.name);
+    else fail(c.name, c.detail);
   }
 }
 
@@ -1208,8 +1398,13 @@ checkPipelineStateReadOnly();
 checkPipelineStateDedup();
 checkJotaroProfile();
 checkReviewCadence();
+checkIntakeState();
+checkScopeGuardRoteirizacao();
+checkRoteiroCommand();
 checkRbacContracts();
 checkSchemas();
+checkFase0Schemas();
+checkRoundtripE1E2();
 checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
