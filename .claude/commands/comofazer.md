@@ -30,7 +30,7 @@ resolve. Não dê um how-to que vai esbarrar num bloqueio no meio.
 
 - **"Como crio uma marca nova?"** Copie o molde do tipo certo de `templates/`
   (`brand-personagem`/`brand-produto`/`brand-servico`) para `projects/<sua-marca>/`, preencha
-  o `RAG/`, ponha 1-3 refs em `RAG/identidade-visual/` e troque o `status` do `project.json`
+  o `RAG/`, ponha 1-4 refs em `RAG/identidade-visual/` e troque o `status` do `project.json`
   para `"ativo"`. Detalhe em `templates/README.md`.
 - **"Como troco o personagem do exemplo pelo meu?"** Não mexa no demo TraceDefense — crie um
   projeto novo (acima). Se quiser mesmo reaproveitar, copie `projects/TraceDefense/` para um

@@ -17,7 +17,7 @@ Cada pasta `brand-*` é um **molde de projeto** pronto pra copiar. Não são pro
    cp -r "templates/brand-personagem" "projects/MinhaMarca"
    ```
 2. Preencha `projects/MinhaMarca/RAG/marca.md` e `RAG/narrativa.md` (troque os `<placeholders>`).
-3. Coloque 1 a 3 imagens de referência em `projects/MinhaMarca/RAG/identidade-visual/`.
+3. Coloque 1 a 4 imagens de referência em `projects/MinhaMarca/RAG/identidade-visual/`.
 4. Edite `projects/MinhaMarca/project.json`: ajuste `nome` e troque `status` para `"ativo"`.
 5. Valide: `node scripts/validate-rag.cjs --project projects/MinhaMarca`.
 

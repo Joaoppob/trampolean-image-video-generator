@@ -24,7 +24,7 @@ da sua marca numa pasta, pede um vídeo, e sai com o reel montado.
    o **Jotaro** já está lá: é o agente de IA da Trampolean com quem você fala.
 3. **Rode `/setup`.** Ele instala o Higgsfield CLI (se preciso), conduz o login no navegador
    (`higgsfield auth login` — você só aprova na conta certa), e confere o FFmpeg e o saldo.
-   **Não precisa reiniciar o Claude Code** — a auth do CLI vale na mesma sessão.
+**Não precisa reiniciar o Claude Code** — a auth do CLI vale na mesma sessão.
 4. **Rode `/creditos`** para confirmar a conta conectada (email + saldo) e ver seu crédito.
 
 Pronto isso uma vez, não precisa repetir. O login fica guardado no seu perfil. Se você trocar
@@ -40,7 +40,7 @@ para `projects/<seu-projeto>/`:
 ```
 projects/<seu-projeto>/
   RAG/
-    identidade-visual/   ← coloque aqui 1 a 3 imagens do seu personagem/produto
+    identidade-visual/   ← coloque aqui 1 a 4 imagens do seu personagem/produto
     marca.md             ← descreva sua marca (nome, anchor, estilo, paleta)
     narrativa.md         ← a história e o tom
   project.json           ← { nome, tipo_marca, status: "ativo" }
@@ -238,7 +238,7 @@ A geração consome créditos do Higgsfield:
 - **Vídeo** (clipe de 4 segundos com `--duration 4`, mudo no free): 4 créditos.
 - **Reel de 6 cenas:** 6 imagens × 2 + 6 vídeos × 4 = **36 créditos**.
 
-> ⚠️ O `veo3_1_lite` custa **8 créditos no default** (`duration=8`). A skill `gera-video`
+> WARNING: O `veo3_1_lite` custa **8 créditos no default** (`duration=8`). A skill `gera-video`
 > sempre passa `--duration 4` pra ficar em 4 créditos — não gere vídeo sem isso.
 
 No **plano free** são **10 créditos por dia**, compartilhados entre imagem e vídeo. Então um
@@ -316,7 +316,7 @@ confere mais de uma centena de itens de uma vez (a contagem cresce conforme o pr
   quando cabe, e ancora os custos canônicos (imagem 2, vídeo 4, teto 10/dia).
 - **Migração pro CLI** — confere que `.mcp.json` não declara mais o servidor MCP do Higgsfield
   (a geração é via CLI) e que os arquivos operacionais não referenciam os tools MCP antigos.
-- **Projetos e identidade** — valida cada projeto (`projects/*`): `identidade-visual/` tem 1-3
+- **Projetos e identidade** — valida cada projeto (`projects/*`): `identidade-visual/` tem 1-4
   imagens, `marca.md` e `narrativa.md` têm as seções, anchor canônico. Projeto `ativo` bloqueia
   se falhar; `rascunho` só avisa; `arquivado` é pulado. O HUB compartilhado é validado à parte.
 - **Pipeline e cadência** — testa que o checkpoint é read-only, que a cadência bloqueia após 2

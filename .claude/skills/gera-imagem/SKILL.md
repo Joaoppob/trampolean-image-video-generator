@@ -38,7 +38,7 @@ gastar crédito. Regra de paths:
 
 - `cena` — número da cena (índice no save-crystal).
 - `prompt` — prompt de imagem (vem do `prompt-smith`, formato do `exemplo-shotlist-mago.json`).
-- `refs` — paths das imagens de referência em `<PROJ>/RAG/identidade-visual/` (1-3; o mago usa 3).
+- `refs` — paths das imagens de referência em `<PROJ>/RAG/identidade-visual/` (1-4; o mago usa 4).
 - aspecto fixo **9:16**.
 
 ## Procedimento
@@ -64,7 +64,7 @@ existe no disco. Limitação: se o usuário renomeou o arquivo, a reconciliaçã
 
 ### 1. Subir as referências (ou reusar upload_ids do run)
 
-As refs (mage1-3.png) são as MESMAS pra todas as cenas do run — suba uma vez por arquivo,
+As refs (mage0-3.png) são as MESMAS pra todas as cenas do run — suba uma vez por arquivo,
 reuse em todas as cenas. O save-crystal guarda os upload_ids por arquivo. Para cada ref que
 ainda não tem `media_id` neste run:
 

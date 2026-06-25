@@ -93,7 +93,7 @@ function validateProject(projectRoot) {
 
   const refs = listImages(projectRoot);
   add(refs.length >= 1, 'projeto tem ao menos uma imagem de referencia', refs.join(', '));
-  add(refs.length <= 3, 'projeto tem no maximo tres imagens de referencia', refs.join(', '));
+  add(refs.length <= 4, 'projeto tem no maximo quatro imagens de referencia', refs.join(', '));
   add(refs.every((ref) => ref.startsWith('RAG/identidade-visual/')), 'paths de refs sao relativos ao projeto');
 
   if (exists(projectRoot, 'RAG/marca.md')) {

@@ -66,9 +66,9 @@ cobrem e-commerce, serviço e lifestyle. A curva muda, mas a lógica de anchor m
 cena é a mesma.
 
 > **Sobre as referências dos exemplos produto/serviço.** O exemplo do mago é o **demo
-> rodável**: suas refs (`mage1-3.png`) são arte real em `identidade-visual/` e o `verify`
+> rodável**: suas refs (`mage0-3.png`) são arte real em `identidade-visual/` e o `verify`
 > garante que continuem lá. Já `produto1.png` e `brand1.png` (nos exemplos de produto e
 > serviço) são **templates de formato** — nomes ilustrativos da ref que *você* fornece, não
 > arquivos que viajam no repo. E nem caberiam: `identidade-visual/` guarda só a marca ativa
-> (no máximo 3 refs — ver `validate-rag.cjs`). Para rodar um desses formatos, troque a marca
+> (no máximo 4 refs — ver `validate-rag.cjs`). Para rodar um desses formatos, troque a marca
 > ativa: coloque a sua imagem em `identidade-visual/` e aponte a ref do exemplo pra ela.

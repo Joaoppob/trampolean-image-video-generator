@@ -9,7 +9,7 @@ projects/<nome>/
   RAG/
     marca.md              identidade da marca (o que é, público, anchor, estilo, tom)
     narrativa.md          história e arco do reel
-    identidade-visual/    1 a 3 imagens de referência (a alavanca de consistência)
+    identidade-visual/    1 a 4 imagens de referência (a alavanca de consistência)
   output/
     imagens/ clips/ reels/    saídas geradas (não versionadas)
     .pipeline-state.json      checkpoint de retomada (não versionado)

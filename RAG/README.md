@@ -33,7 +33,7 @@ consulta aqui antes de improvisar quando algo falha.
 
 Cada marca é um projeto autocontido em `projects/<nome>/RAG/`:
 
-- `identidade-visual/`: 1 a 3 imagens de referência (a alavanca mais forte de consistência).
+- `identidade-visual/`: 1 a 4 imagens de referência (a alavanca mais forte de consistência).
 - `marca.md`: o que é a marca, público, sujeito central, paleta, tom, e o anchor canônico.
 - `narrativa.md`: a história e o arco do reel.
 

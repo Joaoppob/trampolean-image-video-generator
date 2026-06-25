@@ -26,7 +26,7 @@ Use o que for relevante à pergunta. Não despeje diagnóstico que ninguém pedi
   conectado, eu não consigo gerar nada. A conexão é por conta do usuário (login OAuth), sem
   segredo guardado no projeto.
 - **"Onde coloco minhas imagens?"** Em `projects/<seu-projeto>/RAG/identidade-visual/`. De 1 a
-  3 imagens do mesmo personagem ou produto. São o que mantém a cara igual entre as cenas. (Cada
+  4 imagens do mesmo personagem ou produto. São o que mantém a cara igual entre as cenas. (Cada
   marca é um projeto; pra começar uma nova, copie um molde de `templates/`.)
 - **"Por que ele fica igual entre as cenas?"** Porque as imagens de referência viajam em
   toda cena, mais uma descrição fixa do personagem (o anchor). Isso segura a identidade.

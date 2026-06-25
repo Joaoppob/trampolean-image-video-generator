@@ -52,7 +52,7 @@ no gate). Monte o prompt nesta ordem:
 O anchor é um bloco fixo de texto mais as imagens de referência que viajam em todo prompt da
 série. É o que mantém o personagem reconhecível de cena em cena.
 
-**Componente A, imagens de referência (o mais forte).** Passe de 1 a 3 imagens da pasta
+**Componente A, imagens de referência (o mais forte).** Passe de 1 a 4 imagens da pasta
 `identidade-visual/`. No teste do mago, 3 referências deram 6/6 de consistência sem precisar
 de recurso pago. É a alavanca principal.
 

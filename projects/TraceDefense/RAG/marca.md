@@ -22,8 +22,8 @@ Shorts: gancho nos primeiros segundos, clímax visual no meio, chamada para baix
 
 ## Personagem central: o mago
 
-O mago é o rosto da marca. Aparece em todo criativo. A identidade dele é travada por três
-imagens de referência em `identidade-visual/` (mage1.png, mage2.png, mage3.png) mais o
+O mago é o rosto da marca. Aparece em todo criativo. A identidade dele é travada por quatro
+imagens de referência em `identidade-visual/` (mage0.png, mage1.png, mage2.png, mage3.png) mais o
 anchor textual abaixo. Os traços distintivos, não os genéricos, são o que segura a
 consistência entre cenas:
 

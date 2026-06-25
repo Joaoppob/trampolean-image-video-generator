@@ -181,7 +181,7 @@ veo3_1_lite --help`, corrigir flags e tentar no maximo mais uma vez.
 
 **Sintoma:** `projects/<projeto>/RAG/identidade-visual/` nao tem imagens. `validate-rag.cjs --project <projeto>` falha.
 
-**Resposta:** "A pasta de referencias visuais deste projeto esta vazia. Para gerar com a cara da sua marca, coloque de 1 a 3 imagens do seu personagem ou produto em `projects/<projeto>/RAG/identidade-visual/`. Sem isso, eu gero imagem generica, sem consistencia entre cenas."
+**Resposta:** "A pasta de referencias visuais deste projeto esta vazia. Para gerar com a cara da sua marca, coloque de 1 a 4 imagens do seu personagem ou produto em `projects/<projeto>/RAG/identidade-visual/`. Sem isso, eu gero imagem generica, sem consistencia entre cenas."
 
 **Proximo passo:** usuario coloca imagens → `validate-rag.cjs --project <projeto>` para conferir.
 
