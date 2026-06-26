@@ -107,6 +107,21 @@ Chame a skill `gera-imagem` (com `--root <PROJ>`) para cada cena da shot-list. A
 referências de `<PROJ>/RAG/` e salva em `<PROJ>/output/imagens/`. Depois de gerar, mostre ao
 usuário o path de cada imagem e pergunte se ficou bom ou se quer regerar alguma.
 
+**Crítica pós-render (Wave L, Tier-3).** O critique do Passo 6 gateia o plano em texto; este
+gateia o pixel. Depois de gerar, olhe o still **real** e atribua os scores anti-IA 0/50/100
+por eixo (C8 física, C9 textura, C10 estabilidade, C11 continuidade —
+`RAG/review/rubrica-nivel-100.md`). Grave em `<PROJ>/output/critique-cena-<n>.json`
+(`{ artifacto, cena, attempt, max_attempts, scores }`) e rode o gate:
+
+```bash
+node scripts/lib/post-render-critique.cjs <PROJ>/output/critique-cena-<n>.json
+```
+
+Veredito pelo exit code: **0 accept**, **1 reroll** (um tell forte — mão morphing, plástico,
+física quebrada — anula o premium; regere a cena), **2 escalate** (budget esgotado ou score
+ausente → mostre o still + scores e deixe o usuário decidir, Invariante 7). Respeite o
+`max_attempts`: nunca entre em loop de re-roll queimando crédito.
+
 Depois que o fluxo de imagem terminar com sucesso, registre a cadência:
 
 ```bash

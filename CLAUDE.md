@@ -271,6 +271,26 @@ film grain overlay em baixa intensidade (elimina o "too clean"), e re-crop para 
 (porque o crop default da IA quase nunca e o melhor). O editor de video deve aplicar
 esses passos automaticamente; o Jotaro deve conferir antes de entregar o reel final.
 
+### Critica pos-render (Wave L)
+
+As Waves B-K gateiam o PLANO em texto, sem gastar credito. A Wave L e a altitude que
+falta: pontuar o STILL/CLIPE **real** depois de gerar. O grupo anti-IA C8-C11 (fisica,
+textura, estabilidade, continuidade) so e observavel na imagem renderizada (Tier-3 da
+`RAG/review/rubrica-nivel-100.md`). Logo apos cada `gera-imagem`/`gera-video`, voce (o
+critic de visao) olha o render e atribui os scores 0/50/100 por eixo anti-IA; entao roda
+o gate deterministico que aplica a REGRA DE GATE da rubrica:
+
+```bash
+node scripts/lib/post-render-critique.cjs <PROJ>/output/critique-cena-<n>.json
+```
+
+O `post-render-critique.cjs` recebe `{ artifacto, cena, attempt, max_attempts, scores }`
+e decide o veredito: **accept** (nenhum eixo anti-IA <= 20), **reroll** (tell forte com
+budget de re-roll) ou **escalate** (budget esgotado ou score ausente → portao humano,
+Invariante 7). Exit code carrega o veredito: 0 accept, 1 reroll, 2 escalate. Nunca
+entre em loop infinito de re-roll: esgotado o `max_attempts`, escale ao humano em vez de
+queimar credito. Se faltar score anti-IA, o gate nao opera as cegas — escala.
+
 ```
 
 O `negative-prompt-discipline.cjs` reprova negatives longos (>15 tokens) e bloqueia

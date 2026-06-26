@@ -148,7 +148,21 @@ Para cada cena da shot-list, na ordem (todas as skills com `--root <PROJ>`):
 2. Chame `gera-video` sobre essa imagem com o `job_id` da imagem **e o prompt de movimento**
    (4 créditos, só `veo3_1_lite` no free). A skill cria o job sem `--wait`, confirma `job_id`,
    e só então espera o vídeo. Salva em `<PROJ>/output/clips/`.
-3. Registre o progresso no `<PROJ>/output/.pipeline-state.json` (a skill cuida disso): se o run
+3. **Crítica pós-render (Wave L, Tier-3).** Antes de aceitar a imagem da cena, olhe o render
+   real e atribua os scores anti-IA 0/50/100 por eixo (C8 física, C9 textura, C10 estabilidade,
+   C11 continuidade — `RAG/review/rubrica-nivel-100.md`). Grave-os em
+   `<PROJ>/output/critique-cena-<n>.json` (`{ artifacto, cena, attempt, max_attempts, scores }`)
+   e rode o gate determinístico:
+
+   ```bash
+   node scripts/lib/post-render-critique.cjs <PROJ>/output/critique-cena-<n>.json
+   ```
+
+   Veredito pelo exit code: **0 accept** (segue para o vídeo), **1 reroll** (regere a cena —
+   um tell forte anula o premium), **2 escalate** (budget de re-roll esgotado ou score ausente
+   → mostre o still e os scores ao usuário e deixe ele decidir, Invariante 7). Nunca entre em
+   loop infinito: respeite o `max_attempts`.
+4. Registre o progresso no `<PROJ>/output/.pipeline-state.json` (a skill cuida disso): se o run
    cair, dá para retomar daqui.
 
 Mostre o progresso ao usuário a cada cena ("cena 3 de 6 pronta").

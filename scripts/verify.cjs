@@ -2016,6 +2016,134 @@ function checkNegativePromptDisciplineWiredIntoFlow() {
   }
 }
 
+function checkPostRenderCritiqueWaveL() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'post-render-critique.cjs'));
+  } catch (e) {
+    fail('post-render-critique.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluatePostRender !== 'function') {
+    fail('post-render-critique.cjs exports evaluatePostRender', typeof mod.evaluatePostRender);
+    return;
+  }
+
+  // 1. Render limpo: todos anti-IA = 100 -> accept
+  const clean = {
+    artifacto: 'projects/x/output/imagens/cena-1.png',
+    cena: 1,
+    attempt: 1,
+    max_attempts: 2,
+    scores: { C8: 100, C9: 100, C10: 100, C11: 100 },
+  };
+  const r1 = mod.evaluatePostRender(clean);
+  if (r1.ok && r1.verdict === 'accept' && r1.anti_ia_score === 100) {
+    pass('post-render aceita render sem tell de IA (C8-C11 = 100)');
+  } else {
+    fail('post-render aceita render sem tell de IA', JSON.stringify(r1));
+  }
+
+  // 2. Tell forte com budget -> reroll
+  const tellWithBudget = {
+    artifacto: 'projects/x/output/imagens/cena-2.png',
+    cena: 2,
+    attempt: 1,
+    max_attempts: 2,
+    scores: { C8: 0, C9: 50, C10: 100, C11: 50 },
+  };
+  const r2 = mod.evaluatePostRender(tellWithBudget);
+  if (!r2.ok && r2.verdict === 'reroll' && r2.failures.some((f) => /C8/.test(f))) {
+    pass('post-render reprova tell forte (C8 <= 20) e manda reroll com budget');
+  } else {
+    fail('post-render reprova tell forte e manda reroll', JSON.stringify(r2));
+  }
+
+  // 3. Tell forte com budget esgotado -> escalate (portao humano, Invariante 7)
+  const tellNoBudget = {
+    artifacto: 'projects/x/output/imagens/cena-2.png',
+    cena: 2,
+    attempt: 2,
+    max_attempts: 2,
+    scores: { C8: 0, C9: 50, C10: 100, C11: 50 },
+  };
+  const r3 = mod.evaluatePostRender(tellNoBudget);
+  if (!r3.ok && r3.verdict === 'escalate') {
+    pass('post-render escala ao humano quando budget de reroll esgota');
+  } else {
+    fail('post-render escala ao humano quando budget esgota', JSON.stringify(r3));
+  }
+
+  // 4. Score anti-IA ausente -> nao da pra gatear -> escalate
+  const missing = {
+    artifacto: 'projects/x/output/imagens/cena-3.png',
+    cena: 3,
+    attempt: 1,
+    max_attempts: 2,
+    scores: { C8: 100, C9: 100 },
+  };
+  const r4 = mod.evaluatePostRender(missing);
+  if (!r4.ok && r4.verdict === 'escalate' && r4.failures.some((f) => /C10|C11|ausente|faltando/i.test(f))) {
+    pass('post-render escala quando critic nao devolveu todos os scores anti-IA');
+  } else {
+    fail('post-render escala quando faltam scores anti-IA', JSON.stringify(r4));
+  }
+
+  // 5. Soft floor: anti-IA = 50 (sem tell forte) -> accept com warning
+  const mediocre = {
+    artifacto: 'projects/x/output/imagens/cena-4.png',
+    cena: 4,
+    attempt: 1,
+    max_attempts: 2,
+    scores: { C8: 50, C9: 50, C10: 50, C11: 50 },
+  };
+  const r5 = mod.evaluatePostRender(mediocre);
+  if (r5.ok && r5.verdict === 'accept' && r5.warnings.length > 0) {
+    pass('post-render aceita mas alerta quando anti-IA fica medíocre (mean < 60)');
+  } else {
+    fail('post-render aceita com warning em qualidade medíocre', JSON.stringify(r5));
+  }
+
+  // 6. Total ponderado quando os 16 criterios estao presentes
+  const full = {
+    artifacto: 'projects/x/output/imagens/cena-5.png',
+    cena: 5,
+    attempt: 1,
+    max_attempts: 2,
+    scores: {
+      C1: 100, C2: 100, C3: 100, C4: 100, C5: 100, C6: 100, C7: 100, C8: 100,
+      C9: 100, C10: 100, C11: 100, C12: 100, C13: 100, C14: 100, C15: 100, C16: 100,
+    },
+  };
+  const r6 = mod.evaluatePostRender(full);
+  if (r6.ok && r6.weighted_total === 100) {
+    pass('post-render computa total ponderado quando os 16 critérios existem');
+  } else {
+    fail('post-render computa total ponderado', JSON.stringify(r6));
+  }
+}
+
+function checkPostRenderCritiqueWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['gerarvideo', '.claude/commands/gerarvideo.md'],
+    ['gerarimagem', '.claude/commands/gerarimagem.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`post-render-critique wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /post-render-critique\.cjs/.test(text);
+    const hasConcept = /pós.render|pos.render|post.render|Tier.3|C8.C11.*renderizad|render.*real|still.*pontu/i.test(text);
+    if (hasTool && hasConcept) pass(`post-render-critique wired ${label}`);
+    else fail(`post-render-critique wired ${label}`, `tool=${hasTool} concept=${hasConcept}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3912,6 +4040,8 @@ checkIdentityTraitCarryWiredIntoFlow();
 checkNegativePromptDisciplineWaveJ();
 checkNegativePromptDisciplineWiredIntoFlow();
 checkPostProcessingMandateWaveK();
+checkPostRenderCritiqueWaveL();
+checkPostRenderCritiqueWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
