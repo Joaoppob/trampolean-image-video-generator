@@ -23,6 +23,12 @@ que costumam puxar look plastico/generico: `8K`, `ultra-realistic`, `photoreal`,
 Troque esses atalhos por fatos observaveis: fonte de luz, direcao, textura, paleta, composicao,
 peso fisico, refs/anchor e movimento de camera motivado.
 
+**Wave D / passe DP:** antes de credito, `scripts/lib/dp-quality.cjs` valida se o prompt nasceu de
+um style block verificavel. Cada cena de geracao precisa preservar no campo `cinematografia` e no
+texto do prompt: luz motivada (fonte + direcao + contraste/Kelvin), composicao 9:16 com safe-zone
+central (Y=220-1440 / middle 60%, topo/base limpos), um movimento de camera por shot, cor/grading
+nomeado e anti-IA concreto. Sem isso, volte ao prompt-smith.
+
 | # | Slot | O que entra | Exemplo (mago) |
 |---|------|-------------|----------------|
 | 1 | Estilo / medium | abre definindo o mundo visual | `Mobile game cartoon style` |

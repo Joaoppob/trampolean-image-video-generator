@@ -105,6 +105,7 @@ Salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
 
 ```bash
 node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
+node scripts/lib/dp-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
 node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
 ```
 
@@ -113,6 +114,10 @@ Mostre ao usuário o `score_ponderado`, o `gate_aprovado` e qualquer reprovaçã
 imagem**: volte ao `prompt-smith`/storyboard com as ações do critique. Esse gate pega
 quality-words, luz chapada, prompt genérico, falta de refs/anchor e tells textuais antes de
 queimar crédito.
+O `dp-quality.cjs` roda antes do `critique` e bloqueia shot-list sem cinematografia verificavel:
+luz motivada, composicao 9:16 com safe-zone central (Y=220-1440 / middle 60%), um movimento de
+camera por shot, cor/grading nomeado e anti-IA concreto. Se reprovar, volte ao `prompt-smith`
+antes de gastar a primeira imagem.
 
 Antes de entrar no loop, derive para cada cena um **prompt de movimento** curto para o vídeo.
 O `veo3_1_lite` exige `--prompt` mesmo quando recebe `--start-image`; sem isso o CLI pode falhar

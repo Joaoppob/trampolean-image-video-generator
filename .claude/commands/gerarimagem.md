@@ -78,6 +78,7 @@ Salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
 
 ```bash
 node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
+node scripts/lib/dp-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
 node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
 ```
 
@@ -85,6 +86,9 @@ Mostre ao usuário o `score_ponderado`, o `gate_aprovado` e qualquer reprovaçã
 (C8-C11) da `RAG/review/rubrica-nivel-100.md`. Se `gate_aprovado:false`, **não chame
 `gera-imagem`**: volte ao `prompt-smith` com as ações do critique. Esse gate pega quality-words,
 luz chapada, prompt genérico, falta de refs/anchor e tells textuais antes de queimar crédito.
+O `dp-quality.cjs` precisa passar antes do `critique`: ele exige bloco `cinematografia` por cena
+de geração com luz motivada, safe-zone 9:16 (Y=220-1440 / middle 60%), um movimento de camera,
+cor/grading e anti-IA concreto. Se reprovar, volte ao `prompt-smith`; nao gere no escuro.
 
 ## Passo 7: gere
 

@@ -140,10 +140,17 @@ textura/material, composicao 9:16, peso fisico, refs/anchor e um movimento de ca
 
 Voce nao roda Bash, mas sua shot-list precisa nascer pronta para passar no gate:
 `node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json` e
+`node scripts/lib/dp-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json` e
 `node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json`. Se o Jotaro devolver
 acoes do critique, corrija a shot-list antes de qualquer geracao. Use os campos aditivos
 `cinematografia` e `anti_ia` quando eles ajudarem a preservar a intencao sem depender de prosa
 solta no prompt.
+
+Wave D: cada cena `geracao` deve sair com um bloco `cinematografia` que o `dp-quality.cjs`
+consiga aprovar. O bloco precisa declarar luz motivada (fonte + direcao + contraste/Kelvin),
+composicao vertical com safe-zone central (Y=220-1440 / middle 60%, topo/base limpos), um unico
+movimento de camera ou beats sequenciais, cor/grading nomeado e anti-IA concreto. Repita esse
+style block no `prompt`; nao deixe a cinematografia presa so no campo estruturado.
 
 ## Regras
 

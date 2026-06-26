@@ -1387,6 +1387,146 @@ function checkIdentityQualityWiredIntoFlow() {
   }
 }
 
+function checkDpQualityWaveD() {
+  let dp;
+  try {
+    dp = require(path.join(ROOT, 'scripts', 'lib', 'dp-quality.cjs'));
+  } catch (e) {
+    fail('dp-quality.cjs carrega', e.message);
+    return;
+  }
+  if (typeof dp.evaluateCinematography !== 'function' || typeof dp.evaluateShotlistDp !== 'function') {
+    fail('dp-quality.cjs exporta avaliadores', 'evaluateCinematography/evaluateShotlistDp ausentes');
+    return;
+  }
+
+  const strongPlan = {
+    campanha: 'dp-strong',
+    cliente: 'demo',
+    formato: 'vertical 9:16',
+    diretriz_global: 'Style block travado: luz motivada, safe zone central e grade warm analog repetidos em cada cena.',
+    cenas: [
+      {
+        n: 1,
+        objetivo_visual: 'Frame 1 segura o feed com produto ja visivel, sem fade e sem logo.',
+        frame_1: 'Produto entra no centro seguro Y=220-1440, rosto fora da action bar e respiro no topo/base.',
+        luz: 'Single motivated warm tungsten practical at 3200K from camera-left, 4:1 contrast, soft rim separating subject from background.',
+        composicao: 'Vertical 9:16 centered safe-zone composition, subject in middle 60%, clean top and bottom thirds for caption.',
+        camera: 'Slow dolly push-in only, eye-level, one movement, no random camera drift.',
+        cor: 'Warm analog film emulation, lifted blacks 3-8%, amber highlights, cool teal shadows, saturation controlled.',
+        anti_ia: {
+          evitar: ['flat frontal light', 'plastic skin', 'random camera drift'],
+          foco: ['coherent contact shadows', 'visible material texture', 'stable silhouettes'],
+        },
+      },
+    ],
+  };
+  const weakPlan = {
+    campanha: 'dp-weak',
+    cliente: 'demo',
+    formato: 'vertical 9:16',
+    cenas: [
+      {
+        n: 1,
+        objetivo_visual: 'Cena bonita e cinematica.',
+        frame_1: 'Comeca com logo bonito.',
+        luz: 'Beautiful cinematic lighting.',
+        composicao: 'Nice composition.',
+        camera: 'Dynamic orbit dolly tilt zoom camera movement.',
+        cor: 'Vibrant premium colors.',
+        anti_ia: { evitar: ['bad quality'], foco: ['nice look'] },
+      },
+    ],
+  };
+  const strongEval = dp.evaluateCinematography(strongPlan, 'strong-dp');
+  const weakEval = dp.evaluateCinematography(weakPlan, 'weak-dp');
+  if (strongEval.ok === true && strongEval.score >= 80 && weakEval.ok === false && strongEval.score > weakEval.score) {
+    pass('dp-quality separa plano DP forte de plano DP fraco');
+  } else {
+    fail('dp-quality separa plano DP forte de plano DP fraco', `strong=${strongEval.score}/${strongEval.ok} weak=${weakEval.score}/${weakEval.ok}`);
+  }
+  if (weakEval.errors.some((e) => /luz|light/i.test(e)) && weakEval.errors.some((e) => /safe|9:16|Y=220-1440/i.test(e))) {
+    pass('dp-quality reprova luz generica e composicao sem safe-zone');
+  } else {
+    fail('dp-quality reprova luz generica e composicao sem safe-zone', JSON.stringify(weakEval.errors));
+  }
+
+  const goodShotlist = {
+    campanha: 'dp-shotlist-good',
+    cliente: 'demo',
+    formato: 'vertical 9:16',
+    duracao_total_seg: 4,
+    modelo: 'nano_banana_2',
+    referencias_obrigatorias: ['RAG/identidade-visual/mage1.png'],
+    anchor_personagem: 'Same wizard character from reference images with stable hat, beard, robe, staff and physical material texture across every generated shot.',
+    cenas: [
+      {
+        n: 1,
+        tag: 'hook',
+        fonte: 'geracao',
+        tempo_seg: '0-4',
+        intencao: 'Frame 1 abre no produto ja em movimento.',
+        personagem_visivel: 'completo',
+        prompt: 'Same wizard character from reference images. Vertical 9:16 centered safe-zone composition, subject in middle 60%, clean top and bottom thirds for caption. Single motivated warm tungsten practical at 3200K from camera-left, 4:1 contrast, soft rim, coherent contact shadows. Camera: slow dolly push-in only, no random drift. Warm analog film emulation, lifted blacks 3-8%, amber highlights and cool teal shadows, visible fabric texture.',
+        salvar_em: 'output/imagens/cena-01-hook.png',
+        cinematografia: strongPlan.cenas[0],
+        anti_ia: strongPlan.cenas[0].anti_ia,
+      },
+    ],
+  };
+  const badShotlist = {
+    campanha: 'dp-shotlist-bad',
+    cliente: 'demo',
+    formato: 'vertical 9:16',
+    duracao_total_seg: 4,
+    modelo: 'nano_banana_2',
+    referencias_obrigatorias: ['RAG/identidade-visual/mage1.png'],
+    anchor_personagem: 'Same wizard character from reference images with stable hat, beard, robe, staff and physical material texture across every generated shot.',
+    cenas: [
+      {
+        n: 1,
+        tag: 'hook',
+        fonte: 'geracao',
+        tempo_seg: '0-4',
+        intencao: 'Cena bonita.',
+        prompt: 'A beautiful cinematic 9:16 video frame with premium colors and dynamic camera.',
+        salvar_em: 'output/imagens/cena-01-hook.png',
+      },
+    ],
+  };
+  const goodShotEval = dp.evaluateShotlistDp(goodShotlist, 'good-shotlist-dp');
+  const badShotEval = dp.evaluateShotlistDp(badShotlist, 'bad-shotlist-dp');
+  if (goodShotEval.ok === true && badShotEval.ok === false && badShotEval.errors.some((e) => /cinematografia/.test(e))) {
+    pass('dp-quality detecta shot-list sem bloco DP por cena');
+  } else {
+    fail('dp-quality detecta shot-list sem bloco DP por cena', `good=${JSON.stringify(goodShotEval)} bad=${JSON.stringify(badShotEval)}`);
+  }
+}
+
+function checkDpQualityWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+    ['gerarimagem', '.claude/commands/gerarimagem.md'],
+    ['gerarvideo', '.claude/commands/gerarvideo.md'],
+    ['padroes-de-prompt', 'RAG/prompts/padroes-de-prompt.md'],
+    ['qualidade-prompt', 'RAG/review/qualidade-prompt.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`dp-quality wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /dp-quality\.cjs/.test(text);
+    const hasDp = /cinematografia|style block|safe-zone|Y=220-1440|luz motivada|grading/i.test(text);
+    if (hasTool && hasDp) pass(`dp-quality wired ${label}`);
+    else fail(`dp-quality wired ${label}`, `tool=${hasTool} dp=${hasDp}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3268,6 +3408,8 @@ checkCritiquePrecredit();
 checkCritiqueWiredIntoFlow();
 checkIdentityQualityWaveC();
 checkIdentityQualityWiredIntoFlow();
+checkDpQualityWaveD();
+checkDpQualityWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
