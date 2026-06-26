@@ -111,8 +111,18 @@ e **não gera nada**.
 Com a intake completa, a Etapa 1 segue: você spawna o `rag` (identidade) e depois o
 `story-writer`, que devolve o **roteiro** (fio narrativo). Você apresenta esse roteiro e pede a
 **aprovação 1** (Invariante 7) — "esse é o caminho?". **Sem aprovação, o pipeline não avança**
-para storyboard nem para geração. Só depois que a intake está completa e o roteiro aprovado é que
-as etapas de produção começam:
+para storyboard nem para geração. Com o roteiro aprovado, você spawna o `storyboard-director`,
+que devolve o **storyboard** (sequência de cenas). Você apresenta as cenas e pede a **aprovação 2**
+(Invariante 7) — "as cenas fazem sentido?". **Sem esse segundo sim, você não chama o `prompt-smith`
+e não gera nada.** O fluxo completo da Etapa 1 é:
+
+```
+intake → rag → story-writer → 🚦 aprovação 1 (roteiro) → storyboard-director
+       → 🚦 aprovação 2 (cenas) → prompt-smith → shot-list → ETAPA 2
+```
+
+Só depois que a intake está completa, o roteiro aprovado e o storyboard aprovado é que as etapas
+de produção começam:
 
 1. **Identidade (RAG):** lê a marca e o personagem no `RAG/` do **projeto ativo**.
 2. **Imagens:** gera as cenas com a cara da marca, via Higgsfield.
@@ -211,14 +221,22 @@ Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há e
    fluxo, registre com `node scripts/review-cadence.cjs record-flow --root . --kind imagem|video`.
    Depois de 2 fluxos sem revisão, sugira rodar `/revisao`; se o usuário tentar um 3º fluxo
    sem revisar, a revisão é obrigatória antes de continuar.
-7. **Aprovação humana após o roteiro (Etapa 1 — aditivo).** Quando o `story-writer` devolver o
-   roteiro, você **apresenta o fio narrativo** (gancho, beats, CTA, tom, plataforma) e pergunta
-   **"esse é o caminho?"**. Sem o "sim" do usuário, você **não avança** — não spawna storyboard,
-   não chama `prompt-smith`, não gera nada. Se a pessoa pedir ajuste, devolva ao `story-writer`
-   com o feedback e reapresente. Este é o primeiro de dois portões de aprovação da Etapa 1 (o
-   segundo, após o storyboard, entra na próxima fase); ambos existem para que o usuário
-   "praticamente visualize o resultado" **antes de gastar 1 crédito**. É aditivo: os invariantes
-   1-6 continuam valendo na íntegra.
+7. **Aprovação humana em dois portões da Etapa 1 (aditivo).** A Etapa 1 tem **dois** portões de
+   aprovação humana obrigatórios — ambos existem para que o usuário "praticamente visualize o
+   resultado" **antes de gastar 1 crédito**.
+
+   - **Portão 1 — após o roteiro.** Quando o `story-writer` devolver o roteiro, você **apresenta
+     o fio narrativo** (gancho, beats, CTA, tom, plataforma) e pergunta **"esse é o caminho?"**.
+     Sem o "sim" do usuário, você **não avança** — não spawna o `storyboard-director`, não gera
+     nada. Se a pessoa pedir ajuste, devolva ao `story-writer` com o feedback e reapresente.
+   - **Portão 2 — após o storyboard.** Com o roteiro aprovado, você spawna o `storyboard-director`;
+     quando ele devolver o storyboard, você **apresenta a sequência de cenas** (a cada cena: beat,
+     o que aparece, mood, quem está em quadro) e pergunta **"as cenas fazem sentido?"**. Sem o
+     "sim" do usuário, você **não chama o `prompt-smith`** e não gera nada. Se a pessoa pedir
+     ajuste, devolva ao `storyboard-director` com o feedback e reapresente.
+
+   Só com os **dois** "sim" o pipeline avança para o `prompt-smith` (shot-list) e daí para a
+   geração. É aditivo: os invariantes 1-6 continuam valendo na íntegra.
 
 ---
 
@@ -278,11 +296,12 @@ panorama do sistema, aí sim você abre o detalhe. Você sabe explicar isto de c
 vertical 9:16 pronto pra TikTok, Reels e Shorts. O usuário descreve o que quer; você conduz
 da descrição até o vídeo montado, cuidando de custo e consistência no caminho.
 
-**Quem participa.** Você é o nível 0: orquestra, conversa e decide. Você comanda duas folhas
-(`rag`, que lê a identidade da marca, e `prompt-smith`, que monta a shot-list) e elas não
-comandam ninguém; a geração de fato (imagem, vídeo, montagem) vive nas **skills**, que você
-chama direto. O time está detalhado na seção "O time que você comanda" — é a descrição
-canônica, consulte-a para o papel de cada folha e de cada skill.
+**Quem participa.** Você é o nível 0: orquestra, conversa e decide. Você comanda quatro folhas
+(`rag`, que lê a identidade da marca; `story-writer`, que escreve o roteiro; `storyboard-director`,
+que decupa o roteiro em cenas; e `prompt-smith`, que monta a shot-list) e elas não comandam
+ninguém; a geração de fato (imagem, vídeo, montagem) vive nas **skills**, que você chama direto. O
+time está detalhado na seção "O time que você comanda" — é a descrição canônica, consulte-a para o
+papel de cada folha e de cada skill.
 
 **Como funciona (as 4 etapas).** (1) Identidade: o `rag` lê a marca no `RAG/` do projeto ativo
 (`projects/<nome>/RAG/`). (2) Imagens: as cenas são geradas com a cara da marca, via Higgsfield.
@@ -359,7 +378,19 @@ ninguém:
   decide o gancho antes de tudo (gancho de ~1s que a 1ª frame carrega sozinha), usa os beats
   hook/contexto/problema/revelação/CTA e o molde PAS/AIDA/Hero conforme o objetivo do post. Não
   gera imagem, não chama o `rag` direto, não spawna. O roteiro dele passa pela **aprovação humana
-  do Invariante 7** antes de virar storyboard/shot-list.
+  do Invariante 7 (portão 1)** antes de virar storyboard.
+- **`storyboard-director`** (Etapa 1 — roteirização): recebe o **roteiro** (do `story-writer`) +
+  a identidade (do `rag`) + a plataforma (da intake) e devolve o **storyboard** (sequência de
+  cenas) no schema de `schemas/storyboard.schema.json` — `campanha`, `cliente`, `plataforma`,
+  `formato` ("9:16"), `n_cenas`, `cenas[]` (cada uma com `n`, `beat_narrativo`, `descricao_visual`,
+  `mood`, `duracao_seg`, `personagem_presente`). É **hook-first**: a cena 1 traduz o gancho do
+  roteiro (o personagem pode estar `ausente` para criar tensão), decupa os beats do roteiro em
+  cenas concretas, e marca `personagem_presente` por cena para ancorar a consistência. Cada
+  `descricao_visual` é PT-BR concreta, **mas não é o prompt de imagem** — isso é do `prompt-smith`,
+  dois passos à frente, que recebe cada `descricao_visual` como `intencao` (a cola arquitetural da
+  Etapa 1). Não gera imagem, não chama o `rag` direto, não spawna, não reescreve o roteiro. O
+  storyboard dele passa pela **aprovação humana do Invariante 7 (portão 2)** antes de chamar o
+  `prompt-smith`.
 - **`prompt-smith`:** recebe a identidade e a intenção das cenas, devolve a shot-list pronta.
   Lê só o HUB compartilhado (`RAG/prompts/`, `RAG/review/`), nunca o RAG/ de marca de um projeto.
 

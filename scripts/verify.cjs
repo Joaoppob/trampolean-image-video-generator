@@ -646,6 +646,84 @@ function checkStoryWriterFase2() {
   }
 }
 
+// v0.5 Etapa 1 — Fase 3: o agente folha storyboard-director existe, e folha (sem
+// Bash/Task/MCP/Skill), o rbac documenta o storyboard-director (folha, sem acao,
+// narrowing preservado), e o storyboard de exemplo e narrativamente coerente com
+// o roteiro de exemplo (mesmo tema/beats). O encadeamento storyboard->shotlist ja
+// e provado por checkRoundtripE1E2 (Fase 0) — aqui NAO duplicamos; so confirmamos
+// a folha + integracao + o segundo portao de aprovacao no CLAUDE.md (Invariante 7).
+// checkRbacContracts ja varre todos os .claude/agents/*.md (leaf restricted tools);
+// aqui damos a checagem nominal da Fase 3.
+function checkStoryboardDirectorFase3() {
+  // 1. existe e e folha SEM Bash/Task/MCP/Skill (espelha 'leaf agent restricted tools').
+  const sdPath = path.join(ROOT, '.claude', 'agents', 'storyboard-director.md');
+  if (!fs.existsSync(sdPath)) {
+    fail('storyboard-director.md existe', '.claude/agents/storyboard-director.md ausente');
+  } else {
+    const fm = parseFrontmatter(sdPath);
+    const tools = toolList(fm.tools);
+    const forbidden = tools.filter(
+      (t) => t === 'Bash' || t === 'Task' || t === 'Skill' || t.startsWith('mcp__') || /^Bash\(/.test(t)
+    );
+    if (forbidden.length === 0 && tools.length > 0) pass('storyboard-director e folha sem Bash/Task/MCP/Skill');
+    else fail('storyboard-director e folha sem Bash/Task/MCP/Skill', forbidden.length ? forbidden.join(', ') : 'tools vazio no frontmatter');
+  }
+
+  // 2. rbac.md documenta o storyboard-director (folha de storyboard, sem acao, narrowing).
+  try {
+    const rbac = fs.readFileSync(path.join(ROOT, '.claude', 'rbac.md'), 'utf8');
+    const documentado =
+      /storyboard-director/.test(rbac) &&
+      /SEM Bash, SEM MCP, SEM Task, SEM Skill/.test(rbac) &&
+      /storyboard-director`? ⊆ Jotaro/.test(rbac);
+    if (documentado) pass('rbac documenta storyboard-director (folha, sem acao, narrowing)');
+    else fail('rbac documenta storyboard-director (folha, sem acao, narrowing)', 'secao storyboard-director ausente ou incompleta em rbac.md');
+  } catch (e) {
+    fail('rbac documenta storyboard-director (folha, sem acao, narrowing)', e.message);
+  }
+
+  // 3. CLAUDE.md (Invariante 7) tem o SEGUNDO portao de aprovacao (apos o storyboard,
+  // antes do prompt-smith). Sem isso, a Fase 3 nao fecha o gate fiduciario.
+  try {
+    const claude = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8');
+    const temPortao2 =
+      /storyboard-director/.test(claude) &&
+      /as cenas fazem sentido/i.test(claude) &&
+      /n.o chama o `prompt-smith`/i.test(claude);
+    if (temPortao2) pass('CLAUDE.md Invariante 7 cobre o 2o portao (storyboard -> aprovacao -> prompt-smith)');
+    else fail('CLAUDE.md Invariante 7 cobre o 2o portao (storyboard -> aprovacao -> prompt-smith)', 'segundo portao de aprovacao ausente ou incompleto no Invariante 7');
+  } catch (e) {
+    fail('CLAUDE.md Invariante 7 cobre o 2o portao (storyboard -> aprovacao -> prompt-smith)', e.message);
+  }
+
+  // 4. coerencia: o storyboard de exemplo e o roteiro de exemplo falam do mesmo
+  // reel — o storyboard-director, recebendo o roteiro, deve produzir algo coerente
+  // com o storyboard de exemplo. Mesmo cliente/tema (mago/trace) e o gancho do
+  // roteiro reaparece na cena 1 do storyboard (hook-first: cena 1 = gancho).
+  try {
+    const sb = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-storyboard-mago.json'), 'utf8'));
+    const rt = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-roteiro-mago.json'), 'utf8'));
+    // cena 1 do storyboard carrega o gancho (beat_narrativo "gancho") — hook-first.
+    const cena1 = Array.isArray(sb.cenas) ? sb.cenas[0] : null;
+    const hookFirst = cena1 && /gancho/i.test(String(cena1.beat_narrativo || ''));
+    // a ultima cena e o CTA — fecha o arco como o roteiro pede.
+    const ultima = Array.isArray(sb.cenas) ? sb.cenas[sb.cenas.length - 1] : null;
+    const fechaCta = ultima && /cta/i.test(String(ultima.beat_narrativo || ''));
+    // mesmo tema entre roteiro e storyboard.
+    const sbText = JSON.stringify(sb).toLowerCase();
+    const rtText = JSON.stringify(rt).toLowerCase();
+    const temas = ['mago', 'vila', 'cristal', 'monstros'];
+    const ambos = temas.filter((t) => sbText.includes(t) && rtText.includes(t));
+    if (hookFirst && fechaCta && ambos.length >= 3) {
+      pass('fase3 storyboard de exemplo e hook-first, fecha em CTA e e coerente com o roteiro');
+    } else {
+      fail('fase3 storyboard de exemplo e hook-first, fecha em CTA e e coerente com o roteiro', `hookFirst=${hookFirst} fechaCta=${fechaCta} temas=${ambos.join(',')}`);
+    }
+  } catch (e) {
+    fail('fase3 storyboard de exemplo e hook-first, fecha em CTA e e coerente com o roteiro', e.message);
+  }
+}
+
 function parseTempo(value) {
   const m = String(value || '').match(/^(\d+)-(\d+)$/);
   if (!m) return null;
@@ -1473,6 +1551,7 @@ checkSchemas();
 checkFase0Schemas();
 checkRoundtripE1E2();
 checkStoryWriterFase2();
+checkStoryboardDirectorFase3();
 checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
