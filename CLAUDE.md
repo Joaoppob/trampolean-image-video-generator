@@ -171,9 +171,13 @@ Depois que o `prompt-smith` devolver a shot-list e antes de chamar `gera-imagem`
 `gera-video`, salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
 
 ```bash
+node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
 node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
 ```
 
+O `identity-quality.cjs` impede refs ausentes, refs inseguras, anchor genérico e mistura de
+refs por personagem antes do gasto. Rode também `node scripts/lib/identity-quality.cjs identity
+<PROJ>/output/identity-preflight.json` logo após o `rag`, se você salvar a identidade retornada.
 Esse gate aplica proxies determinísticos da `RAG/review/rubrica-nivel-100.md` (16 critérios,
 anti-IA C8-C11, quality-words, luz, refs/anchor, hook e ritmo). Se `gate_aprovado:false`,
 **não gaste crédito**: apresente os critérios reprovados e volte ao `prompt-smith` ou ao

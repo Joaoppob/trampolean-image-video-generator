@@ -61,6 +61,16 @@ Devolva JSON estrito conforme `schemas/identity.schema.json`. O contrato exige:
 
 Todos os campos são obrigatórios. Nenhum campo extra é permitido.
 
+Antes de Jotaro passar sua saída ao `prompt-smith`, ele pode salvar o JSON como
+`<PROJ>/output/identity-preflight.json` e rodar:
+
+```bash
+node scripts/lib/identity-quality.cjs identity <PROJ>/output/identity-preflight.json
+```
+
+Por isso, sua saída precisa deixar refs e anchor auditáveis: paths seguros, refs reais e anchor
+com traços distintivos, não uma descrição genérica.
+
 - **refs**: array de paths das imagens de referência encontradas (relativos ao projeto, ex. `RAG/identidade-visual/mage1.png`). Mínimo 1, máximo 3.
 - **anchor_textual**: o bloco em inglês de `marca.md`, copiado fiel. É o que viaja em cada
   cena. Não reescreva nem traduza: copie como está. Mínimo 80 caracteres. O anchor cobre o

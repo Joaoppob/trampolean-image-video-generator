@@ -58,6 +58,14 @@ Spawne o agente `rag` (via Task) para ler o `RAG/` do projeto e devolver a ident
 textual, paleta, estilo e os paths das referências. **Diga o projeto no spawn**
 (`{ objetivo: "ler identidade da marca", projeto: "<PROJ>" }`).
 
+Salve a identidade retornada em `<PROJ>/output/identity-preflight.json` e rode:
+
+```bash
+node scripts/lib/identity-quality.cjs identity <PROJ>/output/identity-preflight.json
+```
+
+Se reprovar, não avance para prompt: corrija refs/anchor/RAG com o usuário.
+
 ## Passo 5: monte o prompt
 
 Spawne o agente `prompt-smith` (via Task), passando a identidade que o `rag` devolveu e a
@@ -69,6 +77,7 @@ de referência relativos ao projeto.
 Salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
 
 ```bash
+node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
 node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
 ```
 

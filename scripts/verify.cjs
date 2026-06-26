@@ -1279,6 +1279,114 @@ function checkCritiqueWiredIntoFlow() {
   }
 }
 
+function checkIdentityQualityWaveC() {
+  let iq;
+  try {
+    iq = require(path.join(ROOT, 'scripts', 'lib', 'identity-quality.cjs'));
+  } catch (e) {
+    fail('identity-quality.cjs carrega', e.message);
+    return;
+  }
+  if (typeof iq.evaluateIdentity !== 'function' || typeof iq.evaluateShotlistRefs !== 'function') {
+    fail('identity-quality.cjs exporta avaliadores', 'evaluateIdentity/evaluateShotlistRefs ausentes');
+    return;
+  }
+
+  const strongIdentity = {
+    refs: [
+      'RAG/identidade-visual/sofia/sofia_01.png',
+      'RAG/identidade-visual/sofia/sofia_02.png',
+      'RAG/identidade-visual/marca/produto_01.png',
+    ],
+    anchor_textual: 'Same Sofia character from the reference images: oval face, dark curly shoulder-length hair, amber eyes, small nose, denim jacket with red patch, silver hoop earrings, visible skin pores, vertical 9:16 frame.',
+    estilo: 'warm realistic social ad portraiture',
+    paleta: ['amber', 'denim blue', 'soft red'],
+    narrativa_resumo: 'Sofia apresenta um produto cotidiano em cenas curtas com presenca humana real.',
+    tom: 'direto e confiante',
+  };
+  const weakIdentity = {
+    refs: [],
+    anchor_textual: 'generic person vertical 9:16',
+    estilo: 'nice style',
+    paleta: ['blue'],
+    narrativa_resumo: 'generic story',
+    tom: 'generic',
+  };
+
+  const strongEval = iq.evaluateIdentity(strongIdentity, 'strong');
+  const weakEval = iq.evaluateIdentity(weakIdentity, 'weak');
+  if (strongEval.ok === true && strongEval.score > weakEval.score && weakEval.ok === false) {
+    pass('identity-quality separa identidade forte de identidade fraca');
+  } else {
+    fail('identity-quality separa identidade forte de identidade fraca', `strong=${strongEval.score}/${strongEval.ok} weak=${weakEval.score}/${weakEval.ok}`);
+  }
+  if (weakEval.errors.some((e) => /refs/.test(e)) && weakEval.errors.some((e) => /anchor/.test(e))) {
+    pass('identity-quality reprova refs ausentes e anchor generico');
+  } else {
+    fail('identity-quality reprova refs ausentes e anchor generico', JSON.stringify(weakEval.errors));
+  }
+
+  const goodShotlist = {
+    referencias_obrigatorias: [
+      'RAG/identidade-visual/sofia/sofia_01.png',
+      'RAG/identidade-visual/marca/produto_01.png',
+    ],
+    cenas: [
+      {
+        n: 1,
+        fonte: 'geracao',
+        personagem: 'sofia',
+        prompt: 'Same Sofia character from reference images, vertical 9:16 frame, warm side key.',
+      },
+    ],
+  };
+  const mixedShotlist = {
+    referencias_obrigatorias: [
+      'RAG/identidade-visual/dandara/dandara_01.png',
+      'RAG/identidade-visual/marca/produto_01.png',
+    ],
+    cenas: [
+      {
+        n: 1,
+        fonte: 'geracao',
+        personagem: 'sofia',
+        prompt: 'Same Sofia character from reference images, vertical 9:16 frame.',
+      },
+    ],
+  };
+  const goodRefs = iq.evaluateShotlistRefs(goodShotlist, 'good-shotlist');
+  const badRefs = iq.evaluateShotlistRefs(mixedShotlist, 'mixed-shotlist');
+  if (goodRefs.ok === true && badRefs.ok === false && badRefs.errors.some((e) => /sofia/.test(e) && /dandara/.test(e))) {
+    pass('identity-quality detecta refs misturadas por personagem');
+  } else {
+    fail('identity-quality detecta refs misturadas por personagem', `good=${JSON.stringify(goodRefs)} bad=${JSON.stringify(badRefs)}`);
+  }
+}
+
+function checkIdentityQualityWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['rag', '.claude/agents/rag.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+    ['gerarimagem', '.claude/commands/gerarimagem.md'],
+    ['gerarvideo', '.claude/commands/gerarvideo.md'],
+    ['consistencia-personagem', 'RAG/review/consistencia-personagem.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`identity-quality wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /identity-quality\.cjs/.test(text);
+    const hasRefs = /refs|referencias|referências|anchor|personagem/i.test(text);
+    if (hasTool && hasRefs) pass(`identity-quality wired ${label}`);
+    else fail(`identity-quality wired ${label}`, `tool=${hasTool} refs=${hasRefs}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3158,6 +3266,8 @@ checkShotlists();
 checkPromptLint();
 checkCritiquePrecredit();
 checkCritiqueWiredIntoFlow();
+checkIdentityQualityWaveC();
+checkIdentityQualityWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

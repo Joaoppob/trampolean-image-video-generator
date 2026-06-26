@@ -139,6 +139,7 @@ vazio e `supersaturated`. Troque por fatos visuais: fonte de luz nomeada, direca
 textura/material, composicao 9:16, peso fisico, refs/anchor e um movimento de camera por shot.
 
 Voce nao roda Bash, mas sua shot-list precisa nascer pronta para passar no gate:
+`node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json` e
 `node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json`. Se o Jotaro devolver
 acoes do critique, corrija a shot-list antes de qualquer geracao. Use os campos aditivos
 `cinematografia` e `anti_ia` quando eles ajudarem a preservar a intencao sem depender de prosa

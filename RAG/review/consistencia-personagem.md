@@ -3,6 +3,16 @@
 Use depois de gerar imagens, antes de animar. O objetivo e decidir se vale gastar credito de
 video ou se uma cena deve ser regerada.
 
+Antes de gerar, use tambem o gate textual:
+
+```bash
+node scripts/lib/identity-quality.cjs identity <PROJ>/output/identity-preflight.json
+node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json
+```
+
+Ele pega refs ausentes, refs inseguras, anchor generico e mistura de refs por personagem antes
+de gastar credito.
+
 ## Gate rapido
 
 Uma cena passa se preserva, de forma reconhecivel:
