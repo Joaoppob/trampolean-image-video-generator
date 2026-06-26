@@ -1,5 +1,5 @@
-# === Saídas geradas (não versionar — só os .gitkeep das pastas) ===
-# Multi-projeto: output vive em projects/<nome>/output/ (e templates/<nome>/output/).
+# === Outputs (nao versionar, so os .gitkeep das pastas) ===
+# Multi-projeto: output em projects/<nome>/output/ (e templates/<nome>/output/).
 # Os globs **/output/ cobrem qualquer projeto/template de uma vez.
 **/output/imagens/*
 !**/output/imagens/.gitkeep
@@ -8,17 +8,18 @@
 **/output/reels/*
 !**/output/reels/.gitkeep
 
-# === Caixa de entrada Raw/ (conteúdo NÃO versionado — só o esqueleto) ===
+# === Caixa de entrada Raw/ (conteudo NAO versionado, so o esqueleto) ===
 # JB dropa material aqui e o Jotaro organiza via /importa (move pra projects/).
-# Ignora todo o conteúdo solto, mantém o esqueleto rastreável (.gitkeep + README).
+# Ignora todo o conteudo solto, mantem o esqueleto rastreavel (.gitkeep + README).
 Raw/**
 !Raw/.gitkeep
 !Raw/README.md
 
-# === Temporários e estado de pipeline (por projeto) ===
+# === Temporarios e estado de pipeline (por projeto) ===
 tmp/
 **/output/.pipeline-state.json
 **/output/.pipeline-state.json.corrupt-*
+**/output/.pipeline-state.json.lock
 **/output/.credit-ledger.jsonl
 **/output/.intake-state.json
 **/output/.anim-*.json
@@ -28,7 +29,7 @@ tmp/
 .claude/state/*.corrupt-*
 **/*.tmp
 
-# === Credenciais — NUNCA versionar (OAuth é por-usuário, em ~/.claude/) ===
+# === Credenciais - NUNCA versionar (OAuth e por-usuario, em ~/.claude/) ===
 .credentials.json
 *.credentials.json
 .env

@@ -32,6 +32,8 @@ node .claude/skills/editor-video/scripts/concat-reel.cjs \
   [--legenda-estilo caixa|contorno] \
   [--legenda-inicio 3 --legenda-fim 8] \
   [--fontsize 72] \
+  [--timeout 600] \
+  [--verbose] \
   [--dry-run]
 ```
 
@@ -44,6 +46,10 @@ node .claude/skills/editor-video/scripts/concat-reel.cjs \
   CTA) ou `contorno` (outline estilo TikTok, mais limpo).
 - `--legenda-inicio`/`--legenda-fim`: segundos pra legenda aparecer só num intervalo
   (ex: CTA só nos últimos segundos). Omita pra legenda o vídeo todo.
+- `--timeout`: segundos máximo pro FFmpeg (default 300 = 5 min). Se estourar, mata o
+  processo travado (`taskkill`/`pkill`) e retorna erro com o log parcial.
+- `--verbose`: mostra a etapa atual (escala, concat, drawtext) no stderr — útil pra
+  diagnosticar renders longos ou travados.
 - `--dry-run`: imprime o comando FFmpeg sem executar (pra inspecionar/debug).
 
 ## O que o helper faz por dentro

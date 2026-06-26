@@ -73,12 +73,16 @@ ajuste, atualize o plano e reapresente.
    node scripts/raw-ingest.cjs scaffold --root . --projeto <nome> --tipo <personagem|produto|servico>
    ```
 
-2. Autore `marca.md` e `narrativa.md` via helper path-safe. Passe o conteudo final pelo stdin:
+ 2. Autore `marca.md` e `narrativa.md` via helper path-safe. Escreva o conteudo final
+    num arquivo temporario e passe com `--file` (evita caracteres especiais do pipe):
 
-   ```bash
-   node scripts/raw-ingest.cjs write-rag --root . --projeto <nome> --arquivo marca
-   node scripts/raw-ingest.cjs write-rag --root . --projeto <nome> --arquivo narrativa
-   ```
+    ```bash
+    node scripts/raw-ingest.cjs write-rag --root . --projeto <nome> --arquivo marca --file tmp/marca-tmp.md
+    node scripts/raw-ingest.cjs write-rag --root . --projeto <nome> --arquivo narrativa --file tmp/narrativa-tmp.md
+    ```
+
+    O helper le o arquivo, escreve no RAG do projeto, e apaga o temporario.
+    Crie os temporarios com `Write` antes de chamar o helper (a pasta `tmp/` e ignorada pelo git).
 
    O `marca.md` precisa manter as secoes-chave (`O que`, `Publico`, `Estilo visual`,
    `Tom da comunicacao`, e `Personagem central` ou `Produto central`) e um anchor canonico com
@@ -91,11 +95,11 @@ ajuste, atualize o plano e reapresente.
    node scripts/raw-ingest.cjs move --root . --de "Raw/<tema>/<img>" --para "projects/<nome>/RAG/identidade-visual/<img>"
    ```
 
-4. Se houver roteiro pronto, salve uma copia limpa como rascunho via stdin:
+ 4. Se houver roteiro pronto, salve uma copia limpa como rascunho via arquivo temporario:
 
-   ```bash
-   node scripts/raw-ingest.cjs write-rag --root . --projeto <nome> --arquivo roteiro-rascunho
-   ```
+    ```bash
+    node scripts/raw-ingest.cjs write-rag --root . --projeto <nome> --arquivo roteiro-rascunho --file tmp/roteiro-tmp.md
+    ```
 
 5. Mova ou trate todos os arquivos restantes do lote. Depois finalize:
 

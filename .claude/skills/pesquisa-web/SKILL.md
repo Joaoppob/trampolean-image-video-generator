@@ -168,3 +168,22 @@ para o `story-writer`. Nada de texto bruto da web viaja para folhas.
 - Se nao houver nenhuma web-tool, ofereca o **fallback manual** (usuario cola a referencia,
   passa pelo sanitizador). Se nem isso, **nao force**: informe o Jotaro e siga a Etapa 1 sem
   pesquisa (papel opcional).
+
+## Erros de rate-limit e quota
+
+`WebSearch` e `WebFetch` tem limites por sessao que variam com o plano do usuario.
+Se uma dessas tools retornar erro de rate-limit, quota ou indisponibilidade:
+
+1. **Nao insista.** Nao faca retry em loop — isso so queima mais quota.
+2. **Diferencie "sem resultados" de "bloqueado":** se a tool retornou erro
+   (nao array vazio), nao diga "nao achei nada" — diga "a busca nao esta
+   disponivel agora".
+3. **Ofereca o fallback manual imediatamente:** "A busca web nao esta disponivel
+   agora (limite de requisicoes). Se voce tiver uma referencia, noticia ou trend
+   em mente, pode colar aqui que eu processo do mesmo jeito."
+4. **Se nem fallback manual funcionar:** siga a Etapa 1 sem pesquisa. A
+   pesquisa e opcional — o roteiro funciona sem ela.
+
+> Se o erro for persistente (varias sessoes seguidas), pode ser que a conta
+> Claude nao tenha acesso a tools de web. Nesse caso, a pesquisa-web sempre
+> usara o fallback manual — e esta tudo bem.

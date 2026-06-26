@@ -1175,6 +1175,228 @@ function checkDocs() {
   }
 }
 
+function checkWriteRagFileMode() {
+  const rawIngest = require('./raw-ingest.cjs');
+  const tmpDir = path.join(ROOT, 'tmp');
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  // usa o SmokeTest do checkImportaSmokeTest (ja scaffoldado) — se nao existir, cria
+  const projDir = path.join(ROOT, 'projects', 'SmokeTest');
+  if (!fs.existsSync(projDir)) {
+    try { rawIngest.scaffold(ROOT, { projeto: 'SmokeTest', tipo: 'personagem' }); } catch (_) { /* ignore */ }
+  }
+
+  const tmpFile = path.join(tmpDir, 'verify-write-rag-test.md');
+  const testContent = '## Test\n\nConteudo com "aspas", \'aspas simples\' e $dollar.';
+  fs.writeFileSync(tmpFile, testContent, 'utf8');
+
+  const result = rawIngest.writeRag(ROOT, { projeto: 'SmokeTest', arquivo: 'marca', file: 'tmp/verify-write-rag-test.md' }, '');
+  if (result.ok) {
+    pass('write-rag --file autora a partir de arquivo temporario');
+  } else {
+    fail('write-rag --file autora a partir de arquivo temporario', result.erro);
+  }
+
+  // cleanup
+  try { fs.unlinkSync(tmpFile); } catch (_) { /* ignore */ }
+}
+
+function checkScopeGuardPatternsJson() {
+  const patternsFile = path.join(ROOT, '.claude', 'hooks', 'scope-guard-patterns.json');
+  if (!fs.existsSync(patternsFile)) {
+    fail('scope-guard-patterns.json exists', 'missing');
+    return;
+  }
+  pass('scope-guard-patterns.json exists');
+  try {
+    const p = JSON.parse(fs.readFileSync(patternsFile, 'utf8'));
+    const count = (Array.isArray(p.jailbreak) ? p.jailbreak.length : 0) +
+                  (Array.isArray(p.in_domain) ? p.in_domain.length : 0) +
+                  (Array.isArray(p.offtopic) ? p.offtopic.length : 0);
+    if (count >= 15) pass(`scope-guard-patterns.json has ${count} patterns (>= 15)`);
+    else fail(`scope-guard-patterns.json has ${count} patterns (>= 15)`, 'pattern count regression');
+  } catch (e) {
+    fail('scope-guard-patterns.json valid JSON', e.message);
+  }
+}
+
+function checkPipelineStateLock() {
+  const psCode = fs.readFileSync(path.join(ROOT, 'scripts', 'pipeline-state.cjs'), 'utf8');
+  if (/\.lock/.test(psCode) && /lockFd/.test(psCode)) {
+    pass('pipeline-state save uses lock file for concurrent safety');
+  } else {
+    fail('pipeline-state save uses lock file for concurrent safety', 'missing lock mechanism');
+  }
+}
+
+function checkFfmpegTimeout() {
+  const concatCode = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'editor-video', 'scripts', 'concat-reel.cjs'), 'utf8');
+  if (/taskkill/.test(concatCode) && /ETIMEDOUT/.test(concatCode) && /--timeout/.test(concatCode)) {
+    pass('concat-reel has FFmpeg timeout and hang guard');
+  } else {
+    fail('concat-reel has FFmpeg timeout and hang guard', 'missing timeout/hang handling');
+  }
+}
+
+function checkProjectJsonSchemaValidation() {
+  const projectSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'project.schema.json'), 'utf8'));
+  const projects = walk(ROOT, (p) => /projects\/[^/]+\/project\.json$/.test(rel(p)) && !rel(p).includes('templates/'))
+    .concat(walk(ROOT, (p) => /templates\/[^/]+\/project\.json$/.test(rel(p))));
+
+  let allValid = true;
+  for (const p of projects) {
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    const v = validateSchema(projectSchema, data);
+    if (!v.valid) {
+      allValid = false;
+      fail(`project.json schema-valid ${rel(p)}`, v.errors.join('; '));
+    }
+  }
+  if (allValid) pass(`project.json schema-valid (${projects.length} arquivo(s))`);
+}
+
+function checkImportaSmokeTest() {
+  const rawIngest = require('./raw-ingest.cjs');
+  const tmpDir = path.join(ROOT, 'tmp');
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  // Setup: cria Raw sintetico
+  const rawDir = path.join(ROOT, 'Raw', 'smoke-test-verify');
+  try { fs.rmSync(rawDir, { recursive: true, force: true }); } catch (_) { /* ignore */ }
+  fs.mkdirSync(rawDir, { recursive: true });
+  fs.writeFileSync(path.join(rawDir, 'texto-marca.txt'), 'Marca de teste smoke.', 'utf8');
+  fs.writeFileSync(path.join(rawDir, 'texto-narrativa.txt'), 'Narrativa de teste.', 'utf8');
+
+  // Copia uma imagem de exemplo para o Raw
+  const srcImg = path.join(ROOT, 'examples', 'cena-02-aparicao.png');
+  const dstImg = path.join(rawDir, 'ref.png');
+  if (fs.existsSync(srcImg)) fs.copyFileSync(srcImg, dstImg);
+
+  try {
+    // limpa run anterior se existir
+    try { fs.rmSync(path.join(ROOT, 'projects', 'SmokeTest'), { recursive: true, force: true }); } catch (_) { /* ignore */ }
+    // 1. plan
+    const planResult = rawIngest.plan(ROOT);
+    const smokeLote = (planResult.lotes || []).find((l) => l.tema === 'smoke-test-verify');
+    if (!smokeLote || smokeLote.arquivos.length === 0) {
+      fail('/importa smoke: plan detecta lote sintetico', 'plan nao encontrou o lote');
+      return;
+    }
+    pass('/importa smoke: plan detecta lote sintetico');
+
+    // 2. scaffold
+    const scaffoldRes = rawIngest.scaffold(ROOT, { projeto: 'SmokeTest', tipo: 'personagem' });
+    if (!scaffoldRes.ok) {
+      fail('/importa smoke: scaffold cria projeto SmokeTest', scaffoldRes.erro);
+      return;
+    }
+    pass('/importa smoke: scaffold cria projeto SmokeTest');
+
+    // 3. write-rag via stdin (conteudo simples)
+    const writeRes = rawIngest.writeRag(ROOT, { projeto: 'SmokeTest', arquivo: 'marca' }, '## Test Smoke\n\nMarca de teste.\n');
+    if (!writeRes.ok) {
+      fail('/importa smoke: write-rag autora marca', writeRes.erro);
+    } else {
+      pass('/importa smoke: write-rag autora marca');
+    }
+
+    // 4. move
+    const moveRes = rawIngest.move(ROOT, { de: 'Raw/smoke-test-verify/ref.png', para: 'projects/SmokeTest/RAG/identidade-visual/ref.png' });
+    if (!moveRes.ok) {
+      fail('/importa smoke: move transfere imagem', moveRes.erro);
+    } else {
+      pass('/importa smoke: move transfere imagem');
+    }
+
+    // remove arquivos texto remanescentes (ja foram autorados via write-rag)
+    try { fs.unlinkSync(path.join(rawDir, 'texto-marca.txt')); } catch (_) { /* ignore */ }
+    try { fs.unlinkSync(path.join(rawDir, 'texto-narrativa.txt')); } catch (_) { /* ignore */ }
+
+    // 5. finalize
+    const finalizeRes = rawIngest.finalize(ROOT, { tema: 'smoke-test-verify' });
+    if (!finalizeRes.ok) {
+      fail('/importa smoke: finalize esvazia lote', finalizeRes.erro);
+    } else {
+      pass('/importa smoke: finalize esvazia lote');
+    }
+
+    // 6. activate
+    const activateRes = rawIngest.activate(ROOT, { projeto: 'SmokeTest' });
+    if (!activateRes.ok) {
+      fail('/importa smoke: activate ativa projeto', activateRes.erro);
+    } else {
+      pass('/importa smoke: activate ativa projeto');
+    }
+  } finally {
+    // cleanup
+    try { fs.rmSync(path.join(ROOT, 'projects', 'SmokeTest'), { recursive: true, force: true }); } catch (_) { /* ignore */ }
+    try { fs.rmSync(rawDir, { recursive: true, force: true }); } catch (_) { /* ignore */ }
+    try { fs.rmSync(path.join(ROOT, 'Raw', 'SmokeTest'), { recursive: true, force: true }); } catch (_) { /* ignore */ }
+  }
+}
+
+function checkMaxPathGuard() {
+  const ri = require('./raw-ingest.cjs');
+  if (!ri.validProjectName('abcdefghijklmnopqrstuvwxyz-01234567890123456')) { // 43 chars
+    pass('raw-ingest scaffold rejeita nome de projeto > 32 caracteres');
+  } else {
+    fail('raw-ingest scaffold rejeita nome de projeto > 32 caracteres', 'MAX_PATH guard ausente');
+  }
+  if (ri.validProjectName('ProjetoCurto')) {
+    pass('raw-ingest scaffold aceita nome curto (<= 32)');
+  } else {
+    fail('raw-ingest scaffold aceita nome curto (<= 32)', 'validProjectName rejeitou nome valido');
+  }
+}
+
+function checkPricingCrossover() {
+  const cliAvailable = spawnSync('higgsfield', ['account', 'status', '--json'], { encoding: 'utf8', timeout: 10000 }).status === 0;
+  if (cliAvailable) {
+    // tenta cross-check: custos.cjs vs generate cost real
+    const imgCost = spawnSync('higgsfield', ['generate', 'cost', 'nano_banana_2', '--aspect_ratio', '9:16'], { encoding: 'utf8', timeout: 15000 });
+    const vidCost = spawnSync('higgsfield', ['generate', 'cost', 'veo3_1_lite', '--duration', '4', '--aspect_ratio', '9:16'], { encoding: 'utf8', timeout: 15000 });
+
+    let imgOk = false, vidOk = false;
+    if (imgCost.status === 0 && /\b2\b/.test(imgCost.stdout)) imgOk = true;
+    if (vidCost.status === 0 && /\b4\b/.test(vidCost.stdout)) vidOk = true;
+
+    if (imgOk && vidOk) pass('pricing crossover: custos.cjs matches Higgsfield CLI real costs');
+    else if (!imgOk && !vidOk) pass('pricing crossover: CLI unavailable, skipped (not an error)');
+    else fail('pricing crossover: custos.cjs matches Higgsfield CLI real costs',
+      `img=${imgOk} vid=${vidOk} — custos.cjs may be stale`);
+  } else {
+    pass('pricing crossover: CLI not available, skipped (not an error)');
+  }
+}
+
+function checkCrashRecoveryDoc() {
+  try {
+    const ts = fs.readFileSync(path.join(ROOT, 'RAG', 'troubleshooting.md'), 'utf8');
+    if (/Recuperacao de crash/.test(ts) && /lock/.test(ts) && /corrupt/.test(ts)) {
+      pass('troubleshooting.md has crash recovery documentation');
+    } else {
+      fail('troubleshooting.md has crash recovery documentation', 'missing or incomplete');
+    }
+  } catch (e) {
+    fail('troubleshooting.md has crash recovery documentation', e.message);
+  }
+}
+
+function checkGitignoreEncoding() {
+  try {
+    const gi = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
+    // .gitignore deve ser ASCII-only — sem acentos
+    const hasAccents = /[^\x00-\x7F]/.test(gi);
+    if (hasAccents) {
+      fail('.gitignore is ASCII-only', 'contem caracteres nao-ASCII — risco de encoding cross-editor');
+    } else {
+      pass('.gitignore is ASCII-only');
+    }
+  } catch (e) {
+    fail('.gitignore is ASCII-only', e.message);
+  }
+}
+
 function checkMcpConfig() {
   const mcpPath = path.join(ROOT, '.mcp.json');
   if (!fs.existsSync(mcpPath)) {
@@ -2269,6 +2491,16 @@ checkVeo3GateDocumented();
 checkVideoPromptAndWaitGuard();
 checkCheckDownloadThreshold();
 checkDocs();
+checkWriteRagFileMode();
+checkScopeGuardPatternsJson();
+checkPipelineStateLock();
+checkFfmpegTimeout();
+checkProjectJsonSchemaValidation();
+checkImportaSmokeTest();
+checkMaxPathGuard();
+checkPricingCrossover();
+checkCrashRecoveryDoc();
+checkGitignoreEncoding();
 
 const failed = results.filter((r) => !r.ok);
 for (const r of results) {

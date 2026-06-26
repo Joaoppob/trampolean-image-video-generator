@@ -253,6 +253,70 @@ Exemplo:
 
 ---
 
+## Recuperacao de crash / power loss (sessao interrompida)
+
+Se o computador cair, o terminal fechar ou o Claude Code reiniciar no meio de uma geracao,
+o que ja foi gerado **nao esta perdido** — mas requer um procedimento de recuperacao.
+
+### O que sobrevive a um crash
+
+| Artefato | Sobrevive? | Notas |
+|----------|-----------|-------|
+| Imagens ja geradas em `output/imagens/` | Sim (arquivos em disco) | |
+| Clipes ja gerados em `output/clips/` | Sim (arquivos em disco) | |
+| `pipeline-state.json` | Sim, com backup | Se corrompido, ha `.corrupt-*` de backup |
+| `pipeline-state.json.lock` | Pode travar | Remova manualmente se o lock sobreviveu ao crash |
+| `credit-ledger.jsonl` | Sim (append-only) | Linhas gravadas antes do crash estao salvas |
+| Jobs do Higgsfield em andamento | **Depende** | Se o `generate create` retornou `job_id`, o job continua no servidor |
+
+### Procedimento de recuperacao
+
+1. **Reabra o Claude Code na pasta do projeto.** O Jotaro deve detectar o estado via `/inicio`.
+
+2. **Remova locks orfaos se necessario:**
+   O `pipeline-state.cjs` usa lock file (`pipeline-state.json.lock`). Se o crash
+   ocorreu durante uma gravacao, o lock pode ter ficado. Remova manualmente:
+   ```bash
+   rm projects/<projeto>/output/.pipeline-state.json.lock   # Linux/macOS
+   del projects\<projeto>\output\.pipeline-state.json.lock   # Windows
+   ```
+
+3. **Verifique a integridade do state:**
+   ```bash
+   node scripts/pipeline-state.cjs dump --root projects/<projeto>
+   ```
+   Se o JSON for valido (lista `cenas` com `job_id` + `path`), o state esta integro.
+   Se o dump falhar com erro de parse, o arquivo `.corrupt-*` mais recente contem
+   o backup pre-crash — renomeie-o removendo o sufixo `.corrupt-*` para restaurar.
+
+4. **Recupere jobs orfaos do Higgsfield:**
+   Jobs cujo `generate create` retornou `job_id` mas o resultado nunca foi baixado
+   continuam processando (ou ja terminaram) no servidor do Higgsfield. Para verificar:
+   ```bash
+   higgsfield generate get <JOB_ID> --json
+   ```
+   Se o job completou, baixe o resultado com `curl -L`. Se ainda esta processando,
+   aguarde com `higgsfield generate wait <JOB_ID>`.
+
+5. **Retome de onde parou:**
+   O Jotaro, ao rodar `/gerarvideo` ou `/gerarimagem`, consulta o checkpoint
+   (`pipeline-state.cjs get`) e pula cenas ja geradas (credito NAO e regasto).
+   A geracao continua da proxima cena pendente.
+
+### Sinais de que o state esta corrompido
+
+- `pipeline-state.cjs dump` retorna erro de JSON.
+- `pipeline-state.cjs get --cena N` retorna `existe: false` mas o arquivo existe no disco.
+- O arquivo `pipeline-state.json` tem 0 bytes (gravacao interrompida).
+
+Em qualquer caso, o `pipeline-state.cjs` **tenta recuperar automaticamente** (funcao
+`rescueCenas`) os `job_id` e `path` de cada cena do JSON danificado. Se conseguir,
+salva em `.recovered-*` e zera o state (para evitar usar dados parciais). Nesse caso,
+**compare** o que o recovery salvou com o que existe no disco e reconstrua manualmente
+com `pipeline-state.cjs set`.
+
+---
+
 ## Atualizacao deste guia
 
 Quando um erro novo aparecer em producao e for resolvido, adicione uma entrada aqui.

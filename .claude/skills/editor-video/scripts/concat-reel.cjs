@@ -18,7 +18,12 @@
  *   node concat-reel.cjs --check                       (so checa FFmpeg, exit 0/1)
  *   node concat-reel.cjs --clips "a.mp4,b.mp4,c.mp4" --root <repo> \
  *        [--legenda "BAIXE AGORA"] [--legenda-estilo caixa|contorno] \
- *        [--legenda-inicio 3] [--legenda-fim 8] [--fontsize 72] [--dry-run]
+ *        [--legenda-inicio 3] [--legenda-fim 8] [--fontsize 72] [--dry-run] \
+ *        [--timeout 300] [--verbose]
+ *
+ *  --timeout: segundos maximo para o FFmpeg (default 300 = 5 min). Se estourar,
+ *             mata o processo e retorna erro claro com o log parcial.
+ *  --verbose: mostra a etapa atual (escala, concat, drawtext) no stderr.
  *
  * exit 0 = ok; exit 1 = FFmpeg ausente ou erro de montagem. Resultado em JSON no stdout.
  */
@@ -341,9 +346,16 @@ function main() {
   const resolved = clipValidation.resolved;
 
   const out = timestampedOutput(root);
+  const verbose = !!args.verbose;
+  const ffTimeout = (Number(args.timeout) || 300) * 1000; // default 5 min
+
+  function vlog(msg) {
+    if (verbose) process.stderr.write(`[editor-video] ${msg}\n`);
+  }
 
   // 2+3. monta o comando ffmpeg
   const concatFilter = buildConcatFilter(resolved);
+  vlog(`montando ${resolved.length} clipe(s) em ${out}`);
   const ffArgs = [];
   resolved.forEach((p) => ffArgs.push('-i', p));
 
@@ -388,8 +400,39 @@ function main() {
     process.exit(0);
   }
 
-  // 4. executa
-  const run = spawnSync('ffmpeg', ffArgs, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  // 4. executa com timeout
+  vlog('executando ffmpeg...');
+  const run = spawnSync('ffmpeg', ffArgs, {
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+    timeout: ffTimeout,
+  });
+
+  if (run.error && run.error.code === 'ETIMEDOUT') {
+    // Mata o FFmpeg travado no Windows/Linux
+    try {
+      if (process.platform === 'win32') {
+        spawnSync('taskkill', ['/F', '/IM', 'ffmpeg.exe'], { encoding: 'utf8' });
+      } else {
+        spawnSync('pkill', ['-9', 'ffmpeg'], { encoding: 'utf8' });
+      }
+    } catch (_) { /* best effort */ }
+    process.stdout.write(
+      JSON.stringify(
+        {
+          ok: false,
+          etapa: 'ffmpeg',
+          erro: `timeout: FFmpeg nao respondeu em ${Number(args.timeout) || 300}s`,
+          stderr: (run.stderr || '').split('\n').slice(-15).join('\n'),
+          dica: 'pode ser um clipe corrompido ou codec problematico. Tente --verbose para diagnostico.',
+        },
+        null,
+        2
+      ) + '\n'
+    );
+    process.exit(1);
+  }
+
   if (run.status !== 0) {
     process.stdout.write(
       JSON.stringify(
@@ -407,7 +450,9 @@ function main() {
   }
 
   // 5. probe da saida
+  vlog('verificando saida...');
   const meta = probe(out);
+  vlog(`pronto: ${out} (${meta ? meta.resolucao + ', ' + meta.duracao_seg + 's' : 'ok'})`);
   process.stdout.write(
     JSON.stringify(
       { ok: true, saida: out, n_clipes: resolved.length, legenda: args.legenda || null, metadata: meta },

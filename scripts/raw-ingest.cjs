@@ -43,6 +43,8 @@
  *   write-rag --root . --projeto <nome> --arquivo marca|narrativa|roteiro-rascunho
  *       le conteudo do stdin e escreve APENAS nos arquivos permitidos do RAG do
  *       projeto. Usado pelo /importa para autorar sem liberar Write amplo.
+ *       Use --file <caminho> para ler de um arquivo temporario (evita fragilidade
+ *       de caracteres especiais no pipe do shell). --stdin forca stdin explicito.
  *
  *   activate --root . --projeto <nome>
  *       troca project.json de rascunho para ativo (sem sobrescrever outros campos).
@@ -125,6 +127,8 @@ function validProjectName(nome) {
   if (/[\\/]/.test(nome)) return false;
   if (path.isAbsolute(nome)) return false;
   if (nome.split(/[\\/]+/).includes('..')) return false;
+  // Windows MAX_PATH: nomes > 32 chars arriscam bater 260 chars com o path completo
+  if (nome.length > 32) return false;
   return true;
 }
 
@@ -416,9 +420,34 @@ function writeRag(rootAbs, args, content) {
   if (args.arquivo === 'roteiro-rascunho' && fs.existsSync(destAbs)) {
     return { ok: false, erro: 'roteiro-rascunho.md ja existe (nunca sobrescreve rascunho)' };
   }
-  const text = String(content || '').replace(/\r\n/g, '\n');
-  fs.writeFileSync(destAbs, text.endsWith('\n') ? text : text + '\n', 'utf8');
-  return { ok: true, arquivo: relFromRoot(rootAbs, destAbs), bytes: Buffer.byteLength(text, 'utf8') };
+
+  // resolve fonte: --file > stdin. --file evita fragilidade de caracteres
+  // especiais que o pipe do shell (echo/printf) pode corromper.
+  let text;
+  if (args.file && typeof args.file === 'string') {
+    const fileAbs = path.resolve(rootAbs, args.file);
+    if (!isInside(rootAbs, fileAbs)) {
+      return { ok: false, erro: `--file fora da raiz do projeto: ${args.file}` };
+    }
+    if (!fs.existsSync(fileAbs)) {
+      return { ok: false, erro: `--file nao encontrado: ${args.file}` };
+    }
+    try {
+      text = fs.readFileSync(fileAbs, 'utf8');
+    } catch (e) {
+      return { ok: false, erro: `erro ao ler --file: ${e.message}` };
+    }
+    // apaga o temporario apos leitura (se for tmp)
+    if (/[\\/]tmp[\\/]/.test(args.file) || args.file.startsWith('tmp' + path.sep)) {
+      try { fs.unlinkSync(fileAbs); } catch (_) { /* best effort */ }
+    }
+  } else {
+    text = String(content || '');
+  }
+
+  const normalized = text.replace(/\r\n/g, '\n');
+  fs.writeFileSync(destAbs, normalized.endsWith('\n') ? normalized : normalized + '\n', 'utf8');
+  return { ok: true, arquivo: relFromRoot(rootAbs, destAbs), bytes: Buffer.byteLength(normalized, 'utf8') };
 }
 
 function activate(rootAbs, args) {
@@ -467,8 +496,8 @@ function main() {
     case 'finalize':
       result = finalize(rootAbs, args);
       break;
-    case 'write-rag':
-      result = writeRag(rootAbs, args, readStdinSync());
+      case 'write-rag':
+      result = writeRag(rootAbs, args, args.file ? '' : readStdinSync());
       break;
     case 'activate':
       result = activate(rootAbs, args);

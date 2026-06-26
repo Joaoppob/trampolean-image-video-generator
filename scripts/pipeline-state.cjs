@@ -53,6 +53,7 @@ function pathDentroDoProjeto(root, value) {
 function emptyState() {
   return {
     versao: 1,
+    _v: 1, // lock otimista: incrementado a cada save; set/append comparam
     criado_em: new Date().toISOString(),
     atualizado_em: new Date().toISOString(),
     cenas: {}, // { "<n>": { imagem: {...}, video: {...} } }
@@ -183,24 +184,59 @@ function load(root) {
   }
 }
 
-function save(root, state) {
+function save(root, state, opts) {
   const p = statePath(root);
+  const lockFile = p + '.lock';
+  const maxRetries = (opts && opts.maxRetries) || 5;
+  const retryMs = (opts && opts.retryMs) || 50;
+
   fs.mkdirSync(path.dirname(p), { recursive: true });
   state.atualizado_em = new Date().toISOString();
-  // escrita atomica: tmp + rename (evita state truncado se cair no meio)
-  const tmp = p + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(state, null, 2) + '\n', 'utf8');
-  // fallback copy+unlink NAO e atomico (aceitavel: state single-agent sequencial)
-  try {
-    fs.renameSync(tmp, p);
-  } catch (e) {
-    if (e.code === 'EXDEV') {
-      fs.copyFileSync(tmp, p);
-      fs.unlinkSync(tmp);
-      process.stderr.write('[pipeline-state] EXDEV: fallback copy+unlink para ' + p + '\n');
-    } else {
+  if (typeof state._v !== 'number') state._v = 0;
+  state._v += 1;
+
+  // lock file com retry exponencial — evita corrupcao em concorrencia rara
+  // (duas sessoes do Claude Code no mesmo projeto).
+  let lockFd;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      lockFd = fs.openSync(lockFile, 'wx');
+      break;
+    } catch (e) {
+      if (e.code === 'EEXIST' || e.code === 'EPERM') {
+        if (attempt < maxRetries - 1) {
+          const wait = retryMs * Math.pow(2, attempt);
+          const waited = require('child_process').spawnSync
+            ? (function spin(ms) { const t = Date.now(); while (Date.now() - t < ms) { /* spin */ } })(wait)
+            : (function() { const t = Date.now(); while (Date.now() - t < wait) { /* spin */ } })();
+        }
+        continue;
+      }
       throw e;
     }
+  }
+  if (!lockFd) {
+    throw new Error(`nao foi possivel adquirir lock em ${lockFile} apos ${maxRetries} tentativas`);
+  }
+
+  try {
+    // escrita atomica: tmp + rename (evita state truncado se cair no meio)
+    const tmp = p + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(state, null, 2) + '\n', 'utf8');
+    try {
+      fs.renameSync(tmp, p);
+    } catch (e) {
+      if (e.code === 'EXDEV') {
+        fs.copyFileSync(tmp, p);
+        fs.unlinkSync(tmp);
+        process.stderr.write('[pipeline-state] EXDEV: fallback copy+unlink para ' + p + '\n');
+      } else {
+        throw e;
+      }
+    }
+  } finally {
+    try { fs.closeSync(lockFd); } catch (_) { /* ignore */ }
+    try { fs.unlinkSync(lockFile); } catch (_) { /* ignore */ }
   }
 }
 
