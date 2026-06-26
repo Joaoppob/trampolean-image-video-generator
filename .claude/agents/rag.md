@@ -43,6 +43,12 @@ Tudo dentro do projeto ativo `<projeto>` (ex.: `projects/TraceDefense`):
 2. `<projeto>/RAG/marca.md`: o que é a marca, público, personagem/produto central, paleta,
    tom, e o anchor textual canônico (o bloco em inglês que descreve o sujeito da marca).
 3. `<projeto>/RAG/narrativa.md`: a história, o cenário, os inimigos ou obstáculos, o arco do reel.
+4. `<projeto>/RAG/personas/<personagem>.md` (se existir): o **dossiê de persona** de cada
+   personagem — personalidade, mundo, voz, comportamento e os **cues distintivos**. Em marca com
+   elenco recorrente (asset-first), leia o dossiê de cada personagem que aparece e devolva o
+   campo `personas` (mapa `<personagem> -> { personalidade, mundo, voz, cues }`). É o que
+   permite ao pipeline manter a **personalidade** fiel, não só o rosto: o `persona-carry.cjs`
+   cobra esses cues em cada cena de geração do personagem.
 
 ## O que você devolve
 

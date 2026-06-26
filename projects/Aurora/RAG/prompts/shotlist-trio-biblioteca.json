@@ -1,0 +1,61 @@
+{
+  "campanha": "aurora-trio-lancamento",
+  "cliente": "aurora",
+  "data": "2026-06-26",
+  "round": 1,
+  "objetivo": "Demo multi-personagem asset-first: reel do trio Nova/Kai/Lumi montado por SELECAO da biblioteca (custo de imagem 0). Mostra o caminho biblioteca + o dossie de persona por personagem.",
+  "tipo_marca": "personagem",
+  "formato": "vertical 9:16 mobile/TikTok",
+  "duracao_total_seg": 12,
+  "modelo": "nano_banana_2 (modo biblioteca: selecao de asset, sem gerar)",
+  "referencias_obrigatorias": [
+    "RAG/identidade-visual/nova/nova_01.png",
+    "RAG/identidade-visual/kai/kai_01.png",
+    "RAG/identidade-visual/lumi/lumi_01.png"
+  ],
+  "anchor_personagem": "Trio Aurora: Nova (skatista urbana ousada), Kai (ilustrador noturno introspectivo), Lumi (confeiteira solar acolhedora). Cada personagem tem sua biblioteca propria em RAG/identidade-visual/<personagem>/ e seu dossie em RAG/personas/<personagem>.md.",
+  "personas": {
+    "nova": { "personalidade": "ousada impulsiva sarcastica lider eletrica", "mundo": "skatista urbana periferia grafite", "voz": "direta provocadora giria de skate" },
+    "kai": { "personalidade": "introspectivo observador calmo perfeccionista gentil", "mundo": "ilustrador noturno ateliê plantas tinta", "voz": "pausada reflexiva" },
+    "lumi": { "personalidade": "solar otimista acolhedora espontanea faladora", "mundo": "confeiteira cozinha colorida manha de sol", "voz": "calorosa animada" }
+  },
+  "cenas": [
+    {
+      "n": 1,
+      "tag": "hook",
+      "fonte": "biblioteca",
+      "personagem": "nova",
+      "personagem_visivel": "completo",
+      "tempo_seg": "0-4",
+      "intencao": "Nova abre o reel com energia ousada na pista de skate",
+      "asset_path": "RAG/identidade-visual/nova/nova_01.png",
+      "salvar_em": "output/imagens/cena-01-nova.png"
+    },
+    {
+      "n": 2,
+      "tag": "desenvolvimento",
+      "fonte": "biblioteca",
+      "personagem": "kai",
+      "personagem_visivel": "completo",
+      "tempo_seg": "4-8",
+      "intencao": "Kai mostra o lado introspectivo no ateliê noturno",
+      "asset_path": "RAG/identidade-visual/kai/kai_01.png",
+      "salvar_em": "output/imagens/cena-02-kai.png"
+    },
+    {
+      "n": 3,
+      "tag": "cta",
+      "fonte": "biblioteca",
+      "personagem": "lumi",
+      "personagem_visivel": "completo",
+      "tempo_seg": "8-12",
+      "intencao": "Lumi fecha solar e acolhedora, convite final com espaco pro CTA",
+      "asset_path": "RAG/identidade-visual/lumi/lumi_01.png",
+      "salvar_em": "output/imagens/cena-03-lumi.png"
+    }
+  ],
+  "gate_consistencia": {
+    "criterio": "cada personagem reconhecivelmente o mesmo asset da sua biblioteca",
+    "passa": "3/3 — selecao da biblioteca, consistencia perfeita por construcao"
+  }
+}

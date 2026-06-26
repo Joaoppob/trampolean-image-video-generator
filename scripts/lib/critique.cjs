@@ -115,7 +115,22 @@ function weightedScore(criterios) {
 }
 
 function evaluateShotlist(shotlist, artifacto = 'inline') {
-  const cenas = Array.isArray(shotlist && shotlist.cenas) ? shotlist.cenas : [];
+  const todasCenas = Array.isArray(shotlist && shotlist.cenas) ? shotlist.cenas : [];
+  // So cenas `geracao` tem prompt a criticar. Cena `biblioteca` (asset-first) e um asset
+  // real selecionado, sem prompt — os proxies anti-IA textuais nao se aplicam. Consistente
+  // com os demais gates, que filtram geracao. Shot-list 100% biblioteca passa direto.
+  const cenas = todasCenas.filter((c) => (c.fonte || 'geracao') === 'geracao');
+  if (cenas.length === 0) {
+    return {
+      artifacto,
+      etapa: 'pre-credito',
+      score_ponderado: 100,
+      gate_aprovado: true,
+      criterios: [],
+      gate_anti_ia: { limiar: GATE_LIMIAR, criterios: ['C8', 'C9', 'C10', 'C11'], reprovado_por: [] },
+      parecer: 'Shot-list sem cenas de geracao (modo biblioteca): nada a criticar antes do credito.',
+    };
+  }
   const allText = lower([
     shotlist && shotlist.anchor_personagem,
     shotlist && shotlist.formato,

@@ -176,10 +176,19 @@ monotono (4+ cenas com menos de 3 tamanhos de plano distintos) ou cenas adjacent
 com plano E angulo identicos. Alterne os enquadramentos e declare o tamanho de plano
 explicitamente na `composicao` e no prompt; nao repita o mesmo plano em cenas vizinhas.
 
+Fidelidade de persona: quando a marca tem dossie de persona (o `rag` devolve o campo
+`personas`), repasse-o no bloco `personas` da shot-list e, em cada cena de GERACAO do
+personagem, carregue no minimo 2 cues da persona (personalidade/mundo/voz) no prompt ou
+na intencao. O `persona-carry.cjs` cobra isso — assim a personalidade nao some entre
+cenas, nao so o rosto. Cenas `biblioteca` (asset selecionado) sao isentas: o asset JA e o
+personagem. Sujeito unico sem dossie: gate no-op.
+
 **Interlock:** estes gates NAO sao opcionais. O `scripts/preflight-gate.cjs --root
 <PROJ>` roda TODOS de uma vez e so libera a geracao se todos passam; o hook bloqueia
 `higgsfield generate create` sem o gate armado. Espelhe a estrutura do golden
-`RAG/prompts/exemplo-shotlist-nivel100.json`, que passa todos os gates.
+`RAG/prompts/exemplo-shotlist-nivel100.json` (sujeito unico) ou do
+`projects/Aurora/RAG/prompts/shotlist-trio-biblioteca.json` (multi-personagem,
+asset-first), que passam todos os gates.
 
 Wave I: cada cena com personagem completo deve carregar no minimo 3 tracos
 Wave J: negative prompts para modelos Gemini-class devem ser curtos (max 15 tokens)

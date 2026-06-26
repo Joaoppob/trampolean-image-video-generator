@@ -2159,10 +2159,10 @@ function checkPreflightGateInterlock() {
 
   // 1. Golden shotlist passa TODOS os gates.
   const golden = mod.runGates('RAG/prompts/exemplo-shotlist-nivel100.json', ROOT);
-  if (golden.ok && golden.gates.length === 9 && golden.gates.every((g) => g.ok)) {
-    pass('preflight-gate: golden nivel-100 passa os 9 gates');
+  if (golden.ok && golden.gates.length === 10 && golden.gates.every((g) => g.ok)) {
+    pass('preflight-gate: golden nivel-100 passa os 10 gates');
   } else {
-    fail('preflight-gate: golden passa os 9 gates', JSON.stringify(golden.gates && golden.gates.filter((g) => !g.ok)));
+    fail('preflight-gate: golden passa os 10 gates', JSON.stringify(golden.gates && golden.gates.filter((g) => !g.ok)));
   }
 
   // 2. Exemplo legado (mago) REPROVA (critique C8/C9) — runner barra.
@@ -2280,6 +2280,108 @@ function checkInterlockWiring() {
   } catch (e) {
     fail('interlock: CLAUDE.md', e.message);
   }
+}
+
+function checkPersonaCarryGate() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'persona-carry.cjs'));
+  } catch (e) {
+    fail('persona-carry.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('persona-carry.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  // 1. Sem bloco personas => no-op ok.
+  const noop = mod.evaluateShotlist({ cenas: [{ n: 1, fonte: 'geracao', personagem: 'x', prompt: 'qualquer' }] });
+  if (noop.ok && noop.score === 100) pass('persona-carry e no-op sem bloco personas');
+  else fail('persona-carry no-op sem personas', JSON.stringify(noop));
+
+  const personas = { sofia: { personalidade: 'ousada sarcastica impulsiva', mundo: 'skatista urbana periferia' } };
+
+  // 2. Cena geracao que carrega cues => ok.
+  const carried = mod.evaluateShotlist({
+    personas,
+    cenas: [{ n: 1, fonte: 'geracao', personagem: 'sofia', personagem_visivel: 'completo',
+      prompt: 'Sofia ousada e sarcastica na periferia urbana com skate. 9:16.', intencao: 'atitude impulsiva' }],
+  });
+  if (carried.ok) pass('persona-carry aprova cena que carrega cues de persona');
+  else fail('persona-carry aprova cena com cues', JSON.stringify(carried));
+
+  // 3. Cena geracao sem cues => reprova.
+  const missing = mod.evaluateShotlist({
+    personas,
+    cenas: [{ n: 1, fonte: 'geracao', personagem: 'sofia', personagem_visivel: 'completo',
+      prompt: 'Sofia sorri parada num fundo neutro. 9:16.', intencao: 'retrato' }],
+  });
+  if (!missing.ok && missing.errors.some((e) => /persona/i.test(e))) pass('persona-carry reprova cena de geracao sem cues de persona');
+  else fail('persona-carry reprova cena sem cues', JSON.stringify(missing));
+
+  // 4. Cena biblioteca (asset selecionado, sem prompt) => isenta.
+  const biblio = mod.evaluateShotlist({
+    personas,
+    cenas: [{ n: 1, fonte: 'biblioteca', personagem: 'sofia', personagem_visivel: 'completo',
+      asset_path: 'RAG/identidade-visual/sofia/s1.png' }],
+  });
+  if (biblio.ok) pass('persona-carry isenta cena biblioteca (asset = o personagem)');
+  else fail('persona-carry isenta cena biblioteca', JSON.stringify(biblio));
+}
+
+function checkPersonaWired() {
+  for (const [label, rel, tool, concept] of [
+    ['prompt-smith', '.claude/agents/prompt-smith.md', /persona-carry\.cjs/, /persona|cues de persona/i],
+    ['rag', '.claude/agents/rag.md', /personas/, /persona|personalidade/i],
+  ]) {
+    try {
+      const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      if (tool.test(text) && concept.test(text)) pass(`persona wired ${label}`);
+      else fail(`persona wired ${label}`, `tool=${tool.test(text)} concept=${concept.test(text)}`);
+    } catch (e) {
+      fail(`persona wired ${label}`, e.message);
+    }
+  }
+}
+
+function checkAuroraDemo() {
+  const base = path.join(ROOT, 'projects', 'Aurora');
+  // 1. project.json valido + modo biblioteca.
+  try {
+    const pj = JSON.parse(fs.readFileSync(path.join(base, 'project.json'), 'utf8'));
+    if (pj.nome === 'Aurora' && pj.status === 'ativo' && pj.modo_visual === 'biblioteca') pass('Aurora demo: project.json valido (biblioteca)');
+    else fail('Aurora demo: project.json valido', JSON.stringify(pj));
+  } catch (e) {
+    fail('Aurora demo: project.json', e.message);
+    return;
+  }
+  // 2. Trio com biblioteca por personagem + dossie de persona.
+  const idv = require(path.join(ROOT, 'scripts', 'lib', 'identidade-visual.cjs'));
+  const det = idv.detect(base);
+  const esperados = ['kai', 'lumi', 'nova'];
+  if (esperados.every((c) => det.personagens.includes(c))) pass('Aurora demo: 3 personagens com biblioteca propria');
+  else fail('Aurora demo: 3 personagens', JSON.stringify(det.personagens));
+  for (const c of esperados) {
+    if (fs.existsSync(path.join(base, 'RAG', 'personas', `${c}.md`))) pass(`Aurora demo: dossie de persona ${c}`);
+    else fail(`Aurora demo: dossie de persona ${c}`, 'ausente');
+  }
+  // 3. Shot-list do trio passa o bundle inteiro (10 gates) e critique isenta biblioteca.
+  const gate = require(path.join(ROOT, 'scripts', 'preflight-gate.cjs'));
+  const r = gate.runGates('projects/Aurora/RAG/prompts/shotlist-trio-biblioteca.json', ROOT);
+  if (r.ok && r.gates.length === 10 && r.gates.every((g) => g.ok)) pass('Aurora demo: shot-list trio passa os 10 gates (asset-first)');
+  else fail('Aurora demo: shot-list trio passa os 10 gates', JSON.stringify(r.gates && r.gates.filter((g) => !g.ok)));
+}
+
+function checkCritiqueExemptsBiblioteca() {
+  const mod = require(path.join(ROOT, 'scripts', 'lib', 'critique.cjs'));
+  const all = { cenas: [
+    { n: 1, fonte: 'biblioteca', personagem: 'a', asset_path: 'RAG/identidade-visual/a/a1.png' },
+    { n: 2, fonte: 'biblioteca', personagem: 'b', asset_path: 'RAG/identidade-visual/b/b1.png' },
+  ] };
+  const r = mod.evaluateShotlist(all);
+  if (r.gate_aprovado === true) pass('critique isenta shot-list 100% biblioteca (sem cena de geracao)');
+  else fail('critique isenta biblioteca', JSON.stringify(r));
 }
 
 function checkPrestartContent() {
@@ -4335,6 +4437,10 @@ checkPostRenderCritiqueWiredIntoFlow();
 checkPreflightGateInterlock();
 checkHiggsfieldGateHook();
 checkInterlockWiring();
+checkPersonaCarryGate();
+checkPersonaWired();
+checkAuroraDemo();
+checkCritiqueExemptsBiblioteca();
 checkPrestartContent();
 checkAngleVarietyGate();
 checkAngleVarietyWired();

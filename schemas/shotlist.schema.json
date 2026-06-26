@@ -110,6 +110,10 @@
     "gate_consistencia": {
       "type": "object",
       "minProperties": 1
+    },
+    "personas": {
+      "type": "object",
+      "description": "ADITIVO (nivel-100). Dossie de persona por personagem: mapeia <personagem> -> descricao (string OU { personalidade, mundo, voz, comportamento, cues }). Alimenta o persona-carry.cjs, que exige que cada cena do personagem carregue cues de personalidade/mundo no prompt/intencao. Opcional; sujeito unico nao precisa."
     }
   }
 }

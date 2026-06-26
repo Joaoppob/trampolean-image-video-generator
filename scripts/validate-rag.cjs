@@ -47,13 +47,39 @@ function read(root, rel) {
   return fs.readFileSync(path.join(root, rel), 'utf8');
 }
 
+// Lista refs da pasta plana E das subpastas por personagem (asset-first). Antes era
+// flat-only e projetos com biblioteca por personagem (nova/, kai/...) apareciam sem refs.
 function listImages(root) {
   const dir = path.join(root, 'RAG', 'identidade-visual');
   if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((name) => IMAGE_RE.test(name))
-    .sort()
-    .map((name) => `RAG/identidade-visual/${name}`);
+  const out = [];
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return []; }
+  for (const e of entries) {
+    if (e.isFile() && IMAGE_RE.test(e.name)) {
+      out.push(`RAG/identidade-visual/${e.name}`);
+    } else if (e.isDirectory()) {
+      let subs;
+      try { subs = fs.readdirSync(path.join(dir, e.name)); } catch (_) { subs = []; }
+      for (const f of subs) {
+        if (IMAGE_RE.test(f)) out.push(`RAG/identidade-visual/${e.name}/${f}`);
+      }
+    }
+  }
+  return out.sort();
+}
+
+// asset-first = ha ao menos uma subpasta de personagem com imagem.
+function hasCharacterLibrary(root) {
+  const dir = path.join(root, 'RAG', 'identidade-visual');
+  if (!fs.existsSync(dir)) return false;
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return false; }
+  return entries.some((e) => {
+    if (!e.isDirectory() || e.name.toLowerCase() === 'marca') return false;
+    try { return fs.readdirSync(path.join(dir, e.name)).some((f) => IMAGE_RE.test(f)); }
+    catch (_) { return false; }
+  });
 }
 
 function hasHeadingMatching(text, pattern) {
@@ -92,8 +118,11 @@ function validateProject(projectRoot) {
   add(exists(projectRoot, 'RAG/narrativa.md'), 'projeto tem RAG/narrativa.md');
 
   const refs = listImages(projectRoot);
+  const assetFirst = hasCharacterLibrary(projectRoot);
   add(refs.length >= 1, 'projeto tem ao menos uma imagem de referencia', refs.join(', '));
-  add(refs.length <= 4, 'projeto tem no maximo quatro imagens de referencia', refs.join(', '));
+  // O teto de 4 refs vale so pro modelo flat (sujeito unico). Em asset-first (biblioteca
+  // por personagem) cada personagem pode ter muitas refs — o teto nao se aplica.
+  add(assetFirst || refs.length <= 4, 'projeto tem no maximo quatro imagens de referencia (flat)', refs.join(', '));
   add(refs.every((ref) => ref.startsWith('RAG/identidade-visual/')), 'paths de refs sao relativos ao projeto');
 
   if (exists(projectRoot, 'RAG/marca.md')) {
