@@ -254,6 +254,21 @@ no minimo 3 tracos distintivos do `anchor_personagem` no prompt:
 
 ```bash
 node scripts/lib/identity-trait-carry.cjs <PROJ>/output/shotlist-preflight.json
+
+### Disciplina de negative prompt (Wave J)
+
+Se o prompt-smith incluir `negative_prompt` nas cenas, valide que ele e curto e
+targeted (max 15 tokens, sem listas genericas estilo SDXL):
+
+```bash
+node scripts/lib/negative-prompt-discipline.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `negative-prompt-discipline.cjs` reprova negatives longos (>15 tokens) e bloqueia
+termos genericos (blurry, low quality, bad anatomy, deformed, etc.) que degradam a
+saida de modelos Gemini-class. Negatives devem ser 0-15 tokens, mirando artefatos
+realmente observados, nao listas preset.
+
 ```
 
 O `identity-trait-carry.cjs` extrai os tokens distintivos do anchor e confere se

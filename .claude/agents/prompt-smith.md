@@ -171,6 +171,12 @@ Wave H: a estrutura narrativa da shot-list importa tanto quanto o visual. O
 devolver acao do `narrative-quality.cjs`, ajuste a narrativa antes de gerar.
 
 Wave I: cada cena com personagem completo deve carregar no minimo 3 tracos
+Wave J: negative prompts para modelos Gemini-class devem ser curtos (max 15 tokens)
+e targeted (so artefatos observados, nao listas genericas). O
+`negative-prompt-discipline.cjs` reprova "blurry, low quality, bad anatomy" e
+similares. Se incluir `negative_prompt`, mantenha-o cirurgico. Se o Jotaro devolver
+acao do gate, reduza o negative ou remova-o.
+
 distintivos do `anchor_personagem` no prompt. O `identity-trait-carry.cjs`
 verifica se os tokens do anchor (ex.: emerald eyes, aquiline nose, strong
 jawline) aparecem no prompt de cada cena `personagem_visivel: "completo"`.

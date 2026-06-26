@@ -1932,6 +1932,67 @@ function checkIdentityTraitCarryWiredIntoFlow() {
   }
 }
 
+function checkNegativePromptDisciplineWaveJ() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'negative-prompt-discipline.cjs'));
+  } catch (e) {
+    fail('negative-prompt-discipline.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('negative-prompt-discipline.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  const clean = { cenas: [{ n: 1, fonte: 'geracao', negative_prompt: 'text, watermark' }] };
+  const r1 = mod.evaluateShotlist(clean);
+  if (r1.ok && r1.score >= 80) pass('negative-discipline aprova negative curto e targeted');
+  else fail('negative-discipline aprova negative curto e targeted', JSON.stringify(r1));
+
+  const bloated = { cenas: [{ n: 1, fonte: 'geracao', negative_prompt: 'blurry, low quality, bad anatomy, deformed, extra fingers, jpeg artifacts, plastic skin, ugly, disfigured, watermark, text, worst quality, mutation, mutated' }] };
+  const r2 = mod.evaluateShotlist(bloated);
+  if (!r2.ok) pass('negative-discipline reprova negative longo estilo SDXL');
+  else fail('negative-discipline reprova negative longo estilo SDXL', JSON.stringify(r2));
+
+  const hasGeneric = {
+    cenas: [
+      { n: 1, fonte: 'geracao', negative_prompt: 'blurry, low quality, deformed, bad anatomy' },
+    ],
+  };
+  const r3 = mod.evaluateShotlist(hasGeneric);
+  if (!r3.ok && r3.errors.some((e) => /generic|blurry|low quality|bad anatomy/i.test(e))) {
+    pass('negative-discipline detecta termos genericos de SDXL');
+  } else {
+    fail('negative-discipline detecta termos genericos de SDXL', JSON.stringify(r3));
+  }
+
+  const none = { cenas: [{ n: 1, fonte: 'geracao' }] };
+  const r4 = mod.evaluateShotlist(none);
+  if (r4.ok && r4.score >= 90) pass('negative-discipline aceita cena sem negative prompt');
+  else fail('negative-discipline aceita cena sem negative prompt', JSON.stringify(r4));
+}
+
+function checkNegativePromptDisciplineWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`negative-discipline wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /negative-prompt-discipline\.cjs/.test(text);
+    const hasConcept = /negative.{0,20}(prompt|discipline|disciplina)|prompt negativo|estratégia de negative/i.test(text);
+    if (hasTool && hasConcept) pass(`negative-discipline wired ${label}`);
+    else fail(`negative-discipline wired ${label}`, `tool=${hasTool} concept=${hasConcept}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3825,6 +3886,8 @@ checkNarrativeQualityWaveH();
 checkNarrativeQualityWiredIntoFlow();
 checkIdentityTraitCarryWaveI();
 checkIdentityTraitCarryWiredIntoFlow();
+checkNegativePromptDisciplineWaveJ();
+checkNegativePromptDisciplineWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
