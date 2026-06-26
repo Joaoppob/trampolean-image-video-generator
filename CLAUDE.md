@@ -212,14 +212,21 @@ Antes do preflight de custo e antes de qualquer geracao, apresente uma tabela de
 tradeoff honesto:
 
 ```bash
-node scripts/lib/model-advisor.cjs image --objetivo "<resumo-do-job>" --plano "<free|paid>" --saldo "<creditos>"
-node scripts/lib/model-advisor.cjs video --objetivo "<resumo-do-job>" --plano "<free|paid>" --saldo "<creditos>"
+node scripts/lib/model-advisor.cjs image --objetivo "<resumo-do-job>" --plano "<free|paid>" --saldo "<creditos>" --cenas <N> --modo <biblioteca|geracao>
+node scripts/lib/model-advisor.cjs video --objetivo "<resumo-do-job>" --plano "<free|paid>" --saldo "<creditos>" --cenas <N>
 ```
 
-O `model-advisor.cjs` cruza o catalogo vivo de `references/_pesquisa-nivel-100/catalogo-higgsfield-vivo.md`
-com o comparativo de modelos e separa: modelo executavel agora no CLI (`nano_banana_2`/`veo3_1_lite`),
+O `model-advisor.cjs` separa: modelo executavel agora no CLI (`nano_banana_2`/`veo3_1_lite`),
 opcoes de teto pago (ex.: `soul_cinematic`, `cinematic_studio_3_0`, `seedance_2_0`) e custos AC.
-Nao invente preco para modelo nao-default: confirme com `higgsfield generate cost` antes de prometer.
+Com `--cenas N` ele dá o **custo por cenario** (reel de N cenas): real e fixo pro default
+(imagem geracao = N×2, biblioteca = 0, video = N×4), e `AC × N` pros pagos — **nunca inventa
+preco**: confirme com `higgsfield generate cost` antes de prometer.
+
+**Catalogo é snapshot datado (`catalogo_data`), nao vivo em runtime.** Antes de recomendar um
+teto pago, cruze com o catalogo real: rode `higgsfield model list --image > /tmp/live.txt` e
+`node scripts/lib/model-advisor.cjs --verificar-catalogo /tmp/live.txt` — ele lista ids do
+catalogo que sumiram do Higgsfield (obsolescencia). Confirmado 2026-06-26: o slug **`nano_banana_2`
+= "Nano Banana Pro"** (NAO confunda com `nano_banana_flash`, cujo display é o enganoso "Nano Banana 2").
 
 ### Estrutura do prompt (Wave G)
 ### Consistencia de estilo entre cenas (Wave F)

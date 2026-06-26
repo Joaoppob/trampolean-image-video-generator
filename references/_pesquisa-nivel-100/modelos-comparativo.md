@@ -31,8 +31,12 @@ Pesquisa via web (Exa). Data: 2026-06-26. Autor: Nahida (D.TAI).
 > - **Nano Banana 2** (Gemini 3.x Flash Image) — tier "flash", mais barato/rápido.
 > - **Nano Banana Pro** (Gemini 3 Pro Image, nov/2025) — o flagship 4K, o que lidera leaderboards.
 > Quando reviews dizem "Nano Banana" em 2026, normalmente querem dizer **Pro**.
-> **Confirmar internamente qual ID o `nano_banana_2` do Higgsfield realmente chama** —
-> se for o Flash tier, a qualidade é menor que o descrito abaixo (que é do Pro).
+>
+> **RESOLVIDO (confirmado via `higgsfield model list --image`, 2026-06-26):** no Higgsfield,
+> o slug `nano_banana_2` = **"Nano Banana Pro"** (o flagship — é o que o gerador usa). O tier
+> Flash é um slug SEPARADO, `nano_banana_flash`, cujo display name é o enganoso "Nano Banana 2".
+> Ou seja: o default do gerador É o Pro. Não confundir os display names. Re-confirmar com
+> `model-advisor.cjs --verificar-catalogo` se o catálogo mudar.
 
 | Campo | Conteúdo |
 |---|---|

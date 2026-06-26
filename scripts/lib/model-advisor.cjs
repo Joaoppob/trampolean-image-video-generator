@@ -4,37 +4,33 @@
 const custos = require('./custos.cjs');
 const parseArgs = require('./parse-args.cjs');
 
+// Data do snapshot do catalogo abaixo (confirmado via `higgsfield model list`).
+// O catalogo e ESTATICO; a verificacao viva e feita por idsObsoletos() alimentado
+// com a saida real de `higgsfield model list`.
+const CATALOGO_DATA = '2026-06-26';
+
 const MODELS = [
   {
     id: 'nano_banana_2',
+    display_name: 'Nano Banana Pro',
     kind: 'image',
     tier: 'A',
     executable_now: true,
     plan: 'free',
     focus: ['default', 'image', 'reference', 'fast', 'budget', 'product', 'text'],
-    best_for: 'Default executavel hoje via CLI: imagem 9:16 com refs, boa aderencia e custo fixo.',
-    tradeoff: 'Nao e necessariamente o teto do catalogo vivo; pode ficar abaixo de Soul/Cinema Studio em still cinema-grade.',
+    best_for: 'Default executavel hoje via CLI: imagem 9:16 com refs, boa aderencia e custo fixo. Confirmado 2026-06-26: o slug nano_banana_2 = "Nano Banana Pro" (NAO o Flash).',
+    tradeoff: 'Nao confunda com nano_banana_flash (display "Nano Banana 2", tier inferior). nano_banana_2 e o Pro. Pode ficar abaixo de Soul/Cinema Studio em still cinema-grade.',
     cost_note: `fixo no CLI atual: ${custos.IMAGEM} cr por imagem 9:16`,
   },
   {
-    id: 'nano_banana_pro',
-    kind: 'image',
-    tier: 'S',
-    executable_now: false,
-    plan: 'paid_or_ac',
-    focus: ['text', 'hero', 'quality', 'product', 'poster', 'diagram'],
-    best_for: 'Hero image com texto, rotulo, poster, packshot ou aderencia maxima.',
-    tradeoff: 'Custo/latencia AC; confirmar slug e preco no Higgsfield antes de prometer.',
-    cost_note: 'AC via higgsfield generate cost; nao usar numero fixo',
-  },
-  {
-    id: 'soul_2',
+    id: 'text2image_soul_v2',
+    display_name: 'Higgsfield Soul V2',
     kind: 'image',
     tier: 'A',
     executable_now: false,
     plan: 'paid_or_ac',
-    focus: ['character', 'identity', 'ugc', 'fashion', 'personagem', 'consistencia'],
-    best_for: 'Personagem/UGC/fashion com identidade consistente via soul_id.',
+    focus: ['character', 'identity', 'ugc', 'fashion', 'personagem', 'consistencia', 'soul'],
+    best_for: 'Personagem/UGC/fashion com identidade consistente via soul_id (Higgsfield Soul V2).',
     tradeoff: 'Exige fluxo Soul; substitui parte do refs+anchor quando houver credito/plano.',
     cost_note: 'AC via higgsfield generate cost; depende de soul_id/plano',
   },
@@ -73,6 +69,7 @@ const MODELS = [
   },
   {
     id: 'veo3_1_lite',
+    display_name: 'Veo 3.1 Lite',
     kind: 'video',
     tier: 'B',
     executable_now: true,
@@ -139,6 +136,43 @@ const MODELS = [
   },
 ];
 
+// Custo de geracao POR CENARIO (reel de N cenas). Para o modelo default executavel
+// o numero e fixo e real (custos.cjs); para modelos pagos NAO inventa preco — devolve
+// "AC x N" e manda confirmar com `higgsfield generate cost`. Em modo biblioteca a
+// imagem custa 0 (selecao de asset), so o video custa.
+function custoCenario(model, cenas, modo) {
+  const n = Number(cenas);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const modoVisual = String(modo || 'geracao').toLowerCase();
+  if (!model) return null;
+  if (!model.executable_now) {
+    return { cenas: n, por_cena: 'AC', total: `AC x ${n}`, confirmar: 'higgsfield generate cost', fixo: false };
+  }
+  if (model.kind === 'image') {
+    const porCena = modoVisual === 'biblioteca' ? 0 : custos.IMAGEM;
+    return { cenas: n, modo: modoVisual, por_cena: porCena, total: porCena * n, unidade: 'creditos', fixo: true };
+  }
+  // video
+  return { cenas: n, por_cena: custos.VIDEO, total: custos.VIDEO * n, unidade: 'creditos', fixo: true };
+}
+
+// Cruza os ids hardcoded do MODELS com a saida REAL de `higgsfield model list`
+// (texto cru, uma linha por modelo com o slug na 1a coluna). Devolve os ids do
+// catalogo estatico que NAO aparecem mais no catalogo vivo — sinal de obsolescencia.
+// O Jotaro alimenta isto com a saida do CLI antes de recomendar um teto pago.
+function idsObsoletos(liveListText, kind) {
+  const text = String(liveListText || '');
+  const slugs = new Set();
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^([a-z0-9_]+)\b/i);
+    if (m) slugs.add(m[1].toLowerCase());
+  }
+  if (slugs.size === 0) return { ok: false, erro: 'saida de model list vazia ou ilegivel', obsoletos: [] };
+  const alvo = kind ? MODELS.filter((mo) => mo.kind === normalizeKind(kind)) : MODELS;
+  const obsoletos = alvo.filter((mo) => !slugs.has(mo.id.toLowerCase())).map((mo) => mo.id);
+  return { ok: true, conferidos: alvo.length, obsoletos };
+}
+
 function normalizeKind(kind) {
   const k = String(kind || '').toLowerCase();
   if (k === 'imagem') return 'image';
@@ -193,15 +227,30 @@ function recommendModels(input = {}) {
   }
   warnings.push('Custos de modelos nao-default sao AC: confirme com higgsfield generate cost antes de prometer preco.');
   warnings.push('Execucao automatica desta versao continua via CLI; modelos nao-default sao decisao informada do usuario antes de integrar rota propria.');
+  warnings.push(`Catalogo abaixo e snapshot de ${CATALOGO_DATA}; rode \`higgsfield model list\` e cruze com idsObsoletos() antes de recomendar um teto pago (ids podem mudar).`);
+
+  const cenas = input.cenas === undefined || input.cenas === null || input.cenas === '' ? null : Number(input.cenas);
+  const custo_cenario = cenas !== null
+    ? {
+      cenas,
+      modo: input.modo || input.modo_visual || 'geracao',
+      executavel: custoCenario(current, cenas, input.modo || input.modo_visual),
+      recomendado: recommended && recommended.id !== (current && current.id)
+        ? custoCenario(recommended, cenas, input.modo || input.modo_visual)
+        : null,
+    }
+    : null;
 
   return {
     kind,
     objective,
     plan,
     credits,
+    catalogo_data: CATALOGO_DATA,
     current_executable_model: current,
     recommended,
     options: options.slice(0, 5),
+    custo_cenario,
     warnings,
   };
 }
@@ -212,6 +261,13 @@ function printHuman(advice) {
   lines.push(`Objetivo: ${advice.objective || '(nao informado)'}`);
   lines.push(`Modelo executavel agora: ${advice.current_executable_model.id} (${advice.current_executable_model.cost_note})`);
   lines.push(`Parecer: ${advice.recommended.id} - ${advice.recommended.best_for}`);
+  if (advice.custo_cenario) {
+    const e = advice.custo_cenario.executavel;
+    if (e) {
+      const tot = e.fixo ? `${e.total} ${e.unidade}` : e.total;
+      lines.push(`Custo do cenario (${advice.custo_cenario.cenas} cenas, modo ${advice.custo_cenario.modo}, ${advice.current_executable_model.id}): ${tot}${e.fixo ? '' : ' — confirme com higgsfield generate cost'}`);
+    }
+  }
   lines.push('');
   lines.push('| modelo | tier | roda agora? | melhor para | custo | tradeoff |');
   lines.push('|---|---|---|---|---|---|');
@@ -225,12 +281,29 @@ function printHuman(advice) {
 
 module.exports = {
   MODELS,
+  CATALOGO_DATA,
   recommendModels,
   printHuman,
+  custoCenario,
+  idsObsoletos,
 };
 
 if (require.main === module) {
   const args = parseArgs(process.argv);
+  const fs = require('fs');
+  // Modo verificacao de catalogo: cruza os ids hardcoded com a saida do CLI vivo.
+  //   higgsfield model list --image > /tmp/live.txt
+  //   node scripts/lib/model-advisor.cjs --verificar-catalogo /tmp/live.txt [--tipo image]
+  if (args['verificar-catalogo']) {
+    let text = '';
+    try { text = fs.readFileSync(args['verificar-catalogo'], 'utf8'); } catch (e) {
+      process.stderr.write(`nao li o arquivo de model list: ${e.message}\n`);
+      process.exit(2);
+    }
+    const r = idsObsoletos(text, args.tipo || args.kind);
+    process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+    process.exit(r.ok && r.obsoletos.length === 0 ? 0 : 1);
+  }
   const kind = args.kind || args.tipo || process.argv[2];
   const objective = args.objective || args.objetivo || args.o || '';
   const advice = recommendModels({
@@ -238,6 +311,8 @@ if (require.main === module) {
     objective,
     plan: args.plan || args.plano,
     credits: args.credits || args.creditos || args.saldo,
+    cenas: args.cenas || args.scenes,
+    modo: args.modo || args['modo-visual'],
   });
   if (args.json === true || args.json === 'true') {
     process.stdout.write(`${JSON.stringify(advice, null, 2)}\n`);

@@ -3792,6 +3792,60 @@ function checkHubBrandAgnostic() {
 // PATH-SAFETY: move com ../ ou destino fora de projects/ deve ser REJEITADO;
 // scaffold em projeto existente deve ERRAR. Tambem confirma que validate-rag
 // tolera um projeto com RAG/roteiro-rascunho.md (campo/arquivo extra nao quebra).
+function checkModelAdvisor() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'model-advisor.cjs'));
+  } catch (e) {
+    fail('model-advisor.cjs loads', e.message);
+    return;
+  }
+  for (const fn of ['recommendModels', 'custoCenario', 'idsObsoletos']) {
+    if (typeof mod[fn] !== 'function') { fail(`model-advisor exports ${fn}`, typeof mod[fn]); return; }
+  }
+  const custos = require(path.join(ROOT, 'scripts', 'lib', 'custos.cjs'));
+
+  // 1. Shape + objetivo free recomenda o executavel.
+  const adv = mod.recommendModels({ kind: 'image', objetivo: 'reel barato em volume', plano: 'free' });
+  if (adv.current_executable_model && adv.recommended && Array.isArray(adv.options) && adv.catalogo_data) {
+    pass('model-advisor: recomenda com modelo executavel + catalogo datado');
+  } else {
+    fail('model-advisor: recomenda com shape esperado', JSON.stringify(adv));
+  }
+
+  // 2. nano_banana_2 = "Nano Banana Pro" (verdade do catalogo vivo, resolvida).
+  const nb = mod.MODELS.find((m) => m.id === 'nano_banana_2');
+  if (nb && nb.display_name === 'Nano Banana Pro') pass('model-advisor: nano_banana_2 carimbado como Nano Banana Pro');
+  else fail('model-advisor: nano_banana_2 display_name', JSON.stringify(nb && nb.display_name));
+
+  // 3. Custo por cenario: image geracao N -> N*IMAGEM; biblioteca -> 0; video -> N*VIDEO; pago -> AC.
+  const img = mod.custoCenario(nb, 6, 'geracao');
+  const biblio = mod.custoCenario(nb, 6, 'biblioteca');
+  const vid = mod.custoCenario(mod.MODELS.find((m) => m.id === 'veo3_1_lite'), 6, 'geracao');
+  const pago = mod.custoCenario(mod.MODELS.find((m) => !m.executable_now), 6, 'geracao');
+  if (img.total === custos.IMAGEM * 6 && biblio.total === 0 && vid.total === custos.VIDEO * 6 && /AC/.test(pago.total)) {
+    pass('model-advisor: custo por cenario (geracao/biblioteca/video/pago-AC)');
+  } else {
+    fail('model-advisor: custo por cenario', JSON.stringify({ img, biblio, vid, pago }));
+  }
+
+  // 4. Detector de obsolescencia: lista viva sem um slug => flag; lista completa => vazio.
+  const todos = mod.MODELS.map((m) => `${m.id}    Nome    ${m.kind}`).join('\n');
+  const completo = mod.idsObsoletos(todos);
+  if (completo.ok && completo.obsoletos.length === 0) pass('model-advisor: idsObsoletos vazio quando catalogo bate');
+  else fail('model-advisor: idsObsoletos vazio com catalogo completo', JSON.stringify(completo));
+
+  const semNano = mod.MODELS.filter((m) => m.id !== 'nano_banana_2').map((m) => `${m.id} x ${m.kind}`).join('\n');
+  const faltando = mod.idsObsoletos(semNano);
+  if (faltando.ok && faltando.obsoletos.includes('nano_banana_2')) pass('model-advisor: idsObsoletos flagra slug ausente do catalogo vivo');
+  else fail('model-advisor: idsObsoletos flagra ausente', JSON.stringify(faltando));
+
+  // 5. Saida vazia de model list nao da falso-ok.
+  const vazio = mod.idsObsoletos('');
+  if (vazio.ok === false) pass('model-advisor: idsObsoletos rejeita lista vazia');
+  else fail('model-advisor: idsObsoletos rejeita lista vazia', JSON.stringify(vazio));
+}
+
 function checkRawSymlinkHardening() {
   const os = require('os');
   let ri;
@@ -4455,6 +4509,7 @@ checkScopeGuardRoteirizacao();
 checkRoteiroCommand();
 checkRawIngest();
 checkRawSymlinkHardening();
+checkModelAdvisor();
 checkRawIngestRecursive();
 checkImportaCommand();
 checkRawSkeletonAndScope();
