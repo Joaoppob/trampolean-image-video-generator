@@ -21,6 +21,40 @@ Se ainda não sabe pra qual projeto a pessoa vai trabalhar, pergunte (ou liste `
 e ofereça o demo TraceDefense). A partir daqui, `<nome>` é esse projeto e todo comando usa
 `--root projects/<nome>`.
 
+### Passo 0. Varra o material do projeto ANTES de perguntar
+
+Antes de perguntar qualquer lacuna, leia o que o projeto já tem no `RAG/`. Perguntar no escuro,
+com 50 roteiros e três personas prontas no disco, é o que faz a intake parecer cega. Aqui você
+surfa o que existe e propõe, depois cobre só o que o material não respondeu.
+
+Primeiro, detecte a biblioteca de personagem e o modo visual direto do disco:
+
+```bash
+node scripts/intake-state.cjs detect --root projects/<nome>
+```
+
+O `detect` devolve `{ existe, personagens, tem_personagem, tem_marca, plano_tem_imagem,
+modo_visual }`. Use isso para não perguntar o que o disco já responde:
+
+- `personagens` não vazio: o projeto já tem biblioteca de personagem. Não pergunte "tem
+  personagem?"; você já sabe quem são. `tem_personagem` vem `true` e `modo_visual` vem
+  `biblioteca` nesse caso.
+- `personagens` vazio e `modo_visual: "geracao"`: projeto sem biblioteca, cada cena será gerada.
+
+Depois, leia o resto do material do projeto com Glob/Grep/Read:
+
+- roteiros já escritos (`projects/<nome>/RAG/**/*roteiro*`, `*.md` de roteiro);
+- dossiês ou notas de persona;
+- a narrativa e a marca (`RAG/marca.md`, `RAG/narrativa.md`).
+
+Com isso em mãos, **surfe e proponha** em vez de perguntar do zero. Por exemplo: "Você já tem
+50 roteiros prontos aqui e três personas na biblioteca: Sofia, Dandara e Ji-woo. Quero te
+sugerir os três ganchos mais fortes que vi, ou você já tem um em mente?". A pessoa escolhe entre
+o que você propôs e o que ela trouxe; nos dois casos a intake anda mais rápido e mais ancorada.
+
+Só depois desse passo você vai às lacunas. As perguntas continuam valendo, mas só para o que o
+material de fato não responde.
+
 ### 2. Leia o estado da intake
 
 ```bash
@@ -36,7 +70,11 @@ obrigatórios ainda em aberto. Os campos obrigatórios (bloqueiam o avanço) sã
 - `tipo_conteudo` — produto, serviço, personagem, depoimento, tendência.
 
 Campos opcionais (você coleta se a pessoa tiver, mas não bloqueiam): `tem_roteiro`,
-`tem_personagem`, `referencias_usuario`.
+`referencias_usuario`.
+
+Os campos `tem_personagem`, `personagens` e `modo_visual` não se perguntam: eles vêm do disco,
+detectados no passo 0 (`detect`) e persistidos pelo `status`. Se a biblioteca de personagem
+responde, não pergunte.
 
 ### 3. Pergunte só as lacunas pendentes — uma de cada vez
 

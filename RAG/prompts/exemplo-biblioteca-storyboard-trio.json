@@ -1,0 +1,42 @@
+{
+  "campanha": "trio-curadoria-biblioteca-exemplo",
+  "cliente": "marca-ficticia-trio",
+  "plataforma": "tiktok",
+  "formato": "vertical 9:16",
+  "n_cenas": 3,
+  "cenas": [
+    {
+      "n": 1,
+      "beat_narrativo": "gancho",
+      "descricao_visual": "Sofia abre o reel com o produto na mesa do cafe, clima acolhedor e luz quente.",
+      "mood": "acolhedor, convidativo",
+      "duracao_seg": 4,
+      "personagem_presente": "completo",
+      "personagem": "sofia",
+      "fonte": "biblioteca",
+      "asset_path": "RAG/identidade-visual/sofia/sofia_05_cafe_artesanal.png"
+    },
+    {
+      "n": 2,
+      "beat_narrativo": "desenvolvimento-1",
+      "descricao_visual": "Dandara no estudio mostra o produto em uso, energia criativa e cores fortes.",
+      "mood": "criativo, energetico",
+      "duracao_seg": 4,
+      "personagem_presente": "completo",
+      "personagem": "dandara",
+      "fonte": "biblioteca",
+      "asset_path": "RAG/identidade-visual/dandara/dandara_03_estudio.png"
+    },
+    {
+      "n": 3,
+      "beat_narrativo": "cta",
+      "descricao_visual": "Ji-woo fecha o reel na rua segurando o produto, convite final limpo com espaco para CTA.",
+      "mood": "confiante, convite final",
+      "duracao_seg": 4,
+      "personagem_presente": "completo",
+      "personagem": "jiwoo",
+      "fonte": "biblioteca",
+      "asset_path": "RAG/identidade-visual/jiwoo/jiwoo_07_rua.png"
+    }
+  ]
+}

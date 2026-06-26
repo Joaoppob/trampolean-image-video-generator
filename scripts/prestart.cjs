@@ -13,6 +13,7 @@ const path = require('path');
 const parseArgs = require('./lib/parse-args.cjs');
 const rawIngest = require('./raw-ingest.cjs');
 const jotaroProfile = require('./jotaro-profile.cjs');
+const identidadeVisual = require('./lib/identidade-visual.cjs');
 
 const PROJECTS_DIR = 'projects';
 
@@ -70,10 +71,19 @@ function scanProjetos(rootAbs) {
       continue;
     }
 
+    // asset-first: detecta a biblioteca de personagem por projeto, para alimentar
+    // o passo 0 da intake (Frente 2) e a deteccao de modo_visual (Frente 4).
+    const projRoot = path.join(projetosAbs, ent.name);
+    const det = identidadeVisual.detect(projRoot);
+
     projetos.push({
       nome: typeof proj.nome === 'string' ? proj.nome : ent.name,
       tipo_marca: proj.tipo_marca || null,
       status: proj.status || null,
+      // ADITIVO: contagem de personagens/biblioteca por projeto (asset-first).
+      personagens: det.personagens,
+      tem_biblioteca: det.tem_personagem,
+      modo_visual: proj.modo_visual || det.modo_visual,
     });
   }
   return { projetos, avisos };

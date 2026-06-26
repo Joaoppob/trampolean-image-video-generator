@@ -1082,6 +1082,331 @@ function checkAnchorTraits() {
   }
 }
 
+// Frente 2 + Frente 4 (asset-first / curadoria). Os schemas do projeto nao tem
+// condicionais (validate-schema.cjs nao suporta oneOf/if-then), entao a regra
+// condicional por `fonte` (biblioteca exige asset_path; geracao exige asset_path
+// null + prompt) e validada AQUI, no verify, com a mesma forma helper/pass/fail.
+//
+// Prova:
+//   (1) cena fonte=biblioteca SEM asset_path e REJEITADA; COM asset_path passa.
+//   (2) cena fonte=geracao COM asset_path nao-nulo e REJEITADA; com asset_path
+//       null (ou ausente) + prompt passa. O exemplo do mago (geracao) continua valido.
+//   (3) asset_path resolve DENTRO de RAG/identidade-visual/ (rejeita ..\escape).
+//   (4) intake-state DETECTA tem_personagem:true + personagens + modo_visual
+//       coerente quando ha RAG/identidade-visual/<char>/ com imagem (fixture
+//       sintetico temporario, limpo ao final).
+//   (5) o exemplo biblioteca sintetico valida contra os schemas novos.
+function assetPathInsideIdentidade(p) {
+  // path-safety puramente lexica (sem tocar disco): aceita SO paths relativos
+  // dentro de RAG/identidade-visual/, sem traversal (..) nem absoluto.
+  if (typeof p !== 'string' || p.length === 0) return false;
+  if (path.isAbsolute(p)) return false;
+  const parts = p.split(/[\\/]+/);
+  if (parts.includes('..')) return false;
+  const norm = p.replace(/\\/g, '/');
+  return /^RAG\/identidade-visual\/.+/.test(norm);
+}
+
+// Regra condicional por fonte. Retorna array de erros (vazio = ok).
+// kind: 'shotlist' (geracao exige prompt) | 'storyboard' (sem prompt obrigatorio).
+function fonteRuleErrors(cena, kind) {
+  const errs = [];
+  const fonte = cena.fonte === undefined ? 'geracao' : cena.fonte; // default = geracao
+  if (fonte !== 'biblioteca' && fonte !== 'geracao') {
+    errs.push(`fonte invalida: ${JSON.stringify(cena.fonte)}`);
+    return errs;
+  }
+  if (fonte === 'biblioteca') {
+    if (cena.asset_path === undefined || cena.asset_path === null || cena.asset_path === '') {
+      errs.push('fonte=biblioteca exige asset_path nao-nulo');
+    } else if (!assetPathInsideIdentidade(cena.asset_path)) {
+      errs.push(`asset_path fora de RAG/identidade-visual/ ou com traversal: ${cena.asset_path}`);
+    }
+    if (kind === 'shotlist' && typeof cena.prompt === 'string' && cena.prompt.length > 0) {
+      errs.push('cena biblioteca nao deve carregar prompt (selecao, nao geracao)');
+    }
+  } else {
+    // geracao: asset_path deve ser null (ou ausente).
+    if (cena.asset_path !== undefined && cena.asset_path !== null) {
+      errs.push(`fonte=geracao exige asset_path null (recebeu ${JSON.stringify(cena.asset_path)})`);
+    }
+    if (kind === 'shotlist' && !(typeof cena.prompt === 'string' && cena.prompt.length > 0)) {
+      errs.push('fonte=geracao exige prompt nao-vazio');
+    }
+  }
+  return errs;
+}
+
+function checkAssetFirstFrentes24() {
+  // ---- (1)+(2) regra condicional fonte<->asset_path, casos sinteticos ----
+  const casos = [
+    ['biblioteca exige asset_path: cena biblioteca SEM asset_path e rejeitada',
+      { n: 1, tag: 't', tempo_seg: '0-4', intencao: 'xxxxxxxxxx', fonte: 'biblioteca', personagem: 'sofia', salvar_em: 'output/imagens/c.png' },
+      'shotlist', false],
+    ['biblioteca exige asset_path: cena biblioteca COM asset_path valido passa',
+      { n: 1, tag: 't', tempo_seg: '0-4', intencao: 'xxxxxxxxxx', fonte: 'biblioteca', personagem: 'sofia', asset_path: 'RAG/identidade-visual/sofia/s_01.png', salvar_em: 'output/imagens/c.png' },
+      'shotlist', true],
+    ['geracao exige asset_path null: cena geracao COM asset_path e rejeitada',
+      { n: 1, tag: 't', tempo_seg: '0-4', intencao: 'xxxxxxxxxx', fonte: 'geracao', asset_path: 'RAG/identidade-visual/sofia/s_01.png', prompt: 'p '.repeat(50) + '9:16', salvar_em: 'output/imagens/c.png' },
+      'shotlist', false],
+    ['geracao exige prompt: cena geracao com asset_path null + prompt passa',
+      { n: 1, tag: 't', tempo_seg: '0-4', intencao: 'xxxxxxxxxx', fonte: 'geracao', asset_path: null, prompt: 'p '.repeat(50) + '9:16', salvar_em: 'output/imagens/c.png' },
+      'shotlist', true],
+    ['asset_path path-safety: cena biblioteca com traversal (..) e rejeitada',
+      { n: 1, tag: 't', tempo_seg: '0-4', intencao: 'xxxxxxxxxx', fonte: 'biblioteca', personagem: 'sofia', asset_path: 'RAG/identidade-visual/../../segredo.png', salvar_em: 'output/imagens/c.png' },
+      'shotlist', false],
+    ['asset_path path-safety: cena biblioteca com path fora de identidade-visual e rejeitada',
+      { n: 1, tag: 't', tempo_seg: '0-4', intencao: 'xxxxxxxxxx', fonte: 'biblioteca', personagem: 'sofia', asset_path: 'output/imagens/roubo.png', salvar_em: 'output/imagens/c.png' },
+      'shotlist', false],
+  ];
+  for (const [name, cena, kind, expectOk] of casos) {
+    const errs = fonteRuleErrors(cena, kind);
+    const ok = errs.length === 0;
+    if (ok === expectOk) pass(`asset-first ${name}`);
+    else fail(`asset-first ${name}`, `errs=${errs.join('; ')}`);
+  }
+
+  // ---- (3) o exemplo do mago (geracao) continua satisfazendo a regra fonte ----
+  try {
+    const mago = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-shotlist-mago.json'), 'utf8'));
+    let allOk = Array.isArray(mago.cenas);
+    let firstErr = '';
+    for (const cena of mago.cenas || []) {
+      const errs = fonteRuleErrors(cena, 'shotlist');
+      if (errs.length) { allOk = false; firstErr = `cena ${cena.n}: ${errs.join('; ')}`; break; }
+    }
+    if (allOk) pass('asset-first exemplo do mago (geracao) satisfaz a regra fonte<->asset_path');
+    else fail('asset-first exemplo do mago (geracao) satisfaz a regra fonte<->asset_path', firstErr);
+  } catch (e) {
+    fail('asset-first exemplo do mago (geracao) satisfaz a regra fonte<->asset_path', e.message);
+  }
+
+  // ---- (5b) limpeza de tetos arbitrarios: refs sem teto + subpasta por personagem ----
+  // Nenhum teto arbitrario de criacao: identity.refs e referencias_obrigatorias aceitam
+  // N refs (mais que o antigo teto de 3) e subpasta por personagem. O path-safety (sem
+  // traversal) e um guard de protecao e CONTINUA valendo. Ver references/asset-first-architecture.md.
+  try {
+    const identitySchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'identity.schema.json'), 'utf8'));
+    const idMulti = {
+      refs: [
+        'RAG/identidade-visual/sofia/sofia_05.png',
+        'RAG/identidade-visual/dandara/dandara_03.png',
+        'RAG/identidade-visual/jiwoo/jiwoo_07.png',
+        'RAG/identidade-visual/marca/produto_01.png',
+        'RAG/identidade-visual/sofia/sofia_12.png',
+      ],
+      anchor_textual: 'x'.repeat(80),
+      estilo: 'lifestyle vertical 9:16',
+      paleta: ['quente', 'neutro'],
+      narrativa_resumo: 'resumo de narrativa com substancia suficiente',
+      tom: 'leve e real',
+    };
+    const res = validateSchema(identitySchema, idMulti);
+    if (res.valid) pass('limpeza de tetos: identity.refs aceita N refs (>3) e subpasta por personagem');
+    else fail('limpeza de tetos: identity.refs aceita N refs (>3) e subpasta por personagem', res.errors.join('; '));
+
+    const idBad = Object.assign({}, idMulti, { refs: ['RAG/identidade-visual/../segredo.png'] });
+    const resBad = validateSchema(identitySchema, idBad);
+    if (!resBad.valid) pass('limpeza de tetos: identity.refs ainda rejeita traversal (guard de protecao intacto)');
+    else fail('limpeza de tetos: identity.refs ainda rejeita traversal (guard de protecao intacto)', 'aceitou path com ..');
+  } catch (e) {
+    fail('limpeza de tetos: identity.refs aceita N refs (>3) e subpasta por personagem', e.message);
+  }
+
+  try {
+    const shotlistSchemaForRefs = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'shotlist.schema.json'), 'utf8'));
+    const refsSchema = shotlistSchemaForRefs.properties && shotlistSchemaForRefs.properties.referencias_obrigatorias;
+    const semTeto = refsSchema && refsSchema.maxItems === undefined;
+    if (semTeto) pass('limpeza de tetos: shotlist.referencias_obrigatorias sem maxItems arbitrario');
+    else fail('limpeza de tetos: shotlist.referencias_obrigatorias sem maxItems arbitrario', `maxItems=${refsSchema && refsSchema.maxItems}`);
+  } catch (e) {
+    fail('limpeza de tetos: shotlist.referencias_obrigatorias sem maxItems arbitrario', e.message);
+  }
+
+  // ---- (5) o exemplo biblioteca sintetico valida contra os schemas novos ----
+  // shotlist biblioteca: valida contra shotlist.schema.json E satisfaz a regra fonte.
+  let shotlistSchema = null;
+  let storyboardSchema = null;
+  try {
+    shotlistSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'shotlist.schema.json'), 'utf8'));
+    storyboardSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'storyboard.schema.json'), 'utf8'));
+  } catch (e) {
+    fail('asset-first schemas carregaveis', e.message);
+  }
+
+  if (shotlistSchema) {
+    try {
+      const bibSl = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-biblioteca-trio.json'), 'utf8'));
+      const res = validateSchema(shotlistSchema, bibSl);
+      const fonteErrs = [];
+      for (const cena of bibSl.cenas || []) {
+        const e = fonteRuleErrors(cena, 'shotlist');
+        if (e.length) fonteErrs.push(`cena ${cena.n}: ${e.join('; ')}`);
+      }
+      // todas as cenas do exemplo sao biblioteca multi-personagem distintos.
+      const personagens = new Set((bibSl.cenas || []).map((c) => c.personagem).filter(Boolean));
+      const todasBiblioteca = (bibSl.cenas || []).every((c) => c.fonte === 'biblioteca');
+      if (res.valid && fonteErrs.length === 0 && todasBiblioteca && personagens.size >= 2) {
+        pass('asset-first exemplo biblioteca (shotlist) valida contra schema + regra fonte (multi-personagem)');
+      } else {
+        fail('asset-first exemplo biblioteca (shotlist) valida contra schema + regra fonte (multi-personagem)',
+          `schema=${res.errors.join('; ')} fonte=${fonteErrs.join('; ')} todasBib=${todasBiblioteca} personagens=${personagens.size}`);
+      }
+    } catch (e) {
+      fail('asset-first exemplo biblioteca (shotlist) valida contra schema + regra fonte (multi-personagem)', e.message);
+    }
+  }
+
+  if (storyboardSchema) {
+    try {
+      const bibSb = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-biblioteca-storyboard-trio.json'), 'utf8'));
+      const res = validateSchema(storyboardSchema, bibSb);
+      const fonteErrs = [];
+      for (const cena of bibSb.cenas || []) {
+        const e = fonteRuleErrors(cena, 'storyboard');
+        if (e.length) fonteErrs.push(`cena ${cena.n}: ${e.join('; ')}`);
+      }
+      if (res.valid && fonteErrs.length === 0) {
+        pass('asset-first exemplo biblioteca (storyboard) valida contra schema + regra fonte');
+      } else {
+        fail('asset-first exemplo biblioteca (storyboard) valida contra schema + regra fonte',
+          `schema=${res.errors.join('; ')} fonte=${fonteErrs.join('; ')}`);
+      }
+    } catch (e) {
+      fail('asset-first exemplo biblioteca (storyboard) valida contra schema + regra fonte', e.message);
+    }
+  }
+
+  // o exemplo do mago (storyboard, sujeito unico/geracao) continua valido com os
+  // campos novos OPCIONAIS (sem fonte/personagem/asset_path explicitos).
+  if (storyboardSchema) {
+    try {
+      const magoSb = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-storyboard-mago.json'), 'utf8'));
+      const res = validateSchema(storyboardSchema, magoSb);
+      if (res.valid) pass('asset-first exemplo do mago (storyboard) continua valido com campos novos opcionais');
+      else fail('asset-first exemplo do mago (storyboard) continua valido com campos novos opcionais', res.errors.join('; '));
+    } catch (e) {
+      fail('asset-first exemplo do mago (storyboard) continua valido com campos novos opcionais', e.message);
+    }
+  }
+
+  // ---- (4) intake-state DETECTA biblioteca de personagem do disco ----
+  const script = path.join(ROOT, 'scripts', 'intake-state.cjs');
+  // fixture sintetico: <tmp>/RAG/identidade-visual/{sofia,dandara}/img + marca/img
+  // + uma imagem solta na raiz (que NAO deve virar personagem).
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-assetfirst-'));
+  try {
+    const iv = path.join(tmp, 'RAG', 'identidade-visual');
+    fs.mkdirSync(path.join(iv, 'sofia'), { recursive: true });
+    fs.mkdirSync(path.join(iv, 'dandara'), { recursive: true });
+    fs.mkdirSync(path.join(iv, 'marca'), { recursive: true });
+    fs.mkdirSync(path.join(iv, 'vazia'), { recursive: true }); // subpasta sem imagem: ignorada
+    fs.writeFileSync(path.join(iv, 'sofia', 'sofia_01.png'), 'fake-png');
+    fs.writeFileSync(path.join(iv, 'dandara', 'dandara_01.jpg'), 'fake-jpg');
+    fs.writeFileSync(path.join(iv, 'marca', 'logo.png'), 'fake-png');
+    fs.writeFileSync(path.join(iv, 'solta.png'), 'fake-png'); // plano: nao e personagem
+
+    // detect: deteccao pura, sem persistir.
+    const det = spawnSync('node', [script, 'detect', '--root', tmp], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+    const detJson = safeJson(det.stdout);
+    const detOk =
+      detJson &&
+      detJson.tem_personagem === true &&
+      Array.isArray(detJson.personagens) &&
+      detJson.personagens.length === 2 &&
+      detJson.personagens.includes('sofia') &&
+      detJson.personagens.includes('dandara') &&
+      !detJson.personagens.includes('marca') &&
+      !detJson.personagens.includes('vazia') &&
+      detJson.tem_marca === true &&
+      detJson.plano_tem_imagem === true &&
+      detJson.modo_visual === 'biblioteca';
+    if (detOk) pass('asset-first intake detect enxerga personagens (exclui marca/ e subpasta vazia)');
+    else fail('asset-first intake detect enxerga personagens (exclui marca/ e subpasta vazia)', det.stdout);
+
+    // status: persiste tem_personagem/personagens/modo_visual detectados.
+    const st = spawnSync('node', [script, 'status', '--root', tmp], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+    const stJson = safeJson(st.stdout);
+    const stOk =
+      stJson &&
+      stJson.tem_personagem === true &&
+      Array.isArray(stJson.personagens) &&
+      stJson.personagens.length === 2 &&
+      stJson.modo_visual === 'biblioteca';
+    if (stOk) pass('asset-first intake status persiste tem_personagem/personagens/modo_visual detectados');
+    else fail('asset-first intake status persiste tem_personagem/personagens/modo_visual detectados', st.stdout);
+
+    // o estado gravado valida contra intake.schema.json (com os campos novos).
+    try {
+      const intakeSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'intake.schema.json'), 'utf8'));
+      const written = JSON.parse(fs.readFileSync(path.join(tmp, 'output', '.intake-state.json'), 'utf8'));
+      const res = validateSchema(intakeSchema, written);
+      if (res.valid) pass('asset-first intake state detectado valida contra intake.schema.json');
+      else fail('asset-first intake state detectado valida contra intake.schema.json', res.errors.join('; '));
+    } catch (e) {
+      fail('asset-first intake state detectado valida contra intake.schema.json', e.message);
+    }
+  } catch (e) {
+    fail('asset-first intake detection sequence', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+
+  // caso geracao: SEM subpastas de personagem -> modo_visual geracao, sem personagens,
+  // tem_personagem false (sujeito unico / mago). NUNCA grava false-no-escuro: aqui
+  // false e o CORRETO (nao ha biblioteca). Prova o outro lado da deteccao.
+  const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-assetfirst-ger-'));
+  try {
+    const iv = path.join(tmp2, 'RAG', 'identidade-visual');
+    fs.mkdirSync(iv, { recursive: true });
+    fs.writeFileSync(path.join(iv, 'mage1.png'), 'fake-png'); // plano: sujeito unico
+    const det = spawnSync('node', [script, 'detect', '--root', tmp2], { cwd: ROOT, encoding: 'utf8', windowsHide: true });
+    const detJson = safeJson(det.stdout);
+    const ok =
+      detJson &&
+      detJson.tem_personagem === false &&
+      Array.isArray(detJson.personagens) &&
+      detJson.personagens.length === 0 &&
+      detJson.modo_visual === 'geracao' &&
+      detJson.plano_tem_imagem === true;
+    if (ok) pass('asset-first intake detect: pasta plana (sujeito unico) e geracao, sem personagens');
+    else fail('asset-first intake detect: pasta plana (sujeito unico) e geracao, sem personagens', det.stdout);
+  } catch (e) {
+    fail('asset-first intake detect geracao case', e.message);
+  } finally {
+    fs.rmSync(tmp2, { recursive: true, force: true });
+  }
+
+  // ---- prestart expoe personagens/tem_biblioteca/modo_visual por projeto ----
+  const prestartScript = path.join(ROOT, 'scripts', 'prestart.cjs');
+  const tmp3 = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-assetfirst-pre-'));
+  try {
+    const projRag = path.join(tmp3, 'projects', 'TrioMarca', 'RAG', 'identidade-visual');
+    fs.mkdirSync(path.join(projRag, 'sofia'), { recursive: true });
+    fs.writeFileSync(path.join(projRag, 'sofia', 'sofia_01.png'), 'fake-png');
+    fs.writeFileSync(
+      path.join(tmp3, 'projects', 'TrioMarca', 'project.json'),
+      JSON.stringify({ nome: 'TrioMarca', tipo_marca: 'personagem', status: 'ativo' }, null, 2) + '\n'
+    );
+    fs.mkdirSync(path.join(tmp3, 'Raw'), { recursive: true });
+    const r = spawnSync('node', [prestartScript, '--root', '.'], { cwd: tmp3, encoding: 'utf8', windowsHide: true });
+    const j = safeJson(r.stdout) || {};
+    const proj = Array.isArray(j.projetos) ? j.projetos.find((p) => p.nome === 'TrioMarca') : null;
+    const ok =
+      proj &&
+      Array.isArray(proj.personagens) &&
+      proj.personagens.includes('sofia') &&
+      proj.tem_biblioteca === true &&
+      proj.modo_visual === 'biblioteca';
+    if (ok) pass('asset-first prestart expoe personagens/tem_biblioteca/modo_visual por projeto');
+    else fail('asset-first prestart expoe personagens/tem_biblioteca/modo_visual por projeto', r.stdout);
+  } catch (e) {
+    fail('asset-first prestart por projeto', e.message);
+  } finally {
+    fs.rmSync(tmp3, { recursive: true, force: true });
+  }
+}
+
 function checkHookRegistered() {
   const settingsPath = path.join(ROOT, '.claude', 'settings.json');
   if (!fs.existsSync(settingsPath)) {
@@ -2200,6 +2525,105 @@ function checkRawIngest() {
   }
 }
 
+// Frente 1 (asset-first) — /importa recursivo + cofre de dados. Prova, num root
+// fake (tmp), os tres comportamentos do spec: (1) plan RECURSIVO enxerga uma
+// imagem dentro de subpasta aninhada (Raw/<tema>/<sub>/x.png), traz `subdir` e o
+// resumo `subpastas`; (2) finalize RECUSA apagar um lote com imagem aninhada
+// remanescente (ok:false, lista a sobra, pasta continua no disco); (3) finalize
+// SO apaga quando a varredura recursiva esta limpa. Mesmo estilo de checkRawIngest.
+function checkRawIngestRecursive() {
+  const script = path.join(ROOT, 'scripts', 'raw-ingest.cjs');
+  if (!fs.existsSync(script)) {
+    fail('raw-ingest.cjs existe (recursivo)', 'scripts/raw-ingest.cjs ausente');
+    return;
+  }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-raw-rec-'));
+
+  function call(args, input) {
+    const r = spawnSync('node', [script, ...args], { cwd: tmp, input, encoding: 'utf8', windowsHide: true });
+    return { status: r.status, json: safeJson(r.stdout), stdout: r.stdout, stderr: r.stderr };
+  }
+
+  try {
+    // Raw/<tema> com uma imagem ANINHADA em subpasta de personagem + um texto no topo.
+    fs.mkdirSync(path.join(tmp, 'Raw', 'girls-gummies', 'Personagens', 'sofia'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'Raw', 'girls-gummies', 'Personagens', 'sofia', 'sofia_01.png'), 'fake-png');
+    fs.writeFileSync(path.join(tmp, 'Raw', 'girls-gummies', 'brief.md'), '# brief\n');
+
+    // (1) plan RECURSIVO enxerga a imagem aninhada, com subdir e path completo.
+    const p = call(['plan', '--root', '.']);
+    const lote = p.json && Array.isArray(p.json.lotes) ? p.json.lotes.find((l) => l.tema === 'girls-gummies') : null;
+    const aninhada = lote ? lote.arquivos.find((a) => a.nome === 'sofia_01.png') : null;
+    if (
+      p.status === 0 &&
+      aninhada &&
+      aninhada.tipo === 'imagem' &&
+      aninhada.subdir === 'Personagens/sofia' &&
+      aninhada.path === 'Raw/girls-gummies/Personagens/sofia/sofia_01.png'
+    ) {
+      pass('raw-ingest plan recursivo enxerga imagem em subpasta aninhada');
+    } else {
+      fail('raw-ingest plan recursivo enxerga imagem em subpasta aninhada', JSON.stringify(p.json));
+    }
+
+    // o resumo `subpastas` reconhece o conjunto de personagem (1a subpasta de 1o nivel).
+    const sub = lote && Array.isArray(lote.subpastas) ? lote.subpastas.find((s) => s.nome === 'Personagens') : null;
+    if (sub && sub.n_imagens === 1) {
+      pass('raw-ingest plan resume subpastas (conjunto de personagem)');
+    } else {
+      fail('raw-ingest plan resume subpastas (conjunto de personagem)', JSON.stringify(lote && lote.subpastas));
+    }
+
+    // (2) finalize RECUSA apagar: imagem aninhada remanescente. ok:false, lista a
+    // sobra (com flag imagem) e a pasta CONTINUA no disco.
+    const finBlocked = call(['finalize', '--root', '.', '--tema', 'girls-gummies']);
+    const sobras = finBlocked.json && Array.isArray(finBlocked.json.sobraram) ? finBlocked.json.sobraram : null;
+    const sobraImg = sobras ? sobras.find((s) => s.path === 'Raw/girls-gummies/Personagens/sofia/sofia_01.png') : null;
+    const aindaNoDisco = fs.existsSync(path.join(tmp, 'Raw', 'girls-gummies', 'Personagens', 'sofia', 'sofia_01.png'));
+    if (
+      finBlocked.status !== 0 &&
+      finBlocked.json &&
+      finBlocked.json.ok === false &&
+      finBlocked.json.apagado === false &&
+      sobraImg &&
+      sobraImg.imagem === true &&
+      aindaNoDisco
+    ) {
+      pass('raw-ingest finalize recusa apagar lote com imagem aninhada (cofre)');
+    } else {
+      fail('raw-ingest finalize recusa apagar lote com imagem aninhada (cofre)', JSON.stringify(finBlocked.json));
+    }
+
+    // (3) finalize SO apaga quando a varredura recursiva esta limpa: move a imagem
+    // aninhada e remove o texto do topo; o lote (mesmo com subdirs vazios) some.
+    fs.mkdirSync(path.join(tmp, 'projects', 'gg', 'RAG', 'identidade-visual', 'sofia'), { recursive: true });
+    const mv = call([
+      'move', '--root', '.',
+      '--de', 'Raw/girls-gummies/Personagens/sofia/sofia_01.png',
+      '--para', 'projects/gg/RAG/identidade-visual/sofia/sofia_01.png',
+    ]);
+    const movedExists = fs.existsSync(path.join(tmp, 'projects', 'gg', 'RAG', 'identidade-visual', 'sofia', 'sofia_01.png'));
+    if (mv.status === 0 && movedExists) {
+      pass('raw-ingest move transfere arquivo aninhado (subpasta de personagem)');
+    } else {
+      fail('raw-ingest move transfere arquivo aninhado (subpasta de personagem)', JSON.stringify(mv.json));
+    }
+    fs.unlinkSync(path.join(tmp, 'Raw', 'girls-gummies', 'brief.md'));
+
+    const finOk = call(['finalize', '--root', '.', '--tema', 'girls-gummies']);
+    const loteGone = !fs.existsSync(path.join(tmp, 'Raw', 'girls-gummies'));
+    if (finOk.status === 0 && finOk.json && finOk.json.ok === true && loteGone) {
+      pass('raw-ingest finalize apaga lote so quando varredura recursiva esta limpa');
+    } else {
+      fail('raw-ingest finalize apaga lote so quando varredura recursiva esta limpa', JSON.stringify(finOk.json));
+    }
+  } catch (e) {
+    fail('raw-ingest recursive command sequence', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 // /importa tem frontmatter description.
 function checkImportaCommand() {
   const file = path.join(ROOT, '.claude', 'commands', 'importa.md');
@@ -2457,6 +2881,7 @@ checkIntakeState();
 checkScopeGuardRoteirizacao();
 checkRoteiroCommand();
 checkRawIngest();
+checkRawIngestRecursive();
 checkImportaCommand();
 checkRawSkeletonAndScope();
 checkPrestart();
@@ -2475,6 +2900,7 @@ checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
 checkAnchorTraits();
+checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
 checkLedger();
 checkHfResult();

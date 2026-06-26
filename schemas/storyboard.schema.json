@@ -22,7 +22,19 @@
           "descricao_visual": { "type": "string", "description": "O que aparece na cena, em linguagem natural PT-BR" },
           "mood": { "type": "string" },
           "duracao_seg": { "type": "integer" },
-          "personagem_presente": { "enum": ["completo", "parcial", "ausente"] }
+          "personagem_presente": { "enum": ["completo", "parcial", "ausente"] },
+          "personagem": {
+            "type": ["string", "null"],
+            "description": "ADITIVO (asset-first). Chave de personagem desta cena: nome da subpasta em RAG/identidade-visual/<char>/ (ex: \"sofia\"), um coletivo (ex: \"trio\"), ou null para sujeito unico / sem personagem literal. Opcional; storyboards de sujeito unico (mago) omitem ou usam null."
+          },
+          "fonte": {
+            "enum": ["biblioteca", "geracao"],
+            "description": "ADITIVO (asset-first). \"biblioteca\" = a cena reaproveita um asset ja existente (curadoria, custo 0); \"geracao\" = a cena sera gerada (legado/default). Opcional: ausente equivale a \"geracao\"."
+          },
+          "asset_path": {
+            "type": ["string", "null"],
+            "description": "ADITIVO (asset-first). Quando fonte=biblioteca: path relativo do asset escolhido, DENTRO de RAG/identidade-visual/ (ex: \"RAG/identidade-visual/sofia/sofia_05_cafe.png\"). Quando fonte=geracao: deve ser null. A regra condicional fonte<->asset_path e validada pelo verify (o validador do projeto nao tem condicionais)."
+          }
         }
       }
     }

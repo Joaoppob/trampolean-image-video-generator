@@ -1,17 +1,23 @@
 ---
 name: gera-video
-description: Transforma a imagem de uma cena (via job_id da gera-imagem) num clipe de vídeo 9:16 curto no Higgsfield, usando SÓ veo3_1_lite (único modelo de vídeo no free tier), via Higgsfield CLI. Exige prompt de movimento, cria o job sem wait, confirma job_id e só então espera o resultado. Grava no save-crystal pra retomada. Use depois de gera-imagem, na etapa image-to-video do pipeline.
+description: Transforma a imagem de uma cena num clipe de vídeo 9:16 curto no Higgsfield, usando SÓ veo3_1_lite (único modelo de vídeo no free tier), via Higgsfield CLI. Aceita dois start-frames: o job_id da gera-imagem (cena de modo geração, sem re-upload) OU o still local da cena de modo biblioteca (job_id simbólico selected-from-library: sobe o still e usa como start-image). Exige prompt de movimento, cria o job sem wait, confirma job_id e só então espera o resultado. Grava no save-crystal pra retomada. Use depois de gera-imagem, na etapa image-to-video do pipeline.
 argument-hint: "[cena] [job_id-da-imagem] [prompt-de-movimento]"
 allowed-tools: Bash, Read
 ---
 
 # gera-video — imagem → clipe 9:16
 
-Pipeline (Higgsfield CLI): `generate create veo3_1_lite --start-image <job_id da imagem>
+Pipeline (Higgsfield CLI): `generate create veo3_1_lite --start-image <start-frame>
 --prompt "<movimento>" --duration 4 --aspect_ratio 9:16 --json` → confirma `job_id` →
 `generate wait <job_id> --json` → parse → download. **4 créditos/clipe** (4s, 9:16, mudo).
-O `--start-image` aceita o `job_id` da imagem (image-to-video, **sem re-upload** — a imagem já
-está no Higgsfield).
+
+O `--start-image` aceita **duas** origens de start-frame, conforme a cena de origem:
+
+- **Cena de modo geração** (`job_id` real da `gera-imagem`): passe o `job_id` direto. A imagem já
+  está no Higgsfield, então é image-to-video **sem re-upload**.
+- **Cena de modo biblioteca** (`job_id: "selected-from-library"`): não há job Higgsfield. O still
+  é local (a cópia do asset em `output/imagens/`). Suba o still uma vez (`higgsfield upload create`)
+  e use o upload id resultante como start-frame. Ver "Resolver o start-frame" no passo 2.
 
 > **Pré-requisito:** CLI autenticado (`higgsfield account status` mostra a conta certa).
 > Se não, `/setup`. O Jotaro resolve sozinho, sem reiniciar o Claude Code.
@@ -56,8 +62,11 @@ caia pra Seedance/Kling/Grok/Wan na esperança de que funcione.
 ## Entrada
 
 - `cena` — número da cena (índice no save-crystal).
-- `job_id` da imagem (saída da `gera-imagem`) — OU `path` da imagem se precisar
-  re-subir (caminho raro; o normal é reusar o job_id como `--start-image`).
+- `job_id` da imagem (saída da `gera-imagem`). Dois casos:
+  - **job real** (cena de modo geração): reusa direto como `--start-image`, sem re-upload.
+  - **`selected-from-library`** (cena de modo biblioteca): não é um job Higgsfield. O start-frame é
+    o **still local** da cena (`<PROJ>/output/imagens/cena-NN-tag.png`, a cópia do asset). Sobe-se o
+    still antes de usar. O `path` do still vem do save-crystal da imagem (campo `path`).
 - `prompt de movimento` — obrigatório para `veo3_1_lite`, mesmo em image-to-video. Deve ser
   curto e concreto: descreva só o movimento/câmera/ação, mantendo o sujeito da imagem. Ex.:
   `"slow cinematic push-in, the character breathes and tightens grip, embers drift, no text"`.
@@ -96,13 +105,29 @@ Regra prática:
 
 ### 2. Criar o job rápido, sem `--wait`
 
-Crie o job **sem `--wait`** para confirmar rapidamente que o Higgsfield aceitou os parâmetros e
-devolveu `job_id`. Isso evita ciclo pendurado: se o CLI reclamar de flag obrigatória, modelo,
-auth ou crédito, a falha aparece na criação e você diagnostica antes de esperar.
+**Resolver o start-frame antes do `generate create`.** O start-frame depende do `job_id` da imagem:
+
+- **`job_id` real** (cena de modo geração): use-o direto como `--start-image`. A imagem já está no
+  Higgsfield, sem re-upload.
+- **`job_id` igual a `selected-from-library`** (cena de modo biblioteca): não há job no Higgsfield.
+  Suba o still local da cena e use o upload id como start-frame:
+
+  ```bash
+  higgsfield upload create "<PROJ>/output/imagens/cena-<NN>-<tag>.png" --json
+  ```
+
+  Pegue o upload id da saída (UUID do media; em dúvida, rode sem `--json` e leia o id em texto).
+  **Upload não cobra crédito.** Esse upload id vira o `START_FRAME` do `generate create`. (O still é
+  o `path` do registro de imagem no save-crystal, prefixado com `<PROJ>/`.)
+
+Defina `START_FRAME` = o `job_id` real **ou** o upload id do still, conforme o caso. Crie o job
+**sem `--wait`** para confirmar rapidamente que o Higgsfield aceitou os parâmetros e devolveu
+`job_id`. Isso evita ciclo pendurado: se o CLI reclamar de flag obrigatória, modelo, auth ou
+crédito, a falha aparece na criação e você diagnostica antes de esperar.
 
 ```bash
 higgsfield generate create veo3_1_lite \
-  --start-image <JOB_ID_DA_IMAGEM> \
+  --start-image <START_FRAME> \
   --prompt "<PROMPT_DE_MOVIMENTO>" \
   --duration 4 \
   --aspect_ratio 9:16 \
@@ -110,8 +135,9 @@ higgsfield generate create veo3_1_lite \
 ```
 
 - `veo3_1_lite` (e SÓ esse no free).
-- `--start-image <JOB_ID_DA_IMAGEM>`: image-to-video reusando o job da imagem, sem re-upload
-  (a flag aceita upload id **ou** job id). Se só tiver o path da imagem, passe o path (auto-upload).
+- `--start-image <START_FRAME>`: o `job_id` real da imagem (modo geração, sem re-upload) ou o
+  upload id do still local (modo biblioteca). A flag aceita upload id **ou** job id. Se só tiver o
+  path da imagem, passe o path (auto-upload).
 - `--prompt "<PROMPT_DE_MOVIMENTO>"`: obrigatório para o Veo 3.1 Lite; sem isso, não prossiga.
 - `--duration 4`: **obrigatório** (ver aviso acima — sem isso, 8 cr).
 

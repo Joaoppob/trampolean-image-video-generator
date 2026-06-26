@@ -15,27 +15,39 @@
  * Interface CLI (subcomando + flags --chave valor):
  *   status  --root projects/<nome>
  *       -> { lacunas_pendentes: [...], status, ...estado }
+ *          DETECTA a biblioteca de personagem do disco e persiste
+ *          tem_personagem/personagens/modo_visual (ver applyDetection).
  *   update  --root projects/<nome> --campo <k> --valor <v>
  *       -> grava o campo, recomputa lacunas_pendentes e status
  *   reset   --root projects/<nome>
  *       -> zera o estado
+ *   detect  --root projects/<nome>
+ *       -> roda SO a deteccao da biblioteca (sem persistir), retorna
+ *          { existe, personagens, tem_personagem, tem_marca, plano_tem_imagem, modo_visual }
  *
  * Campos OBRIGATORIOS (bloqueiam; entram em lacunas_pendentes se nulos/vazios):
  *   projeto, plataforma, objetivo_post, tipo_conteudo
  * Campos OPCIONAIS (nao bloqueiam):
- *   tem_roteiro, tem_personagem, referencias_usuario
+ *   tem_roteiro, referencias_usuario
+ * Campos DETECTADOS do disco (asset-first; NAO inferidos do contexto de conversa):
+ *   tem_personagem, personagens, modo_visual
+ *   - tem_personagem: presenca de RAG/identidade-visual/<char>/ com imagem.
+ *     NUNCA gravado como false quando existe biblioteca de personagem populada.
+ *   - personagens: nomes das subpastas de personagem com imagem.
+ *   - modo_visual: "biblioteca" se ha biblioteca populada; senao "geracao".
  */
 
 const fs = require('fs');
 const path = require('path');
 const parseArgs = require('./lib/parse-args.cjs');
+const identidadeVisual = require('./lib/identidade-visual.cjs');
 
 const STATE_REL = path.join('output', '.intake-state.json');
 
 // Campos que bloqueiam o avanco da intake. Ordem = ordem de pergunta sugerida.
 const CAMPOS_OBRIGATORIOS = ['projeto', 'plataforma', 'objetivo_post', 'tipo_conteudo'];
 // Campos opcionais aceitos por update (nao bloqueiam).
-const CAMPOS_OPCIONAIS = ['tem_roteiro', 'tem_personagem', 'referencias_usuario'];
+const CAMPOS_OPCIONAIS = ['tem_roteiro', 'tem_personagem', 'referencias_usuario', 'personagens', 'modo_visual'];
 // Plataformas validas (espelha o enum de intake.schema.json, menos o null).
 const PLATAFORMAS = ['instagram', 'tiktok', 'facebook', 'youtube', 'reels'];
 
@@ -50,7 +62,12 @@ function emptyState() {
     objetivo_post: null,
     tipo_conteudo: null,
     tem_roteiro: false,
+    // tem_personagem/modo_visual/personagens NAO sao mais default-false-no-escuro:
+    // sao DETECTADOS da biblioteca de personagem (RAG/identidade-visual/<char>/).
+    // null = ainda nao detectado; a deteccao roda no `status` (applyDetection).
     tem_personagem: false,
+    personagens: [],
+    modo_visual: null,
     referencias_usuario: [],
     lacunas_pendentes: [],
     status: 'em-andamento',
@@ -64,6 +81,7 @@ function load(root) {
     const obj = JSON.parse(fs.readFileSync(p, 'utf8'));
     return recompute(Object.assign(emptyState(), obj, {
       referencias_usuario: Array.isArray(obj.referencias_usuario) ? obj.referencias_usuario : [],
+      personagens: Array.isArray(obj.personagens) ? obj.personagens : [],
     }));
   } catch (_) {
     try {
@@ -109,17 +127,47 @@ function recompute(state) {
   return state;
 }
 
+/*
+ * applyDetection — deriva tem_personagem/personagens/modo_visual do disco
+ * (RAG/identidade-visual/<char>/), em vez de inferir do contexto de conversa.
+ * Corrige o bug do run girls-gummies (tem_personagem:false com 48 rostos).
+ *
+ * Regra-cofre: NUNCA grava tem_personagem:false quando existe biblioteca de
+ * personagem populada. Quando ha biblioteca: tem_personagem:true, personagens
+ * dos nomes de subpasta, modo_visual:"biblioteca". Sem biblioteca: modo_visual
+ * "geracao" e personagens []; tem_personagem segue o detectado (false).
+ */
+function applyDetection(root, state) {
+  const det = identidadeVisual.detect(root);
+  if (det.tem_personagem) {
+    state.tem_personagem = true;
+    state.personagens = det.personagens;
+    state.modo_visual = 'biblioteca';
+  } else {
+    state.personagens = [];
+    state.modo_visual = 'geracao';
+    // sem biblioteca de personagem: o sujeito unico (mago) ou projeto sem refs.
+    // nao forcamos true; mantemos o detectado (false) — coerente com geracao.
+    state.tem_personagem = false;
+  }
+  return state;
+}
+
 function coerce(campo, valorRaw) {
   if (campo === 'tem_roteiro' || campo === 'tem_personagem') {
     const v = String(valorRaw).trim().toLowerCase();
     return v === 'true' || v === 'sim' || v === '1';
   }
-  if (campo === 'referencias_usuario') {
+  if (campo === 'referencias_usuario' || campo === 'personagens') {
     // lista separada por virgula
     return String(valorRaw)
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+  }
+  if (campo === 'modo_visual') {
+    const v = String(valorRaw).trim().toLowerCase();
+    return v === 'biblioteca' || v === 'geracao' ? v : null;
   }
   if (campo === 'plataforma') {
     return String(valorRaw).trim().toLowerCase();
@@ -127,8 +175,21 @@ function coerce(campo, valorRaw) {
   return String(valorRaw);
 }
 
+// status agora DETECTA a biblioteca de personagem do disco e persiste o resultado
+// (tem_personagem/personagens/modo_visual), corrigindo o tem_personagem-no-escuro.
+// A deteccao roda sempre que o status e consultado, refletindo o estado real do RAG.
 function status(root) {
-  return load(root);
+  const state = load(root);
+  applyDetection(root, state);
+  recompute(state);
+  save(root, state);
+  return state;
+}
+
+// detect: roda SO a deteccao (tem_personagem/personagens/modo_visual) e devolve,
+// sem persistir nem mexer nas lacunas. Util para inspecao isolada.
+function detect(root) {
+  return identidadeVisual.detect(root);
 }
 
 function update(root, args) {
@@ -141,6 +202,10 @@ function update(root, args) {
     return { erro: 'campo desconhecido', campo, campos_validos: conhecidos };
   }
   const state = load(root);
+  // re-detecta a biblioteca PRIMEIRO (fonte-de-verdade do filesystem), depois
+  // aplica o update do usuario por cima — um update explicito de modo_visual/
+  // tem_personagem/personagens ainda vence nesta chamada, sem ser clobbered.
+  applyDetection(root, state);
   state[campo] = coerce(campo, args.valor === undefined ? '' : args.valor);
   recompute(state);
   save(root, state);
@@ -168,8 +233,11 @@ if (require.main === module) {
     case 'reset':
       result = reset(root);
       break;
+    case 'detect':
+      result = detect(root);
+      break;
     default:
-      result = { erro: 'subcomando desconhecido', uso: 'status|update|reset' };
+      result = { erro: 'subcomando desconhecido', uso: 'status|update|reset|detect' };
   }
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   process.exit(0);
@@ -186,4 +254,6 @@ module.exports = {
   status,
   update,
   reset,
+  detect,
+  applyDetection,
 };

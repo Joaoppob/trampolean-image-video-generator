@@ -11,6 +11,11 @@
       "type": "string",
       "enum": ["personagem", "produto", "servico"]
     },
+    "modo_visual": {
+      "type": "string",
+      "enum": ["biblioteca", "geracao"],
+      "description": "ADITIVO (asset-first). Modo padrao do projeto: \"biblioteca\" = ja tem biblioteca de personagens populada (RAG/identidade-visual/<char>/), o reel e montado por curadoria (custo de imagem 0); \"geracao\" = legado/default, cada cena e gerada. Opcional: projetos sem o campo continuam validos (default detectado em runtime)."
+    },
     "status": {
       "type": "string",
       "enum": ["ativo", "rascunho", "arquivado"],

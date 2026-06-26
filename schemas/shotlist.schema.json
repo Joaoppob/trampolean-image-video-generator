@@ -41,10 +41,10 @@
     "referencias_obrigatorias": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 3,
       "items": {
         "type": "string",
-        "pattern": "^RAG/identidade-visual/[^/]+\\.(png|jpg|jpeg|webp)$"
+        "description": "Path relativo de uma ref, DENTRO de RAG/identidade-visual/. Aceita a pasta plana (sujeito unico: RAG/identidade-visual/mage1.png) E subpastas por personagem (asset-first: RAG/identidade-visual/sofia/sofia_05.png). Sem traversal (..).",
+        "pattern": "^RAG/identidade-visual/([^/.]+/)*[^/]+\\.(png|jpg|jpeg|webp)$"
       }
     },
     "anchor_personagem": {
@@ -58,7 +58,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["n", "tag", "tempo_seg", "intencao", "prompt", "salvar_em"],
+        "required": ["n", "tag", "tempo_seg", "intencao", "salvar_em"],
         "properties": {
           "n": { "type": "integer", "minimum": 1 },
           "tag": { "type": "string", "minLength": 1 },
@@ -70,6 +70,18 @@
           "personagem_visivel": {
             "type": "string",
             "enum": ["completo", "parcial", "ausente"]
+          },
+          "fonte": {
+            "enum": ["biblioteca", "geracao"],
+            "description": "ADITIVO (asset-first). \"biblioteca\" = cena reaproveita asset existente (sem prompt; custo 0); \"geracao\" = cena gerada (legado/default). Opcional: ausente equivale a \"geracao\". A regra condicional por fonte (geracao exige prompt; biblioteca exige asset_path) e validada pelo verify."
+          },
+          "personagem": {
+            "type": ["string", "null"],
+            "description": "ADITIVO (asset-first). Chave de personagem da cena (subpasta RAG/identidade-visual/<char>/), coletivo (ex: \"trio\") ou null. Opcional/nulo em sujeito unico (mago)."
+          },
+          "asset_path": {
+            "type": ["string", "null"],
+            "description": "ADITIVO (asset-first). Cena biblioteca: path relativo do asset, DENTRO de RAG/identidade-visual/. Cena geracao: null (ou ausente). Path-safety validada pelo verify."
           },
           "prompt": {
             "type": "string",

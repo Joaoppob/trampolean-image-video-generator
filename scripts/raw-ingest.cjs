@@ -154,9 +154,62 @@ function listLoteFiles(dirAbs, opts) {
     .sort();
 }
 
+// arquivos de um lote DESCENDO em subpastas (recursivo). Cada arquivo vem com
+// seu subpath relativo ao lote (`subdir`, "" no topo) e o `nome` do arquivo.
+// `opts.skipSkeleton` pula o esqueleto do Raw SO no topo (subpastas aninhadas
+// nunca sao esqueleto). `opts.skipDirs` lista nomes de subpasta de 1o nivel a
+// NAO descer (usado pelo _avulso: subpastas da raiz do Raw ja sao lotes proprios).
+// Saida ordenada por subdir, depois nome — deterministica.
+function listLoteFilesRecursive(loteAbs, opts) {
+  const skipSkeleton = opts && opts.skipSkeleton;
+  const skipDirs = (opts && opts.skipDirs) || null;
+  const out = [];
+  if (!fs.existsSync(loteAbs)) return out;
+
+  function walk(dirAbs, subdir) {
+    const entries = fs.readdirSync(dirAbs, { withFileTypes: true });
+    for (const ent of entries) {
+      if (ent.isDirectory()) {
+        // no topo do lote, opcionalmente pula subpastas que sao lotes proprios.
+        if (subdir === '' && skipDirs && skipDirs.has(ent.name)) continue;
+        walk(path.join(dirAbs, ent.name), subdir === '' ? ent.name : `${subdir}/${ent.name}`);
+      } else if (ent.isFile()) {
+        // esqueleto so e pulado no topo do lote (subdir vazio).
+        if (skipSkeleton && subdir === '' && RAW_SKELETON.has(ent.name)) continue;
+        out.push({ subdir, nome: ent.name });
+      }
+    }
+  }
+
+  walk(loteAbs, '');
+  out.sort((a, b) => (a.subdir === b.subdir ? a.nome.localeCompare(b.nome) : a.subdir.localeCompare(b.subdir)));
+  return out;
+}
+
 // ----------------------------------------------------------------------------
 // plan
 // ----------------------------------------------------------------------------
+
+// resumo por subpasta de 1o nivel dentro do lote: { nome, n_imagens, n_textos,
+// n_outros }. So conta a 1a componente do subdir (a subpasta direta do lote);
+// arquivos no topo do lote (subdir "") nao entram em subpasta nenhuma. Util pro
+// Jotaro reconhecer um conjunto de personagem (subpasta majoritariamente imagem).
+function summarizeSubpastas(arquivos) {
+  const acc = new Map();
+  for (const a of arquivos) {
+    if (!a.subdir) continue; // arquivo no topo do lote nao tem subpasta
+    const primeira = a.subdir.split('/')[0];
+    let s = acc.get(primeira);
+    if (!s) {
+      s = { nome: primeira, n_imagens: 0, n_textos: 0, n_outros: 0 };
+      acc.set(primeira, s);
+    }
+    if (a.tipo === 'imagem') s.n_imagens += 1;
+    else if (a.tipo === 'texto') s.n_textos += 1;
+    else s.n_outros += 1;
+  }
+  return Array.from(acc.values()).sort((x, y) => x.nome.localeCompare(y.nome));
+}
 
 function plan(rootAbs) {
   const rawAbs = path.resolve(rootAbs, RAW_DIR);
@@ -167,30 +220,39 @@ function plan(rootAbs) {
 
   const entries = fs.readdirSync(rawAbs, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
 
-  // subpastas = 1 lote cada
+  // subpastas = 1 lote cada — agora RECURSIVO: desce em sub-subpastas do lote.
   for (const ent of entries) {
     if (!ent.isDirectory()) continue;
     const temaDir = path.join(rawAbs, ent.name);
-    const arquivos = listLoteFiles(temaDir).map((nome) => ({
-      nome,
-      tipo: classify(nome),
-      path: `${RAW_DIR}/${ent.name}/${nome}`,
-    }));
+    const arquivos = listLoteFilesRecursive(temaDir).map((f) => {
+      const rel = f.subdir ? `${ent.name}/${f.subdir}/${f.nome}` : `${ent.name}/${f.nome}`;
+      return {
+        nome: f.nome,
+        subdir: f.subdir,
+        tipo: classify(f.nome),
+        path: `${RAW_DIR}/${rel}`,
+      };
+    });
     lotes.push({
       tema: ent.name,
       path: `${RAW_DIR}/${ent.name}`,
       arquivos,
+      subpastas: summarizeSubpastas(arquivos),
     });
   }
 
-  // arquivos soltos na raiz do Raw = lote _avulso (pulando o esqueleto)
-  const soltos = listLoteFiles(rawAbs, { skipSkeleton: true }).map((nome) => ({
-    nome,
-    tipo: classify(nome),
-    path: `${RAW_DIR}/${nome}`,
+  // arquivos soltos na raiz do Raw = lote _avulso (pulando o esqueleto). Subpastas
+  // da raiz do Raw JA sao lotes proprios (acima); o _avulso so abraca arquivos
+  // soltos no topo — nao desce em subpasta nenhuma (skipDirs = todas as subpastas).
+  const subdirsRaiz = new Set(entries.filter((e) => e.isDirectory()).map((e) => e.name));
+  const soltos = listLoteFilesRecursive(rawAbs, { skipSkeleton: true, skipDirs: subdirsRaiz }).map((f) => ({
+    nome: f.nome,
+    subdir: f.subdir, // sempre "" — _avulso nao desce
+    tipo: classify(f.nome),
+    path: `${RAW_DIR}/${f.nome}`,
   }));
   if (soltos.length > 0) {
-    lotes.push({ tema: AVULSO, path: RAW_DIR, arquivos: soltos });
+    lotes.push({ tema: AVULSO, path: RAW_DIR, arquivos: soltos, subpastas: [] });
   }
 
   return { ok: true, lotes };
@@ -333,14 +395,20 @@ function finalize(rootAbs, args) {
   // movidos sao "restos"); se quiser preservar nao-processados, o /importa so
   // chama finalize apos mover tudo. Aqui: removemos os soltos remanescentes.
   if (tema === AVULSO) {
-    const soltos = listLoteFiles(rawAbs, { skipSkeleton: true });
+    // _avulso so abraca arquivos soltos no TOPO do Raw; subpastas da raiz ja sao
+    // lotes proprios (nao descer nelas — skipDirs). Nunca apaga o Raw/ em si nem
+    // o esqueleto. So checa/avisa as sobras soltas; nada de rm aqui.
+    const subdirsRaiz = new Set(
+      fs.readdirSync(rawAbs, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)
+    );
+    const soltos = listLoteFilesRecursive(rawAbs, { skipSkeleton: true, skipDirs: subdirsRaiz });
     if (soltos.length > 0) {
       return {
         ok: false,
         tema: AVULSO,
         apagado: false,
         aviso: 'lote avulso nao esvaziado: sobraram arquivos nao-processados',
-        sobraram: soltos.map((n) => `${RAW_DIR}/${n}`),
+        sobraram: soltos.map((f) => ({ path: `${RAW_DIR}/${f.nome}`, imagem: classify(f.nome) === 'imagem' })),
       };
     }
     return { ok: true, tema: AVULSO, preservado: 'Raw/ e esqueleto (.gitkeep, README.md)' };
@@ -362,19 +430,26 @@ function finalize(rootAbs, args) {
     return { ok: false, erro: `tema nao e um diretorio: ${tema}` };
   }
 
-  const restantes = listLoteFiles(temaAbs);
+  // REGRA-COFRE: a checagem de sobras e RECURSIVA. Se sobrar QUALQUER arquivo
+  // real (nao-esqueleto) em qualquer profundidade do lote, NAO apaga, AVISA, e
+  // lista as sobras (path a partir do Raw + se e imagem). O rm recursivo so roda
+  // quando a varredura recursiva nao acha NENHUM arquivo real. Nunca apagar dado
+  // nao-processado.
+  const restantes = listLoteFilesRecursive(temaAbs);
   if (restantes.length > 0) {
-    // sobrou arquivo nao-processado: NAO apaga, AVISA.
     return {
       ok: false,
       tema,
       apagado: false,
       aviso: 'lote nao esvaziado: sobraram arquivos nao-processados',
-      sobraram: restantes.map((n) => `${RAW_DIR}/${tema}/${n}`),
+      sobraram: restantes.map((f) => ({
+        path: f.subdir ? `${RAW_DIR}/${tema}/${f.subdir}/${f.nome}` : `${RAW_DIR}/${tema}/${f.nome}`,
+        imagem: classify(f.nome) === 'imagem',
+      })),
     };
   }
 
-  // vazio (ou so subdirs vazios) -> remove o diretorio do lote.
+  // varredura recursiva limpa (so subdirs vazios, no maximo) -> remove o lote.
   fs.rmSync(temaAbs, { recursive: true, force: true });
   return { ok: true, tema, apagado: `${RAW_DIR}/${tema}` };
 }
@@ -524,6 +599,8 @@ module.exports = {
   resolveInside,
   validProjectName,
   classify,
+  listLoteFilesRecursive,
+  summarizeSubpastas,
   plan,
   scaffold,
   move,

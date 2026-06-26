@@ -18,6 +18,7 @@
     {
       "n": 1,
       "tag": "hook",
+      "fonte": "geracao",
       "tempo_seg": "0-4",
       "intencao": "Hook visual: a vila esta sob ataque",
       "personagem_visivel": "ausente",
@@ -27,6 +28,7 @@
     {
       "n": 2,
       "tag": "aparicao",
+      "fonte": "geracao",
       "tempo_seg": "4-8",
       "intencao": "Apresenta o personagem em pose heroica",
       "personagem_visivel": "completo",
@@ -36,6 +38,7 @@
     {
       "n": 3,
       "tag": "tensao",
+      "fonte": "geracao",
       "tempo_seg": "8-12",
       "intencao": "Cria tensao: inimigos avancando, mago em desvantagem aparente",
       "personagem_visivel": "parcial",
@@ -45,6 +48,7 @@
     {
       "n": 4,
       "tag": "carga",
+      "fonte": "geracao",
       "tempo_seg": "12-16",
       "intencao": "Carga da magia, expectativa do disparo",
       "personagem_visivel": "completo",
@@ -54,6 +58,7 @@
     {
       "n": 5,
       "tag": "impacto",
+      "fonte": "geracao",
       "tempo_seg": "16-20",
       "intencao": "Payoff: o feitico explode e varre os inimigos",
       "personagem_visivel": "completo",
@@ -63,6 +68,7 @@
     {
       "n": 6,
       "tag": "cta-clean",
+      "fonte": "geracao",
       "tempo_seg": "20-24",
       "intencao": "Hero pose final limpa (texto CTA sera queimado via FFmpeg no Round 2)",
       "personagem_visivel": "completo",

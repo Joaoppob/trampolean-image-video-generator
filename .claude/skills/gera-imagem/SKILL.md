@@ -1,13 +1,25 @@
 ---
 name: gera-imagem
-description: Gera uma imagem 9:16 no Higgsfield (nano_banana_2 / "Nano Banana Pro") com a identidade visual da marca, usando as imagens de referência de RAG/identidade-visual/ como condicionamento, via Higgsfield CLI. Grava o resultado no save-crystal pra retomada. Use quando o usuário (ou o fluxo /gerarvideo) precisa criar a imagem de uma cena a partir de um prompt + refs.
+description: Produz a imagem de uma cena 9:16 com a identidade visual da marca, em um de dois modos por cena. Modo biblioteca (fonte=biblioteca, asset-first): SELECIONA, copia o asset já existente (asset_path) para a saída da cena, sem gerar e sem gastar crédito. Modo geração (fonte=geracao): GERA via Higgsfield CLI (nano_banana_2 / "Nano Banana Pro"), usando as refs por personagem de referencias_obrigatorias como condicionamento (--image). Grava o resultado no save-crystal pra retomada. Use quando o usuário (ou o fluxo /gerarvideo) precisa produzir a imagem de uma cena.
 argument-hint: "[cena] [prompt]"
 allowed-tools: Bash, Read
 ---
 
 # gera-imagem — uma cena → imagem 9:16 com a cara da marca
 
-Pipeline (Higgsfield CLI): `upload create` das refs → `generate create nano_banana_2
+Esta skill **produz a imagem da cena** em um de dois modos, e o campo `fonte` da cena (vindo da
+shot-list) decide qual:
+
+- **`fonte: "biblioteca"` (seleção, custo zero):** a cena já tem o melhor asset existente escolhido
+  (`asset_path`). Aqui não se gera nada: copia-se o asset para a saída da cena, com o mesmo guard de
+  arquivo não-vazio e a mesma gravação no save-crystal de sempre. `job_id` simbólico
+  `selected-from-library`, **0 créditos, sem entrada no ledger** (nada foi gasto). Ver
+  "Procedimento: modo biblioteca".
+- **`fonte: "geracao"` (geração via Higgsfield):** como sempre, mas as refs vêm de
+  `referencias_obrigatorias` (refs da personagem da cena), não da pasta plana. Ver "Procedimento:
+  modo geração".
+
+Pipeline do modo geração (Higgsfield CLI): `upload create` das refs → `generate create nano_banana_2
 --image <ids> --aspect_ratio 9:16 --wait --json` → parse do resultado → download.
 **2 créditos/imagem.** Sem Soul/character (isso é pago — a consistência vem das
 referências passadas em `--image`).
@@ -37,36 +49,120 @@ gastar crédito. Regra de paths:
 ## Entrada
 
 - `cena` — número da cena (índice no save-crystal).
-- `prompt` — prompt de imagem (vem do `prompt-smith`, formato do `exemplo-shotlist-mago.json`).
-- `refs` — paths das imagens de referência em `<PROJ>/RAG/identidade-visual/` (1-4; o mago usa 4).
+- `fonte`: `biblioteca` ou `geracao` (vem da shot-list; ausente equivale a `geracao`). Decide o
+  caminho desta skill.
+- `tag`: tag curta da cena (compõe o nome do arquivo de saída e o `salvar_em`).
+- `salvar_em`: path relativo do destino da cena (`output/imagens/cena-NN-tag.png`); resolva-o
+  contra `<PROJ>/`.
+- **Modo biblioteca:** `asset_path`, o path relativo do asset escolhido, DENTRO de
+  `RAG/identidade-visual/` (resolva contra `<PROJ>/`). Não há `prompt`.
+- **Modo geração:** `prompt`, o prompt de imagem (vem do `prompt-smith`, formato do
+  `exemplo-shotlist-mago.json`); e `referencias_obrigatorias`, os paths das refs **da personagem da
+  cena** em `<PROJ>/RAG/identidade-visual/<personagem>/` mais marca (1-3). No mago (pasta plana),
+  são as refs da raiz de `RAG/identidade-visual/` (até 4).
 - aspecto fixo **9:16**.
 
 ## Procedimento
 
-### 0. Idempotência — checar o save-crystal ANTES de gerar
+### 0. Idempotência: checar o save-crystal ANTES de produzir
 
 ```bash
 node scripts/pipeline-state.cjs get \
   --root <PROJ> --cena <N> --tipo imagem
 ```
 
-Se `existe: true` (já tem `job_id` + `path`), **NÃO regere** — crédito não volta.
-Reuse o `job_id`/`path` do registro e siga. Só gere se `existe: false`.
+Se `existe: true` (já tem `job_id` + `path`), **NÃO refaça**: em modo geração crédito não volta;
+em modo biblioteca a cópia já está feita. Reuse o `job_id`/`path` do registro e siga. Só produza se
+`existe: false`.
 
 **Reconciliação state-vs-disco.** Se `get` retorna `existe: false` MAS o arquivo
 `salvar_em` da cena já existe no disco (cheque com `fs.existsSync("<PROJ>/" + salvar_em)`),
-**NÃO regere** —
-o crédito já foi gasto num run anterior cujo state se perdeu. Em vez disso, reconstrua
-o registro no state com um `set` usando `--job-id recovered-from-disk` e o `--path` do
-arquivo encontrado, e siga. Só gere de fato quando `existe: false` **E** o arquivo não
-existe no disco. Limitação: se o usuário renomeou o arquivo, a reconciliação não detecta
-(o path do state não bate com o disco) e a cena será regerada.
+**NÃO refaça**:
+em modo geração o crédito já foi gasto num run anterior cujo state se perdeu; em modo biblioteca a
+cópia já existe. Em vez disso, reconstrua o registro no state com um `set` usando
+`--job-id recovered-from-disk` e o `--path` do arquivo encontrado, e siga. Só produza de fato
+quando `existe: false` **E** o arquivo não existe no disco. Limitação: se o usuário renomeou o
+arquivo, a reconciliação não detecta (o path do state não bate com o disco) e a cena será refeita.
+
+### Ramificação por `fonte` (após o passo 0)
+
+Com `existe: false` e o arquivo ausente no disco, ramifique:
+
+- **`fonte: "biblioteca"`** → vá para "Procedimento: modo biblioteca" (seleção, 0 cr, sem ledger).
+- **`fonte: "geracao"` (ou ausente)** → siga os passos 1 a 5 abaixo (geração, 2 cr, com ledger).
+
+---
+
+## Procedimento: modo biblioteca (seleção, custo zero)
+
+A cena `biblioteca` não gera: ela **seleciona** o asset já curado e o copia para a saída da cena.
+Sem Higgsfield, sem upload, sem prompt, sem ledger.
+
+### B1. Resolver e validar o asset de origem
+
+O `asset_path` é relativo ao projeto e DENTRO de `RAG/identidade-visual/`; resolva contra `<PROJ>/`
+(ex.: `<PROJ>/RAG/identidade-visual/sofia/sofia_05_cafe_artesanal.png`). Confirme que o arquivo de
+origem existe e não está vazio antes de copiar, com o mesmo guard de não-vazio do download:
+
+```bash
+node scripts/lib/check-download.cjs "<PROJ>/<asset_path>"
+```
+
+Se vier `ok: false` (asset ausente ou vazio), **pare** e reporte: o storyboard apontou um asset que
+não resolve. Não caia para geração silenciosamente; a cena precisa voltar ao `storyboard-director`.
+
+### B2. Copiar o asset para a saída da cena
+
+```bash
+node scripts/lib/ensure-dir.cjs --root <PROJ> output/imagens
+cp "<PROJ>/<asset_path>" "<PROJ>/output/imagens/cena-<NN>-<tag>.png"
+```
+
+(Use o `salvar_em` da shot-list, prefixado com `<PROJ>/`.) Em seguida valide o destino com o mesmo
+guard de arquivo não-vazio, **antes** de gravar no save-crystal:
+
+```bash
+node scripts/lib/check-download.cjs "<PROJ>/output/imagens/cena-<NN>-<tag>.png"
+```
+
+Se vier `ok: false`, a cópia falhou: **NÃO grave no save-crystal**, re-tente o `cp`. Só siga com
+`ok: true`.
+
+### B3. Save-crystal: gravar (job_id simbólico, sem crédito)
+
+```bash
+node scripts/pipeline-state.cjs set \
+  --root <PROJ> --cena <N> --tipo imagem \
+  --job-id selected-from-library \
+  --path "output/imagens/cena-<NN>-<tag>.png" \
+  --prompt-tag <tag>
+```
+
+O `job_id` é o simbólico `selected-from-library` (sem job Higgsfield): a `gera-video` o reconhece e
+sobe o still local como start-frame, em vez de reusar um job inexistente. **Não há `--media-ids`**
+(nenhuma ref foi subida). A idempotência é idêntica à do modo geração: gravado o registro, uma
+retomada vê `existe: true` e pula.
+
+### B4. Sem ledger
+
+Modo biblioteca **não gasta crédito**: **não** registre no ledger. O ledger é trilha de gasto real;
+uma seleção da biblioteca custa 0 e não entra nele. (No modo geração, o ledger é o passo 5.)
+
+**Retorno (biblioteca):** `{ path da imagem, job_id: "selected-from-library" }`.
+
+---
+
+## Procedimento: modo geração (Higgsfield, 2 cr)
 
 ### 1. Subir as referências (ou reusar upload_ids do run)
 
-As refs (mage0-3.png) são as MESMAS pra todas as cenas do run — suba uma vez por arquivo,
-reuse em todas as cenas. O save-crystal guarda os upload_ids por arquivo. Para cada ref que
-ainda não tem `media_id` neste run:
+As refs desta cena vêm de `referencias_obrigatorias` (refs da personagem da cena mais marca).
+Numa marca de sujeito único (mago), são as mesmas `mage0-3.png` da pasta plana pra todas as cenas;
+numa marca multi-personagem, são as refs da personagem **daquela** cena (ex.: a cena da Sofia usa
+`RAG/identidade-visual/sofia/...`). De toda forma, suba uma vez por arquivo e reuse: o save-crystal
+guarda os upload_ids por arquivo, com chave estável = nome do arquivo sem extensão. Suba só as refs
+que a cena exige; nunca misture a ref de uma personagem na cena de outra. Para cada ref que ainda
+não tem `media_id` neste run:
 
 1. Cheque se já foi subida antes (chave estável = nome do arquivo sem extensão, ex. `mage1`):
    ```bash

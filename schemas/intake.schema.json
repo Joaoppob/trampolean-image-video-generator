@@ -10,6 +10,15 @@
     "objetivo_post": { "type": ["string", "null"] },
     "tem_roteiro": { "type": "boolean" },
     "tem_personagem": { "type": "boolean" },
+    "personagens": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "ADITIVO (asset-first). Nomes de personagem detectados da biblioteca (subpastas RAG/identidade-visual/<char>/ com imagem). Default []. Sujeito unico (mago): vazio."
+    },
+    "modo_visual": {
+      "enum": ["biblioteca", "geracao", null],
+      "description": "ADITIVO (asset-first). Modo visual detectado: \"biblioteca\" se ha biblioteca de personagem populada; senao \"geracao\". null = ainda nao detectado."
+    },
     "tipo_conteudo": { "type": ["string", "null"] },
     "referencias_usuario": { "type": "array", "items": { "type": "string" } },
     "lacunas_pendentes": { "type": "array", "items": { "type": "string" } },
