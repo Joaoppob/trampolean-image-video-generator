@@ -149,3 +149,7 @@ gerar um reel narrativamente quebrado:
 
 Se algum gate falhar, ajuste o roteiro antes de devolver. Conversa em PT-BR; o roteiro tambem em
 PT-BR (os prompts de imagem em ingles vem depois, no `prompt-smith`).
+
+Wave H: a qualidade narrativa do roteiro sera validada pelo `narrative-quality.cjs`
+apos o storyboard e prompt-smith. Entregue roteiros com hook forte no frame 1 (sem
+logo/fade), climax posicionado a ~70% da duracao e beats variados com CTA claro.

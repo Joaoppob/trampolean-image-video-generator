@@ -1,4 +1,4 @@
-﻿# Jotaro, agente de IA da Trampolean
+# Jotaro, agente de IA da Trampolean
 
 ## Sua função (leia antes de tudo)
 
@@ -210,6 +210,22 @@ canonicas (subject, action, environment, composition, lighting, camera/lens, ren
 
 ```bash
 node scripts/lib/prompt-structure.cjs <PROJ>/output/shotlist-preflight.json
+
+### Qualidade narrativa (Wave H)
+
+Antes de gastar credito, avalie a estrutura narrativa da shot-list: hook no primeiro
+frame (sem logo/fade), climax posicionado a ~70% da duracao, variedade de tags entre
+cenas e CTA no fechamento:
+
+```bash
+node scripts/lib/narrative-quality.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `narrative-quality.cjs` reprova abertura com logo/fade/title-card, alerta climax
+tarde demais (>80% da duracao), cobra variedade de tags e confere timing coerente
+entre cenas. Se `ok:false`, volte ao `storyboard-director` ou `prompt-smith` com as
+acoes listadas antes de qualquer geracao.
+
 ```
 
 O `prompt-structure.cjs` exige no minimo 5 das 7 camadas e exige obrigatoriamente as 3

@@ -1770,6 +1770,101 @@ function checkPromptStructureWiredIntoFlow() {
   }
 }
 
+function checkNarrativeQualityWaveH() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'narrative-quality.cjs'));
+  } catch (e) {
+    fail('narrative-quality.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('narrative-quality.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  const goodHook = {
+    cenas: [
+      { n: 1, fonte: 'geracao', tag: 'hook', tempo_seg: '0-3', intencao: 'pattern interrupt com rosto no frame 1' },
+      { n: 2, fonte: 'geracao', tag: 'desenvolvimento', tempo_seg: '3-8', intencao: 'contexto e construcao' },
+      { n: 3, fonte: 'geracao', tag: 'climax', tempo_seg: '8-16', intencao: 'payoff principal' },
+      { n: 4, fonte: 'geracao', tag: 'fechamento-cta', tempo_seg: '16-20', intencao: 'resolucao e CTA' },
+    ],
+    duracao_total_seg: 20,
+  };
+  const r1 = mod.evaluateShotlist(goodHook);
+  if (r1.ok) pass('narrative-quality aprova estrutura com hook+climax+cta');
+  else fail('narrative-quality aprova estrutura com hook+climax+cta', JSON.stringify(r1));
+
+  const badHook = {
+    cenas: [
+      { n: 1, fonte: 'geracao', tag: 'logo-intro', tempo_seg: '0-4', intencao: 'fade in do logo' },
+      { n: 2, fonte: 'geracao', tag: 'desenvolvimento', tempo_seg: '4-8', intencao: 'contexto' },
+    ],
+    duracao_total_seg: 8,
+  };
+  const r2 = mod.evaluateShotlist(badHook);
+  if (!r2.ok && r2.errors.some((e) => /hook/.test(e))) {
+    pass('narrative-quality reprova abertura com logo/fade');
+  } else {
+    fail('narrative-quality reprova abertura com logo/fade', JSON.stringify(r2));
+  }
+
+  const lateClimax = {
+    cenas: [
+      { n: 1, fonte: 'geracao', tag: 'hook', tempo_seg: '0-4', intencao: 'abertura forte' },
+      { n: 2, fonte: 'geracao', tag: 'desenvolvimento', tempo_seg: '4-8', intencao: 'corpo' },
+      { n: 3, fonte: 'geracao', tag: 'desenvolvimento', tempo_seg: '8-12', intencao: 'mais corpo' },
+      { n: 4, fonte: 'geracao', tag: 'desenvolvimento', tempo_seg: '12-16', intencao: 'ainda corpo' },
+      { n: 5, fonte: 'geracao', tag: 'climax', tempo_seg: '16-18', intencao: 'payoff tarde demais' },
+      { n: 6, fonte: 'geracao', tag: 'fechamento-cta', tempo_seg: '18-20', intencao: 'fim' },
+    ],
+    duracao_total_seg: 20,
+  };
+  const r3 = mod.evaluateShotlist(lateClimax);
+  if (!r3.ok && (r3.errors.some((e) => /climax|pico|80%/.test(e)) || r3.warnings.some((w) => /climax|pico|70%/.test(w)))) {
+    pass('narrative-quality alerta climax posicionado tarde demais');
+  } else {
+    fail('narrative-quality alerta climax posicionado tarde demais', JSON.stringify(r3));
+  }
+
+  const noVariety = {
+    cenas: [
+      { n: 1, fonte: 'geracao', tag: 'hook', tempo_seg: '0-4', intencao: 'a' },
+      { n: 2, fonte: 'geracao', tag: 'hook', tempo_seg: '4-8', intencao: 'b' },
+      { n: 3, fonte: 'geracao', tag: 'hook', tempo_seg: '8-12', intencao: 'c' },
+    ],
+    duracao_total_seg: 12,
+  };
+  const r4 = mod.evaluateShotlist(noVariety);
+  if (!r4.ok && r4.errors.some((e) => /arco|variedade|repeti|mesma tag/i.test(e))) {
+    pass('narrative-quality detecta tags repetidas sem variedade');
+  } else {
+    fail('narrative-quality detecta tags repetidas sem variedade', JSON.stringify(r4));
+  }
+}
+
+function checkNarrativeQualityWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+    ['story-writer', '.claude/agents/story-writer.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`narrative-quality wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /narrative-quality\.cjs/.test(text);
+    const hasConcept = /estrutura narrativa|qualidade narrativa|narrative quality|hook.*climax|gancho.*clímax/i.test(text);
+    if (hasTool && hasConcept) pass(`narrative-quality wired ${label}`);
+    else fail(`narrative-quality wired ${label}`, `tool=${hasTool} concept=${hasConcept}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3659,6 +3754,8 @@ checkStyleConsistencyWaveF();
 checkStyleConsistencyWiredIntoFlow();
 checkPromptStructureWaveG();
 checkPromptStructureWiredIntoFlow();
+checkNarrativeQualityWaveH();
+checkNarrativeQualityWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

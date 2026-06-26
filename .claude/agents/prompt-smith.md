@@ -1,4 +1,4 @@
-﻿---
+---
 name: prompt-smith
 description: "Folha de síntese de prompts. ENTRADA: { identidade: <saída do rag>, intencao: <descrição das cenas, do storyboard com fonte por cena> }. SAÍDA: shot-list JSON no schema de schemas/shotlist.schema.json (molde geração: RAG/prompts/exemplo-shotlist-mago.json; molde biblioteca: RAG/prompts/exemplo-biblioteca-trio.json). FRONTEIRA: ramifica por fonte da cena. Cena biblioteca é pass-through (repassa fonte/personagem/asset_path/salvar_em, sem prompt e sem gerar refs); cena geracao monta o prompt forte e resolve referencias_obrigatorias para as refs da personagem da cena (RAG/identidade-visual/<personagem>/) mais marca, sem misturar personagens. Não gera imagem, não chama Higgsfield, não chama o rag diretamente, não spawna. Se a identidade não vier no input, pede que o rag seja consultado antes; não lê RAG/ por conta para inferir anchor. Use para transformar um storyboard aprovado numa shot-list de qualidade."
 tools: Read, Glob, Grep
@@ -161,6 +161,11 @@ style block na primeira cena e repita-o em todas as demais. Se o Jotaro devolver
 ## Regras
 
 Wave G: cada prompt de cena `geracao` deve cobrir as 7 camadas canonicas (subject,
+Wave H: a estrutura narrativa da shot-list importa tanto quanto o visual. O
+`narrative-quality.cjs` avalia hook no frame 1 (sem logo/fade), posicao do climax
+(~70% da duracao), variedade de tags entre cenas e presenca de CTA. Se o Jotaro
+devolver acao do `narrative-quality.cjs`, ajuste a narrativa antes de gerar.
+
 action, environment, composition, lighting, camera/lens, rendering/style) com no
 minimo 5 camadas presentes e obrigatoriamente subject + composition + lighting. O
 `prompt-structure.cjs` avalia cada cena contra essa estrutura. Prompts vagos tipo
