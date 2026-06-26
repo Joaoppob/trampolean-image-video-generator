@@ -36,6 +36,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/higgsfield-gate.cjs\""
+          }
+        ]
+      }
     ]
   }
 }

@@ -99,6 +99,10 @@
           "anti_ia": {
             "type": "object",
             "description": "ADITIVO (nivel-100). Guardrails de prompt contra tell IA: evitar quality-words/plastico/luz chapada e focar fisica, textura e estabilidade."
+          },
+          "negative_prompt": {
+            "type": "string",
+            "description": "ADITIVO (nivel-100, Wave J). Negative prompt curto e targeted (<=15 tokens), sem listas genericas estilo SDXL. Opcional; validado por negative-prompt-discipline.cjs."
           }
         }
       }

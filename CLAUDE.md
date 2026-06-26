@@ -165,10 +165,28 @@ de produção começam:
 A geração de vídeo (etapa 3) usa o **Higgsfield CLI** (`higgsfield ...` via Bash), não o MCP.
 O FFmpeg (etapa 4) é local.
 
-### Crítica pré-crédito (gate nivel-100)
+### Crítica pré-crédito (gate nivel-100) — INTERLOCK MECÂNICO
 
 Depois que o `prompt-smith` devolver a shot-list e antes de chamar `gera-imagem` ou
-`gera-video`, salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
+`gera-video`, salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e **arme o
+gate** com o runner único, que roda TODOS os gates de texto pré-crédito de uma vez:
+
+```bash
+node scripts/preflight-gate.cjs --root <PROJ>
+```
+
+Se todos passam, ele grava um token assinado (`.claude/state/.gate-pass.json`) com o
+hash da shot-list e libera a geração. Se algum reprova, **não arma e sai com erro** —
+apresente os critérios reprovados e volte ao `prompt-smith`/`storyboard-director`.
+
+**Isto não é mais honra: é trava.** O hook `PreToolUse` `higgsfield-gate.cjs` **bloqueia
+mecanicamente** qualquer `higgsfield generate create` sem um token fresco cujo hash bata
+na shot-list atual. Editou a shot-list depois de armar? O hash diverge e o hook bloqueia
+de novo — rearme. A referência canônica de uma shot-list que passa todos os gates é
+`RAG/prompts/exemplo-shotlist-nivel100.json` (o golden nível-100).
+
+Os gates individuais (rodáveis à parte para diagnóstico) cobrem identidade, cinematografia
+e crítica:
 
 ```bash
 node scripts/lib/identity-quality.cjs shotlist <PROJ>/output/shotlist-preflight.json

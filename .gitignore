@@ -26,6 +26,7 @@ tmp/
 **/output/.last-*
 .claude/state/.review-cadence.json
 .claude/state/.jotaro-profile.json
+.claude/state/.gate-pass.json
 .claude/state/*.corrupt-*
 **/*.tmp
 

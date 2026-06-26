@@ -2144,6 +2144,144 @@ function checkPostRenderCritiqueWiredIntoFlow() {
   }
 }
 
+function checkPreflightGateInterlock() {
+  const os = require('os');
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'preflight-gate.cjs'));
+  } catch (e) {
+    fail('preflight-gate.cjs loads', e.message);
+    return;
+  }
+  for (const fn of ['runGates', 'armToken', 'tokenValid', 'sha256File', 'clearToken', 'readToken']) {
+    if (typeof mod[fn] !== 'function') { fail(`preflight-gate exports ${fn}`, typeof mod[fn]); }
+  }
+
+  // 1. Golden shotlist passa TODOS os gates.
+  const golden = mod.runGates('RAG/prompts/exemplo-shotlist-nivel100.json', ROOT);
+  if (golden.ok && golden.gates.length === 8 && golden.gates.every((g) => g.ok)) {
+    pass('preflight-gate: golden nivel-100 passa os 8 gates');
+  } else {
+    fail('preflight-gate: golden passa os 8 gates', JSON.stringify(golden.gates && golden.gates.filter((g) => !g.ok)));
+  }
+
+  // 2. Exemplo legado (mago) REPROVA (critique C8/C9) — runner barra.
+  const mago = mod.runGates('RAG/prompts/exemplo-shotlist-mago.json', ROOT);
+  if (!mago.ok && mago.gates.some((g) => g.name === 'critique' && !g.ok)) {
+    pass('preflight-gate: shotlist sub-nivel100 reprova (critique)');
+  } else {
+    fail('preflight-gate: shotlist sub-nivel100 reprova', JSON.stringify(mago));
+  }
+
+  // 3. Shotlist ausente => erro, sem arme.
+  const missing = mod.runGates('projects/__inexistente__/output/shotlist-preflight.json', ROOT);
+  if (!missing.ok && missing.error) pass('preflight-gate: shotlist ausente nao arma');
+  else fail('preflight-gate: shotlist ausente nao arma', JSON.stringify(missing));
+
+  // 4-6. Logica de token em repoRoot TEMPORARIO (nao toca o estado real).
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-test-'));
+  try {
+    const goldenAbs = path.join(ROOT, 'RAG', 'prompts', 'exemplo-shotlist-nivel100.json');
+    const sha = mod.sha256File(goldenAbs);
+    mod.armToken(tmp, 'projects/x', goldenAbs, sha, ['critique'], new Date().toISOString());
+    const v1 = mod.tokenValid(tmp, Date.now());
+    if (v1.valid) pass('preflight-gate: token recem-armado e valido');
+    else fail('preflight-gate: token recem-armado e valido', JSON.stringify(v1));
+
+    // hash divergente (shotlist mudou apos armar)
+    mod.armToken(tmp, 'projects/x', goldenAbs, 'deadbeef', ['critique'], new Date().toISOString());
+    const v2 = mod.tokenValid(tmp, Date.now());
+    if (!v2.valid && /mudou|hash|shotlist/i.test(v2.reason)) pass('preflight-gate: token invalida se shotlist mudou');
+    else fail('preflight-gate: token invalida se shotlist mudou', JSON.stringify(v2));
+
+    // expirado
+    const old = new Date(Date.now() - (mod.MAX_AGE_MS + 60000)).toISOString();
+    mod.armToken(tmp, 'projects/x', goldenAbs, sha, ['critique'], old);
+    const v3 = mod.tokenValid(tmp, Date.now());
+    if (!v3.valid && /expir/i.test(v3.reason)) pass('preflight-gate: token expira apos a janela');
+    else fail('preflight-gate: token expira apos a janela', JSON.stringify(v3));
+
+    // sem token => invalido
+    mod.clearToken(tmp);
+    const v4 = mod.tokenValid(tmp, Date.now());
+    if (!v4.valid) pass('preflight-gate: sem token => invalido');
+    else fail('preflight-gate: sem token => invalido', JSON.stringify(v4));
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) { /* noop */ }
+  }
+}
+
+function checkHiggsfieldGateHook() {
+  let hook;
+  try {
+    hook = require(path.join(ROOT, '.claude', 'hooks', 'higgsfield-gate.cjs'));
+  } catch (e) {
+    fail('higgsfield-gate.cjs loads', e.message);
+    return;
+  }
+  if (typeof hook.decide !== 'function') {
+    fail('higgsfield-gate exports decide', typeof hook.decide);
+    return;
+  }
+
+  // Allow paths (nao tocam o token):
+  if (hook.decide('Read', 'qualquer', ROOT).decision === 'allow') pass('hook libera tool nao-Bash');
+  else fail('hook libera tool nao-Bash', '');
+  if (hook.decide('Bash', 'higgsfield account status', ROOT).decision === 'allow') pass('hook libera subcomando gratuito (account status)');
+  else fail('hook libera subcomando gratuito', '');
+  if (hook.decide('Bash', 'higgsfield generate cost veo3_1_lite', ROOT).decision === 'allow') pass('hook libera generate cost (gratuito)');
+  else fail('hook libera generate cost', '');
+  if (hook.decide('Bash', 'node scripts/lib/ledger.cjs summary', ROOT).decision === 'allow') pass('hook libera Bash comum');
+  else fail('hook libera Bash comum', '');
+
+  // Deny path: generate create exige token. Snapshot do token real e restaura.
+  const gate = require(path.join(ROOT, 'scripts', 'preflight-gate.cjs'));
+  const tp = gate.tokenPath(ROOT);
+  let saved = null;
+  try { if (fs.existsSync(tp)) saved = fs.readFileSync(tp); } catch (_) { /* noop */ }
+  try {
+    gate.clearToken(ROOT);
+    const denied = hook.decide('Bash', 'higgsfield generate create nano_banana_2 --prompt x', ROOT);
+    if (denied.decision === 'deny' && /gate/i.test(denied.reason)) pass('hook BLOQUEIA generate create sem gate armado');
+    else fail('hook bloqueia generate create sem gate', JSON.stringify(denied));
+
+    const goldenAbs = path.join(ROOT, 'RAG', 'prompts', 'exemplo-shotlist-nivel100.json');
+    gate.armToken(ROOT, 'projects/x', goldenAbs, gate.sha256File(goldenAbs), ['critique'], new Date().toISOString());
+    const allowed = hook.decide('Bash', 'higgsfield generate create nano_banana_2 --prompt x', ROOT);
+    if (allowed.decision === 'allow') pass('hook LIBERA generate create com gate armado');
+    else fail('hook libera generate create com gate armado', JSON.stringify(allowed));
+  } finally {
+    try {
+      if (saved !== null) fs.writeFileSync(tp, saved);
+      else gate.clearToken(ROOT);
+    } catch (_) { /* noop */ }
+  }
+}
+
+function checkInterlockWiring() {
+  // settings.json: hook PreToolUse do higgsfield-gate
+  try {
+    const settings = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));
+    const pre = settings.hooks && settings.hooks.PreToolUse;
+    const wired = Array.isArray(pre) && JSON.stringify(pre).includes('higgsfield-gate');
+    if (wired) pass('interlock: hook PreToolUse higgsfield-gate em settings.json');
+    else fail('interlock: hook PreToolUse em settings.json', 'higgsfield-gate ausente');
+  } catch (e) {
+    fail('interlock: settings.json PreToolUse', e.message);
+  }
+  // CLAUDE.md documenta o interlock
+  try {
+    const claude = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8');
+    if (/preflight-gate\.cjs/.test(claude) && /(interlock|bloqueia|hook).*(gate|gera|credito)/i.test(claude)) {
+      pass('interlock: CLAUDE.md documenta o gate bloqueante');
+    } else {
+      fail('interlock: CLAUDE.md documenta o gate bloqueante', 'mencao ausente');
+    }
+  } catch (e) {
+    fail('interlock: CLAUDE.md', e.message);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -4042,6 +4180,9 @@ checkNegativePromptDisciplineWiredIntoFlow();
 checkPostProcessingMandateWaveK();
 checkPostRenderCritiqueWaveL();
 checkPostRenderCritiqueWiredIntoFlow();
+checkPreflightGateInterlock();
+checkHiggsfieldGateHook();
+checkInterlockWiring();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
