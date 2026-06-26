@@ -8,6 +8,13 @@
 **/output/reels/*
 !**/output/reels/.gitkeep
 
+# === Caixa de entrada Raw/ (conteúdo NÃO versionado — só o esqueleto) ===
+# JB dropa material aqui e o Jotaro organiza via /importa (move pra projects/).
+# Ignora todo o conteúdo solto, mantém o esqueleto rastreável (.gitkeep + README).
+Raw/**
+!Raw/.gitkeep
+!Raw/README.md
+
 # === Temporários e estado de pipeline (por projeto) ===
 tmp/
 **/output/.pipeline-state.json

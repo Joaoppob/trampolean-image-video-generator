@@ -1692,6 +1692,211 @@ function checkHubBrandAgnostic() {
   else pass('HUB brand-agnostic');
 }
 
+// Raw/ ingestion (/importa) — Fase de ingestao. checkRawIngest faz um teste
+// COMPORTAMENTAL num tmp dir: monta um Raw/ fake (1 lote com 1 imagem fake + 1
+// .md), roda plan (classificacao), scaffold (cria projeto do template), move
+// (move a imagem pro identidade-visual) e finalize (esvazia o lote). E TESTE DE
+// PATH-SAFETY: move com ../ ou destino fora de projects/ deve ser REJEITADO;
+// scaffold em projeto existente deve ERRAR. Tambem confirma que validate-rag
+// tolera um projeto com RAG/roteiro-rascunho.md (campo/arquivo extra nao quebra).
+function checkRawIngest() {
+  const script = path.join(ROOT, 'scripts', 'raw-ingest.cjs');
+  if (!fs.existsSync(script)) {
+    fail('raw-ingest.cjs existe', 'scripts/raw-ingest.cjs ausente');
+    return;
+  }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-raw-'));
+
+  function call(args) {
+    const r = spawnSync('node', [script, ...args], { cwd: tmp, encoding: 'utf8', windowsHide: true });
+    return { status: r.status, json: safeJson(r.stdout), stdout: r.stdout, stderr: r.stderr };
+  }
+
+  try {
+    // monta o root fake: copia templates/ (precisos pro scaffold) e cria Raw/<tema>.
+    fs.cpSync(path.join(ROOT, 'templates'), path.join(tmp, 'templates'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, 'projects'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, 'Raw', 'meu-tema'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'Raw', 'meu-tema', 'heroi.png'), 'fake-png-bytes');
+    fs.writeFileSync(path.join(tmp, 'Raw', 'meu-tema', 'sobre.md'), '# sobre a marca\n');
+    fs.writeFileSync(path.join(tmp, 'Raw', 'meu-tema', 'leia.xyz'), 'outro tipo\n');
+
+    // plan: classifica imagem/texto/outro e identifica o lote.
+    const p = call(['plan', '--root', '.']);
+    const lote = p.json && Array.isArray(p.json.lotes) ? p.json.lotes.find((l) => l.tema === 'meu-tema') : null;
+    const tipoDe = (nome) => (lote ? (lote.arquivos.find((a) => a.nome === nome) || {}).tipo : null);
+    if (
+      p.status === 0 &&
+      lote &&
+      tipoDe('heroi.png') === 'imagem' &&
+      tipoDe('sobre.md') === 'texto' &&
+      tipoDe('leia.xyz') === 'outro'
+    ) {
+      pass('raw-ingest plan classifica imagem/texto/outro');
+    } else {
+      fail('raw-ingest plan classifica imagem/texto/outro', JSON.stringify(p.json));
+    }
+
+    // scaffold: cria o projeto a partir do template, status rascunho.
+    const sc = call(['scaffold', '--root', '.', '--projeto', 'meu-tema', '--tipo', 'personagem']);
+    const projJsonPath = path.join(tmp, 'projects', 'meu-tema', 'project.json');
+    const projJson = fs.existsSync(projJsonPath) ? safeJson(fs.readFileSync(projJsonPath, 'utf8')) : null;
+    if (
+      sc.status === 0 &&
+      projJson &&
+      projJson.nome === 'meu-tema' &&
+      projJson.tipo_marca === 'personagem' &&
+      projJson.status === 'rascunho'
+    ) {
+      pass('raw-ingest scaffold cria projeto do template');
+    } else {
+      fail('raw-ingest scaffold cria projeto do template', JSON.stringify(sc.json));
+    }
+
+    // scaffold de novo no mesmo nome: ERRA (nunca sobrescreve).
+    const scDup = call(['scaffold', '--root', '.', '--projeto', 'meu-tema', '--tipo', 'personagem']);
+    if (scDup.status !== 0 && scDup.json && scDup.json.ok === false) {
+      pass('raw-ingest scaffold erra em projeto existente');
+    } else {
+      fail('raw-ingest scaffold erra em projeto existente', JSON.stringify(scDup.json));
+    }
+
+    // move: move a imagem pro identidade-visual do projeto.
+    const mv = call([
+      'move', '--root', '.',
+      '--de', 'Raw/meu-tema/heroi.png',
+      '--para', 'projects/meu-tema/RAG/identidade-visual/heroi.png',
+    ]);
+    const movedExists = fs.existsSync(path.join(tmp, 'projects', 'meu-tema', 'RAG', 'identidade-visual', 'heroi.png'));
+    const srcGone = !fs.existsSync(path.join(tmp, 'Raw', 'meu-tema', 'heroi.png'));
+    if (mv.status === 0 && movedExists && srcGone) {
+      pass('raw-ingest move transfere o arquivo (origem some, destino aparece)');
+    } else {
+      fail('raw-ingest move transfere o arquivo (origem some, destino aparece)', JSON.stringify(mv.json));
+    }
+
+    // PATH-SAFETY: move com ../ no --de deve ser REJEITADO.
+    const mvTraversal = call([
+      'move', '--root', '.',
+      '--de', 'Raw/../projects/meu-tema/project.json',
+      '--para', 'projects/meu-tema/RAG/identidade-visual/x.png',
+    ]);
+    if (mvTraversal.status !== 0 && mvTraversal.json && mvTraversal.json.ok === false) {
+      pass('raw-ingest move rejeita traversal (..) no --de');
+    } else {
+      fail('raw-ingest move rejeita traversal (..) no --de', JSON.stringify(mvTraversal.json));
+    }
+
+    // PATH-SAFETY: move com destino FORA de projects/ deve ser REJEITADO.
+    const mvEscape = call([
+      'move', '--root', '.',
+      '--de', 'Raw/meu-tema/sobre.md',
+      '--para', 'templates/brand-personagem/RAG/sobre.md',
+    ]);
+    if (mvEscape.status !== 0 && mvEscape.json && mvEscape.json.ok === false) {
+      pass('raw-ingest move rejeita destino fora de projects/');
+    } else {
+      fail('raw-ingest move rejeita destino fora de projects/', JSON.stringify(mvEscape.json));
+    }
+
+    // finalize com restos NAO esvazia: avisa (sobre.md e leia.xyz ainda no lote).
+    const finBlocked = call(['finalize', '--root', '.', '--tema', 'meu-tema']);
+    if (
+      finBlocked.status !== 0 &&
+      finBlocked.json &&
+      finBlocked.json.apagado === false &&
+      Array.isArray(finBlocked.json.sobraram) &&
+      finBlocked.json.sobraram.length === 2
+    ) {
+      pass('raw-ingest finalize avisa quando sobram nao-processados');
+    } else {
+      fail('raw-ingest finalize avisa quando sobram nao-processados', JSON.stringify(finBlocked.json));
+    }
+
+    // move os restantes e finalize de novo: agora esvazia (remove o lote).
+    call(['move', '--root', '.', '--de', 'Raw/meu-tema/sobre.md', '--para', 'projects/meu-tema/RAG/roteiro-rascunho.md']);
+    call(['move', '--root', '.', '--de', 'Raw/meu-tema/leia.xyz', '--para', 'projects/meu-tema/RAG/identidade-visual/leia.xyz']);
+    const finOk = call(['finalize', '--root', '.', '--tema', 'meu-tema']);
+    const loteGone = !fs.existsSync(path.join(tmp, 'Raw', 'meu-tema'));
+    if (finOk.status === 0 && finOk.json && finOk.json.ok === true && loteGone) {
+      pass('raw-ingest finalize esvazia o lote consumido');
+    } else {
+      fail('raw-ingest finalize esvazia o lote consumido', JSON.stringify(finOk.json));
+    }
+
+    // validate-rag tolera um projeto com RAG/roteiro-rascunho.md (arquivo extra).
+    // limpa o leia.xyz (nao-imagem) do identidade-visual e deixa so a imagem;
+    // preenche marca/narrativa minimas com as secoes que o validador exige.
+    fs.rmSync(path.join(tmp, 'projects', 'meu-tema', 'RAG', 'identidade-visual', 'leia.xyz'), { force: true });
+    const rgScript = path.join(ROOT, 'scripts', 'validate-rag.cjs');
+    const rg = spawnSync('node', [rgScript, '--project', 'projects/meu-tema'], { cwd: tmp, encoding: 'utf8', windowsHide: true });
+    const rgJson = safeJson(rg.stdout);
+    // o projeto e scaffold cru (placeholders), entao validate-rag falha por
+    // conteudo — mas NAO por causa do roteiro-rascunho.md: provamos que o arquivo
+    // extra nao gera erro proprio (nenhuma check menciona roteiro-rascunho).
+    const semErroDoRascunho =
+      rgJson &&
+      Array.isArray(rgJson.checks) &&
+      !rgJson.checks.some((c) => /roteiro-rascunho/i.test(c.name || ''));
+    const rascunhoPresente = fs.existsSync(path.join(tmp, 'projects', 'meu-tema', 'RAG', 'roteiro-rascunho.md'));
+    if (semErroDoRascunho && rascunhoPresente) {
+      pass('validate-rag tolera RAG/roteiro-rascunho.md (arquivo extra nao quebra)');
+    } else {
+      fail('validate-rag tolera RAG/roteiro-rascunho.md (arquivo extra nao quebra)', rg.stdout || rg.stderr);
+    }
+  } catch (e) {
+    fail('raw-ingest command sequence', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+// /importa tem frontmatter description.
+function checkImportaCommand() {
+  const file = path.join(ROOT, '.claude', 'commands', 'importa.md');
+  if (!fs.existsSync(file)) {
+    fail('/importa tem frontmatter description', 'commands/importa.md ausente');
+    return;
+  }
+  const fm = parseFrontmatter(file);
+  if (fm.description && fm.description.trim().length > 0) pass('/importa tem frontmatter description');
+  else fail('/importa tem frontmatter description', 'description ausente no frontmatter');
+}
+
+// Raw/ tem o esqueleto rastreavel (.gitkeep) e o scope-guard libera os termos de
+// ingestao (importa, importar, raw, organiza, organizar, material).
+function checkRawSkeletonAndScope() {
+  const gitkeep = path.join(ROOT, 'Raw', '.gitkeep');
+  if (fs.existsSync(gitkeep)) pass('Raw/.gitkeep existe');
+  else fail('Raw/.gitkeep existe', 'esqueleto da caixa de entrada ausente');
+
+  const readme = path.join(ROOT, 'Raw', 'README.md');
+  if (fs.existsSync(readme)) pass('Raw/README.md existe');
+  else fail('Raw/README.md existe', 'README da caixa de entrada ausente');
+
+  const hook = path.join(ROOT, '.claude', 'hooks', 'scope-guard.cjs');
+  const cases = [
+    ['scope-guard allows importa request', 'jotaro, importa o raw pra mim'],
+    ['scope-guard allows organizar material request', 'pode organizar esse material que soltei'],
+  ];
+  for (const [name, prompt] of cases) {
+    const r = spawnSync('node', [hook], {
+      cwd: ROOT,
+      input: JSON.stringify({ prompt }),
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    let blocked = false;
+    try {
+      blocked = JSON.parse(r.stdout || '{}').decision === 'block';
+    } catch (_) {
+      blocked = false;
+    }
+    if (r.status === 0 && blocked === false) pass(name);
+    else fail(name, `stdout=${r.stdout} stderr=${r.stderr} status=${r.status}`);
+  }
+}
+
 checkCjsSyntax();
 checkHook();
 checkHookRegistered();
@@ -1705,6 +1910,9 @@ checkReviewCadence();
 checkIntakeState();
 checkScopeGuardRoteirizacao();
 checkRoteiroCommand();
+checkRawIngest();
+checkImportaCommand();
+checkRawSkeletonAndScope();
 checkRbacContracts();
 checkSchemas();
 checkFase0Schemas();

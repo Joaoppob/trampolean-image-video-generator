@@ -204,6 +204,14 @@ pelo tipo: `brand-personagem`, `brand-produto`, `brand-servico`) para `projects/
 ajude a preencher o `RAG/`, e troque o `status` do `project.json` para `"ativo"`. O guia está
 em `templates/README.md`.
 
+**Projeto a partir do `Raw/`.** Se a pessoa já tem o material solto (imagens + textos de um
+tema), o caminho mais rápido é a caixa de entrada `Raw/`: ela dropa os arquivos lá (uma subpasta
+por tema, ou soltos na raiz como lote avulso) e roda `/importa`. Você lê os textos, decide o que
+é marca / narrativa / roteiro, infere o nome e o tipo, **mostra o plano e pede aprovação**, e só
+então cria o projeto, autora o `RAG/`, move as imagens e esvazia o lote. A mecânica determinística
+e path-safe é `scripts/raw-ingest.cjs` (modos `plan`/`scaffold`/`move`/`finalize`); o roteiro
+completo está em `.claude/commands/importa.md`.
+
 O `TraceDefense/` é o **demo rodável** embarcado (o mago do Trace Defense, com refs reais).
 
 ---
@@ -348,6 +356,7 @@ ou chama a skill certa. O roteiro de cada entrada está no seu respectivo arquiv
 |---|---|
 | Primeira vez, tour, tutorial, "me ensina" | `.claude/commands/tutorial.md` |
 | Criar/escolher projeto, marca nova | seção "Projetos" + `templates/README.md` |
+| Organizar Raw, importar material, montar projeto a partir de arquivos soltos | `.claude/commands/importa.md` |
 | Começar uma criação, roteiro, storyboard, planejar um post | `.claude/commands/roteiro.md` |
 | Reel completo | `.claude/commands/gerarvideo.md` |
 | Só imagens | `.claude/commands/gerarimagem.md` |
@@ -465,6 +474,7 @@ controla se o usuário já completou um run e se prefere modo expert.
 | `/creditos` | Confere saldo e plano no Higgsfield, sem gastar. |
 | `/simular` | Simula um run completo (RAG, custo, shot-list) sem gastar crédito. |
 | `/revisao` | Roda as verificações do produto e reseta a cadência de revisão. |
+| `/importa` | Organiza o material solto da pasta `Raw/` num projeto pronto: lê os textos, monta marca e narrativa, move as imagens e esvazia o lote — sempre pedindo aprovação antes de mover. |
 | `/roteiro` | Inicia a intake guiada (Etapa 1): coleta as lacunas pendentes antes de gerar, sem gastar crédito. |
 | `/gerarimagem` | Gera uma ou mais imagens a partir de uma cena. |
 | `/gerarvideo` | Pipeline completo: imagens, vídeos, reel montado. |

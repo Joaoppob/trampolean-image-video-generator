@@ -84,6 +84,8 @@ var IN_DOMAIN = [
   /\b(conect[ae][mr]?\b|login|OAuth|autentic|cli|conta|saldo|account)\b/,
   // Etapa 1 (roteirizacao v0.5): termos de roteiro/storyboard/pesquisa de referencia.
   /\b(roteiro|storyboard|story|narrativa|tendencia|viral|publico|conteudo|plataforma|instagram)\b/,
+  // Ingestao do Raw/ (/importa): organizar material solto num projeto.
+  /\b(importa|importar|raw|organiza|organizar|material)\b/,
 ];
 
 var OFFTOPIC = [
