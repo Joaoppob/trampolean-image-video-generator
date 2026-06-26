@@ -40,6 +40,13 @@
  *       Para _avulso, remove so os arquivos soltos consumidos, nunca o Raw/ em si
  *       nem .gitkeep/README. NUNCA apaga fora de Raw/.
  *
+ *   write-rag --root . --projeto <nome> --arquivo marca|narrativa|roteiro-rascunho
+ *       le conteudo do stdin e escreve APENAS nos arquivos permitidos do RAG do
+ *       projeto. Usado pelo /importa para autorar sem liberar Write amplo.
+ *
+ *   activate --root . --projeto <nome>
+ *       troca project.json de rascunho para ativo (sem sobrescrever outros campos).
+ *
  * Saida sempre JSON no stdout. Erro nao-fatal -> exit != 0 com { ok:false, erro }.
  */
 
@@ -59,6 +66,11 @@ const TIPOS = ['personagem', 'produto', 'servico'];
 // arquivos do esqueleto do Raw/ que NUNCA contam como conteudo de lote nem sao
 // apagados/movidos: o esqueleto versionado da caixa de entrada.
 const RAW_SKELETON = new Set(['.gitkeep', 'README.md']);
+const RAG_WRITE_FILES = {
+  marca: path.join('RAG', 'marca.md'),
+  narrativa: path.join('RAG', 'narrativa.md'),
+  'roteiro-rascunho': path.join('RAG', 'roteiro-rascunho.md'),
+};
 
 // ----------------------------------------------------------------------------
 // path-safety
@@ -69,6 +81,19 @@ const RAW_SKELETON = new Set(['.gitkeep', 'README.md']);
 function isInside(parent, child) {
   const r = path.relative(parent, child);
   return r === '' || (!!r && !r.startsWith('..') && !path.isAbsolute(r));
+}
+
+function realpath(p) {
+  return fs.realpathSync.native ? fs.realpathSync.native(p) : fs.realpathSync(p);
+}
+
+function assertRealInside(baseAbs, targetAbs, label) {
+  const baseReal = realpath(baseAbs);
+  const targetReal = realpath(targetAbs);
+  if (!isInside(baseReal, targetReal)) {
+    return { ok: false, erro: `${label} aponta para fora via symlink: ${targetAbs}` };
+  }
+  return { ok: true, real: targetReal, baseReal };
 }
 
 // resolve um arg de path do usuario contra a raiz e garante que cai dentro de
@@ -173,7 +198,10 @@ function plan(rootAbs) {
 
 // copia recursiva de um diretorio (sem deps; preserva subarvore do template).
 function copyTree(srcAbs, dstAbs) {
-  const st = fs.statSync(srcAbs);
+  const st = fs.lstatSync(srcAbs);
+  if (st.isSymbolicLink()) {
+    throw new Error(`template contem symlink nao permitido: ${srcAbs}`);
+  }
   if (st.isDirectory()) {
     fs.mkdirSync(dstAbs, { recursive: true });
     for (const name of fs.readdirSync(srcAbs)) {
@@ -206,7 +234,11 @@ function scaffold(rootAbs, args) {
     return { ok: false, erro: `projeto ja existe (nunca sobrescreve): ${PROJECTS_DIR}/${nome}` };
   }
 
-  copyTree(templateAbs, dstAbs);
+  try {
+    copyTree(templateAbs, dstAbs);
+  } catch (e) {
+    return { ok: false, erro: `falha ao copiar template: ${e.message}` };
+  }
 
   // ajusta project.json: nome, tipo_marca, status rascunho.
   const projJsonPath = path.join(dstAbs, 'project.json');
@@ -246,12 +278,16 @@ function move(rootAbs, args) {
   if (!fs.statSync(de.abs).isFile()) {
     return { ok: false, erro: `origem nao e um arquivo: ${args.de}` };
   }
+  const realSrc = assertRealInside(de.baseAbs, de.abs, 'origem');
+  if (!realSrc.ok) return { ok: false, erro: realSrc.erro };
   if (fs.existsSync(para.abs)) {
     return { ok: false, erro: `destino ja existe (nunca sobrescreve): ${args.para}` };
   }
 
   // cria o diretorio-pai do destino (dentro de projects/, ja validado).
   fs.mkdirSync(path.dirname(para.abs), { recursive: true });
+  const realDstParent = assertRealInside(para.baseAbs, path.dirname(para.abs), 'destino');
+  if (!realDstParent.ok) return { ok: false, erro: realDstParent.erro };
 
   // move: rename, com fallback copy+unlink para cross-device (EXDEV).
   try {
@@ -294,15 +330,16 @@ function finalize(rootAbs, args) {
   // chama finalize apos mover tudo. Aqui: removemos os soltos remanescentes.
   if (tema === AVULSO) {
     const soltos = listLoteFiles(rawAbs, { skipSkeleton: true });
-    const removidos = [];
-    for (const nome of soltos) {
-      const alvo = path.join(rawAbs, nome);
-      // path-safety: o alvo tem que estar dentro de Raw/ e ser arquivo.
-      if (!isInside(rawAbs, alvo) || !fs.statSync(alvo).isFile()) continue;
-      fs.unlinkSync(alvo);
-      removidos.push(`${RAW_DIR}/${nome}`);
+    if (soltos.length > 0) {
+      return {
+        ok: false,
+        tema: AVULSO,
+        apagado: false,
+        aviso: 'lote avulso nao esvaziado: sobraram arquivos nao-processados',
+        sobraram: soltos.map((n) => `${RAW_DIR}/${n}`),
+      };
     }
-    return { ok: true, tema: AVULSO, removidos, preservado: 'Raw/ e esqueleto (.gitkeep, README.md)' };
+    return { ok: true, tema: AVULSO, preservado: 'Raw/ e esqueleto (.gitkeep, README.md)' };
   }
 
   // subpasta: so remove a pasta se estiver vazia (ou so com restos ja movidos).
@@ -339,6 +376,75 @@ function finalize(rootAbs, args) {
 }
 
 // ----------------------------------------------------------------------------
+// write-rag / activate
+// ----------------------------------------------------------------------------
+
+function projectRoot(rootAbs, nome) {
+  if (!validProjectName(nome)) {
+    return { ok: false, erro: `nome de projeto invalido: ${String(nome)}` };
+  }
+  const baseAbs = path.resolve(rootAbs, PROJECTS_DIR);
+  const projAbs = path.resolve(baseAbs, nome);
+  if (!isInside(baseAbs, projAbs)) {
+    return { ok: false, erro: `projeto fora de ${PROJECTS_DIR}/: ${nome}` };
+  }
+  if (!fs.existsSync(projAbs) || !fs.statSync(projAbs).isDirectory()) {
+    return { ok: false, erro: `projeto nao existe: ${PROJECTS_DIR}/${nome}` };
+  }
+  const realProj = assertRealInside(baseAbs, projAbs, 'projeto');
+  if (!realProj.ok) return { ok: false, erro: realProj.erro };
+  return { ok: true, abs: projAbs, baseAbs };
+}
+
+function writeRag(rootAbs, args, content) {
+  const proj = projectRoot(rootAbs, args.projeto);
+  if (!proj.ok) return { ok: false, erro: proj.erro };
+  const relFile = RAG_WRITE_FILES[args.arquivo];
+  if (!relFile) {
+    return {
+      ok: false,
+      erro: `arquivo invalido: ${String(args.arquivo)} (use ${Object.keys(RAG_WRITE_FILES).join('|')})`,
+    };
+  }
+  const destAbs = path.resolve(proj.abs, relFile);
+  if (!isInside(proj.abs, destAbs)) {
+    return { ok: false, erro: `destino fora do projeto: ${relFile}` };
+  }
+  fs.mkdirSync(path.dirname(destAbs), { recursive: true });
+  const realParent = assertRealInside(proj.abs, path.dirname(destAbs), 'destino RAG');
+  if (!realParent.ok) return { ok: false, erro: realParent.erro };
+  if (args.arquivo === 'roteiro-rascunho' && fs.existsSync(destAbs)) {
+    return { ok: false, erro: 'roteiro-rascunho.md ja existe (nunca sobrescreve rascunho)' };
+  }
+  const text = String(content || '').replace(/\r\n/g, '\n');
+  fs.writeFileSync(destAbs, text.endsWith('\n') ? text : text + '\n', 'utf8');
+  return { ok: true, arquivo: relFromRoot(rootAbs, destAbs), bytes: Buffer.byteLength(text, 'utf8') };
+}
+
+function activate(rootAbs, args) {
+  const proj = projectRoot(rootAbs, args.projeto);
+  if (!proj.ok) return { ok: false, erro: proj.erro };
+  const projJsonPath = path.join(proj.abs, 'project.json');
+  let projJson;
+  try {
+    projJson = JSON.parse(fs.readFileSync(projJsonPath, 'utf8'));
+  } catch (e) {
+    return { ok: false, erro: `project.json ilegivel: ${e.message}` };
+  }
+  projJson.status = 'ativo';
+  fs.writeFileSync(projJsonPath, JSON.stringify(projJson, null, 2) + '\n', 'utf8');
+  return { ok: true, projeto: `${PROJECTS_DIR}/${args.projeto}`, status: 'ativo' };
+}
+
+function readStdinSync() {
+  try {
+    return fs.readFileSync(0, 'utf8');
+  } catch (_) {
+    return '';
+  }
+}
+
+// ----------------------------------------------------------------------------
 // CLI
 // ----------------------------------------------------------------------------
 
@@ -361,8 +467,14 @@ function main() {
     case 'finalize':
       result = finalize(rootAbs, args);
       break;
+    case 'write-rag':
+      result = writeRag(rootAbs, args, readStdinSync());
+      break;
+    case 'activate':
+      result = activate(rootAbs, args);
+      break;
     default:
-      result = { ok: false, erro: 'subcomando desconhecido', uso: 'plan|scaffold|move|finalize' };
+      result = { ok: false, erro: 'subcomando desconhecido', uso: 'plan|scaffold|move|finalize|write-rag|activate' };
   }
 
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
@@ -387,4 +499,6 @@ module.exports = {
   scaffold,
   move,
   finalize,
+  writeRag,
+  activate,
 };

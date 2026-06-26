@@ -255,6 +255,42 @@ function probe(file) {
   }
 }
 
+function validateClipPaths(root, clips) {
+  const resolved = clips.map((cl) => (path.isAbsolute(cl) ? cl : path.resolve(root, cl)));
+  const rootAbs = path.resolve(root);
+  const rootCmp = process.platform === 'win32' ? rootAbs.toLowerCase() : rootAbs;
+  const fora = resolved.filter((p) => {
+    const pc = process.platform === 'win32' ? p.toLowerCase() : p;
+    return pc !== rootCmp && !pc.startsWith(rootCmp + path.sep);
+  });
+  if (fora.length) {
+    return { ok: false, etapa: 'validacao-clips', erro: 'clip fora da raiz do repo', fora };
+  }
+
+  const faltando = resolved.filter((p) => !fs.existsSync(p));
+  if (faltando.length) {
+    return { ok: false, erro: 'clipes nao encontrados', faltando };
+  }
+
+  const rootReal = fs.realpathSync.native ? fs.realpathSync.native(rootAbs) : fs.realpathSync(rootAbs);
+  const rootRealCmp = process.platform === 'win32' ? rootReal.toLowerCase() : rootReal;
+  const symlinkEscape = resolved.filter((p) => {
+    const real = fs.realpathSync.native ? fs.realpathSync.native(p) : fs.realpathSync(p);
+    const realCmp = process.platform === 'win32' ? real.toLowerCase() : real;
+    return realCmp !== rootRealCmp && !realCmp.startsWith(rootRealCmp + path.sep);
+  });
+  if (symlinkEscape.length) {
+    return {
+      ok: false,
+      etapa: 'validacao-clips',
+      erro: 'clip aponta para fora da raiz via symlink',
+      fora: symlinkEscape,
+    };
+  }
+
+  return { ok: true, resolved };
+}
+
 // ---------- main ----------
 function main() {
   const args = parseArgs(process.argv);
@@ -297,29 +333,12 @@ function main() {
     process.exit(1);
   }
 
-  // valida existencia dos clipes (resolve relativo a root)
-  const resolved = clips.map((cl) => (path.isAbsolute(cl) ? cl : path.resolve(root, cl)));
-
-  // guard de path traversal: cada clip resolvido deve ser filho da raiz do repo
-  // nota: symlinks apontando fora da raiz NAO sao cobertos por este guard (sem realpath)
-  const rootAbs = path.resolve(root);
-  const rootCmp = process.platform === 'win32' ? rootAbs.toLowerCase() : rootAbs;
-  const fora = resolved.filter((p) => {
-    const pc = process.platform === 'win32' ? p.toLowerCase() : p;
-    return !pc.startsWith(rootCmp + path.sep);
-  });
-  if (fora.length) {
-    process.stdout.write(JSON.stringify({ ok: false, etapa: 'validacao-clips', erro: 'clip fora da raiz do repo', fora }) + '\n');
+  const clipValidation = validateClipPaths(root, clips);
+  if (!clipValidation.ok) {
+    process.stdout.write(JSON.stringify(clipValidation, null, 2) + '\n');
     process.exit(1);
   }
-
-  const faltando = resolved.filter((p) => !fs.existsSync(p));
-  if (faltando.length) {
-    process.stdout.write(
-      JSON.stringify({ ok: false, erro: 'clipes nao encontrados', faltando }, null, 2) + '\n'
-    );
-    process.exit(1);
-  }
+  const resolved = clipValidation.resolved;
 
   const out = timestampedOutput(root);
 
@@ -412,4 +431,5 @@ module.exports = {
   fontCandidatesForOs,
   timestampedOutput,
   checkFfmpeg,
+  validateClipPaths,
 };

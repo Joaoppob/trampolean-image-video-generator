@@ -1236,6 +1236,12 @@ function checkPipelineStateDedup() {
     const missingPath = run(['set', '--root', tmp, '--cena', '1', '--tipo', 'imagem', '--job-id', 'j1']);
     if (missingPath.status === 1) pass('pipeline-state rejects missing path');
     else fail('pipeline-state rejects missing path', missingPath.stdout);
+    const escapePath = run(['set', '--root', tmp, '--cena', '1', '--tipo', 'imagem', '--job-id', 'j1', '--path', '../fora.png']);
+    if (escapePath.status === 1) pass('pipeline-state rejects path outside project output');
+    else fail('pipeline-state rejects path outside project output', escapePath.stdout);
+    const nonOutputPath = run(['set', '--root', tmp, '--cena', '1', '--tipo', 'imagem', '--job-id', 'j1', '--path', 'RAG/x.png']);
+    if (nonOutputPath.status === 1) pass('pipeline-state rejects path outside output/');
+    else fail('pipeline-state rejects path outside output/', nonOutputPath.stdout);
     const missingMediaId = run(['media', '--root', tmp, '--key', 'mage1']);
     if (missingMediaId.status === 1) pass('pipeline-state rejects missing media_id');
     else fail('pipeline-state rejects missing media_id', missingMediaId.stdout);
@@ -1400,6 +1406,33 @@ function checkEditorOutputAndFont() {
     pass('editor escapes drive colon in font path');
   } else {
     fail('editor escapes drive colon in font path', 'escapeFilterPath missing or not escaping');
+  }
+  const clipTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-reel-paths-'));
+  try {
+    fs.mkdirSync(path.join(clipTmp, 'output', 'clips'), { recursive: true });
+    fs.writeFileSync(path.join(clipTmp, 'output', 'clips', 'a.mp4'), 'fake');
+    const okClip = mod.validateClipPaths(clipTmp, ['output/clips/a.mp4']);
+    if (okClip && okClip.ok === true) pass('editor accepts clip inside root');
+    else fail('editor accepts clip inside root', JSON.stringify(okClip));
+
+    const outside = path.join(os.tmpdir(), `verify-reel-outside-${Date.now()}.mp4`);
+    fs.writeFileSync(outside, 'fake');
+    try {
+      const link = path.join(clipTmp, 'output', 'clips', 'link.mp4');
+      fs.symlinkSync(outside, link);
+      const badClip = mod.validateClipPaths(clipTmp, ['output/clips/link.mp4']);
+      try { fs.rmSync(outside, { force: true }); } catch (_) {}
+      if (badClip && badClip.ok === false && /symlink/i.test(badClip.erro || '')) {
+        pass('editor rejects clip symlink outside root');
+      } else {
+        fail('editor rejects clip symlink outside root', JSON.stringify(badClip));
+      }
+    } catch (_) {
+      try { fs.rmSync(outside, { force: true }); } catch (__) {}
+      pass('editor rejects clip symlink outside root (symlink indisponivel)');
+    }
+  } finally {
+    fs.rmSync(clipTmp, { recursive: true, force: true });
   }
 }
 
@@ -1707,8 +1740,8 @@ function checkRawIngest() {
   }
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-raw-'));
 
-  function call(args) {
-    const r = spawnSync('node', [script, ...args], { cwd: tmp, encoding: 'utf8', windowsHide: true });
+  function call(args, input) {
+    const r = spawnSync('node', [script, ...args], { cwd: tmp, input, encoding: 'utf8', windowsHide: true });
     return { status: r.status, json: safeJson(r.stdout), stdout: r.stdout, stderr: r.stderr };
   }
 
@@ -1761,6 +1794,50 @@ function checkRawIngest() {
       fail('raw-ingest scaffold erra em projeto existente', JSON.stringify(scDup.json));
     }
 
+    const marcaMinima = [
+      '# Marca: Meu Tema',
+      '',
+      '## O que e',
+      'Uma marca de teste para validar a ingestao.',
+      '',
+      '## Publico',
+      'Pessoas testando o fluxo.',
+      '',
+      '## Personagem central',
+      'Heroi de teste.',
+      '',
+      'Anchor textual canonico:',
+      '',
+      '```',
+      'Same test character from the reference images: bold silhouette, blue clothes, clear emblem, friendly face, colorful mobile game cartoon style, vertical 9:16 frame.',
+      '```',
+      '',
+      '## Estilo visual',
+      'Cartoon mobile, cores fortes.',
+      '',
+      '## Tom da comunicacao',
+      'Direto e energetico.',
+    ].join('\n');
+    const narrativaMinima = [
+      '# Narrativa',
+      '',
+      '## A Historia',
+      'O heroi aparece para resolver um problema simples.',
+      '',
+      '## Cenario',
+      'Um mundo colorido e direto.',
+      '',
+      '## Como o personagem age',
+      'Ele demonstra a solucao com energia.',
+    ].join('\n');
+    const wrMarca = call(['write-rag', '--root', '.', '--projeto', 'meu-tema', '--arquivo', 'marca'], marcaMinima);
+    const wrNarr = call(['write-rag', '--root', '.', '--projeto', 'meu-tema', '--arquivo', 'narrativa'], narrativaMinima);
+    if (wrMarca.status === 0 && wrNarr.status === 0) {
+      pass('raw-ingest write-rag autora marca/narrativa sem Write amplo');
+    } else {
+      fail('raw-ingest write-rag autora marca/narrativa sem Write amplo', `${wrMarca.stdout} ${wrNarr.stdout}`);
+    }
+
     // move: move a imagem pro identidade-visual do projeto.
     const mv = call([
       'move', '--root', '.',
@@ -1797,6 +1874,27 @@ function checkRawIngest() {
       pass('raw-ingest move rejeita destino fora de projects/');
     } else {
       fail('raw-ingest move rejeita destino fora de projects/', JSON.stringify(mvEscape.json));
+    }
+
+    try {
+      const outside = path.join(tmp, '..', `trampolean-outside-${Date.now()}.png`);
+      fs.writeFileSync(outside, 'fora\n');
+      const link = path.join(tmp, 'Raw', 'meu-tema', 'link-fora.png');
+      fs.symlinkSync(outside, link);
+      const mvSymlink = call([
+        'move', '--root', '.',
+        '--de', 'Raw/meu-tema/link-fora.png',
+        '--para', 'projects/meu-tema/RAG/identidade-visual/link-fora.png',
+      ]);
+      try { fs.rmSync(outside, { force: true }); } catch (_) {}
+      try { fs.rmSync(link, { force: true }); } catch (_) {}
+      if (mvSymlink.status !== 0 && mvSymlink.json && mvSymlink.json.ok === false) {
+        pass('raw-ingest move rejeita symlink que aponta fora do Raw');
+      } else {
+        fail('raw-ingest move rejeita symlink que aponta fora do Raw', JSON.stringify(mvSymlink.json));
+      }
+    } catch (_) {
+      pass('raw-ingest move rejeita symlink que aponta fora do Raw (symlink indisponivel)');
     }
 
     // finalize com restos NAO esvazia: avisa (sobre.md e leia.xyz ainda no lote).
@@ -1843,6 +1941,35 @@ function checkRawIngest() {
       pass('validate-rag tolera RAG/roteiro-rascunho.md (arquivo extra nao quebra)');
     } else {
       fail('validate-rag tolera RAG/roteiro-rascunho.md (arquivo extra nao quebra)', rg.stdout || rg.stderr);
+    }
+
+    if (rg.status === 0) {
+      pass('raw-ingest projeto autorado valida antes de ativar');
+    } else {
+      fail('raw-ingest projeto autorado valida antes de ativar', rg.stdout || rg.stderr);
+    }
+    const act = call(['activate', '--root', '.', '--projeto', 'meu-tema']);
+    const activeJson = safeJson(fs.readFileSync(projJsonPath, 'utf8'));
+    if (act.status === 0 && activeJson && activeJson.status === 'ativo') {
+      pass('raw-ingest activate troca projeto para ativo');
+    } else {
+      fail('raw-ingest activate troca projeto para ativo', act.stdout);
+    }
+
+    fs.writeFileSync(path.join(tmp, 'Raw', 'solto.txt'), 'arquivo avulso\n');
+    const finAvulsoBlocked = call(['finalize', '--root', '.', '--tema', '_avulso']);
+    const soltoStillThere = fs.existsSync(path.join(tmp, 'Raw', 'solto.txt'));
+    if (finAvulsoBlocked.status !== 0 && soltoStillThere && Array.isArray(finAvulsoBlocked.json.sobraram)) {
+      pass('raw-ingest finalize _avulso rejeita sobras sem apagar');
+    } else {
+      fail('raw-ingest finalize _avulso rejeita sobras sem apagar', JSON.stringify(finAvulsoBlocked.json));
+    }
+    fs.unlinkSync(path.join(tmp, 'Raw', 'solto.txt'));
+    const finAvulsoOk = call(['finalize', '--root', '.', '--tema', '_avulso']);
+    if (finAvulsoOk.status === 0 && finAvulsoOk.json && finAvulsoOk.json.ok === true) {
+      pass('raw-ingest finalize _avulso vazio preserva Raw');
+    } else {
+      fail('raw-ingest finalize _avulso vazio preserva Raw', JSON.stringify(finAvulsoOk.json));
     }
   } catch (e) {
     fail('raw-ingest command sequence', e.message);
@@ -1927,6 +2054,7 @@ function checkPrestart() {
       path.join(tmp, 'projects', 'MinhaMarca', 'project.json'),
       JSON.stringify({ nome: 'MinhaMarca', tipo_marca: 'servico', status: 'ativo' }, null, 2) + '\n'
     );
+    fs.mkdirSync(path.join(tmp, 'projects', 'ProjetoQuebrado'), { recursive: true });
     // sem .claude/state/.jotaro-profile.json -> primeira_vez true.
 
     const r = call(tmp);
@@ -1957,6 +2085,12 @@ function checkPrestart() {
     const okProj = proj && proj.tipo_marca === 'servico' && proj.status === 'ativo';
     if (okProj) pass('prestart lista projeto com status');
     else fail('prestart lista projeto com status', JSON.stringify(j.projetos));
+
+    const okAvisos =
+      Array.isArray(j.avisos) &&
+      j.avisos.some((a) => /ProjetoQuebrado\/project\.json ausente/.test(a));
+    if (okAvisos) pass('prestart reporta avisos de projetos quebrados');
+    else fail('prestart reporta avisos de projetos quebrados', JSON.stringify(j.avisos));
 
     const okPerfil = j.perfil && j.perfil.primeira_vez === true && j.perfil.expert === false;
     if (okPerfil) pass('prestart marca primeira_vez quando nao ha perfil');
@@ -2056,6 +2190,37 @@ function checkScopeGuardInicio() {
   }
 }
 
+function checkCiConfig() {
+  const pkgPath = path.join(ROOT, 'package.json');
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  } catch (e) {
+    fail('package.json exists and is valid JSON', e.message);
+    return;
+  }
+  pass('package.json exists and is valid JSON');
+  if (pkg.scripts && pkg.scripts.test === 'node scripts/verify.cjs') {
+    pass('package.json test runs verify.cjs');
+  } else {
+    fail('package.json test runs verify.cjs', JSON.stringify(pkg.scripts || {}));
+  }
+
+  const wfPath = path.join(ROOT, '.github', 'workflows', 'verify.yml');
+  let wf;
+  try {
+    wf = fs.readFileSync(wfPath, 'utf8');
+  } catch (e) {
+    fail('GitHub Actions verify workflow exists', e.message);
+    return;
+  }
+  if (/npm test/.test(wf) && /actions\/checkout@v4/.test(wf) && /actions\/setup-node@v4/.test(wf)) {
+    pass('GitHub Actions verify workflow runs npm test');
+  } else {
+    fail('GitHub Actions verify workflow runs npm test', wf);
+  }
+}
+
 checkCjsSyntax();
 checkHook();
 checkHookRegistered();
@@ -2076,6 +2241,7 @@ checkPrestart();
 checkInicioCommand();
 checkOnboardingStateAware();
 checkScopeGuardInicio();
+checkCiConfig();
 checkRbacContracts();
 checkSchemas();
 checkFase0Schemas();

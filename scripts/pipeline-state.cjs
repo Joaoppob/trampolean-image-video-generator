@@ -34,6 +34,22 @@ function statePath(root) {
   return path.resolve(root || '.', STATE_REL);
 }
 
+function isInside(parent, child) {
+  const rel = path.relative(parent, child);
+  return rel === '' || (!!rel && !rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+function pathDentroDoProjeto(root, value) {
+  if (!value || typeof value !== 'string') return false;
+  if (path.isAbsolute(value)) return false;
+  if (value.split(/[\\/]+/).includes('..')) return false;
+  const rootAbs = path.resolve(root || '.');
+  const targetAbs = path.resolve(rootAbs, value);
+  if (!isInside(rootAbs, targetAbs)) return false;
+  const outputAbs = path.resolve(rootAbs, 'output');
+  return isInside(outputAbs, targetAbs);
+}
+
 function emptyState() {
   return {
     versao: 1,
@@ -215,6 +231,9 @@ function cmdSet(root, args) {
   if (!args.path) {
     return { erro: 'path obrigatorio para gravar state' };
   }
+  if (!pathDentroDoProjeto(root, args.path)) {
+    return { erro: 'path deve ser relativo e ficar dentro de output/ do projeto' };
+  }
   if (!state.cenas[key]) state.cenas[key] = {};
   const registro = {
     job_id: args['job-id'] || null,
@@ -282,4 +301,4 @@ if (require.main === module) {
   process.exit(result && result.erro ? 1 : 0);
 }
 
-module.exports = { load, save, cmdGet, cmdSet, cmdMedia, cmdMediaGet, statePath };
+module.exports = { load, save, cmdGet, cmdSet, cmdMedia, cmdMediaGet, statePath, pathDentroDoProjeto };

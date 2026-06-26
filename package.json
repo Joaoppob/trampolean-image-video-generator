@@ -1,0 +1,13 @@
+{
+  "name": "trampolean-image-video-generator",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Claude Code product for Trampolean image and video generation via Higgsfield CLI.",
+  "scripts": {
+    "test": "node scripts/verify.cjs",
+    "verify": "node scripts/verify.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
