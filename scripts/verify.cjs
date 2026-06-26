@@ -3740,6 +3740,9 @@ function checkHubBrandAgnostic() {
     'style', 'colors', 'color', 'frame', 'vertical', 'mobile', 'cartoon', 'saturated',
     'bold', 'outlines', 'soft', 'shadows', 'premium', 'lifestyle', 'product', 'photography',
     'modern', 'clean', 'minimal', 'service', 'brand', 'identity', 'warm', 'neutral', 'palette',
+    // craft genérico (não é traço distintivo de marca): aparece em qualquer prompt/HUB
+    'natural', 'render', 'lighting', 'scenes', 'scene', 'placement', 'secondary', 'consistent',
+    'photo', 'realistic', 'cinematic', 'composition', 'selected', 'library', 'libraries',
   ]);
   const tokens = (text) =>
     new Set(

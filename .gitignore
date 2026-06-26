@@ -8,6 +8,11 @@
 **/output/reels/*
 !**/output/reels/.gitkeep
 
+# === Projetos de cliente (material privado, NAO versionar) ===
+# Demos embarcados (TraceDefense, Aurora) sao versionados; projetos reais de
+# cliente ficam locais (assets pesados + material confidencial).
+projects/Girls Gummies/
+
 # === Caixa de entrada Raw/ (conteudo NAO versionado, so o esqueleto) ===
 # JB dropa material aqui e o Jotaro organiza via /importa (move pra projects/).
 # Ignora todo o conteudo solto, mantem o esqueleto rastreavel (.gitkeep + README).
