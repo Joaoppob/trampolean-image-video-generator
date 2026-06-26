@@ -3792,6 +3792,66 @@ function checkHubBrandAgnostic() {
 // PATH-SAFETY: move com ../ ou destino fora de projects/ deve ser REJEITADO;
 // scaffold em projeto existente deve ERRAR. Tambem confirma que validate-rag
 // tolera um projeto com RAG/roteiro-rascunho.md (campo/arquivo extra nao quebra).
+function checkRawSymlinkHardening() {
+  const os = require('os');
+  let ri;
+  try {
+    ri = require(path.join(ROOT, 'scripts', 'raw-ingest.cjs'));
+  } catch (e) {
+    fail('raw-ingest symlink hardening loads', e.message);
+    return;
+  }
+  for (const fn of ['assertRealInside', 'pathHasSymlinkComponent', 'listLoteFilesRecursive']) {
+    if (typeof ri[fn] !== 'function') { fail(`raw-ingest exports ${fn}`, typeof ri[fn]); return; }
+  }
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'raw-sym-'));
+  try {
+    const tema = path.join(tmp, 'Raw', 'tema');
+    fs.mkdirSync(tema, { recursive: true });
+    fs.writeFileSync(path.join(tema, 'real.png'), 'x');
+    fs.mkdirSync(path.join(tema, 'sub'), { recursive: true });
+    fs.writeFileSync(path.join(tema, 'sub', 'nested.png'), 'x');
+
+    // ASSERCAO SEMPRE-RODAVEL (nao depende de symlink): caminho aninhado legitimo
+    // nao e flagado como symlink.
+    if (ri.pathHasSymlinkComponent(tema, path.join(tema, 'sub', 'nested.png')) === false) {
+      pass('raw symlink-guard: caminho real aninhado nao e falso-positivo');
+    } else {
+      fail('raw symlink-guard: falso-positivo em caminho real', 'sub/nested.png');
+    }
+
+    // CASO POSITIVO (quando symlink for criavel no ambiente): escape via symlink-DIR.
+    const outside = path.join(tmp, 'OUTSIDE');
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, 'secret.png'), 'CONFIDENTIAL');
+    let symlinkOk = true;
+    try {
+      fs.symlinkSync(outside, path.join(tema, 'link'), 'dir');
+    } catch (_) { symlinkOk = false; }
+
+    if (symlinkOk) {
+      // 1) componente symlink-DIR e rejeitado pelo guard (o vetor do Windows realpath.native).
+      const r = ri.assertRealInside(tema, path.join(tema, 'link', 'secret.png'), 'origem');
+      if (r.ok === false && /symlink/i.test(r.erro || '')) pass('raw symlink-guard: rejeita path via componente symlink-dir');
+      else fail('raw symlink-guard: rejeita path via symlink-dir', JSON.stringify(r));
+
+      // 2) walk recursivo NAO lista o conteudo atras do symlink (nao importa dado externo).
+      const files = ri.listLoteFilesRecursive(tema).map((f) => (f.subdir ? f.subdir + '/' : '') + f.nome);
+      if (!files.some((f) => /secret/.test(f)) && files.includes('real.png') && files.includes('sub/nested.png')) {
+        pass('raw symlink-guard: walk exclui conteudo de symlink, mantem conteudo real');
+      } else {
+        fail('raw symlink-guard: walk exclui symlink mantem real', JSON.stringify(files));
+      }
+    } else {
+      pass('raw symlink-guard: caso positivo pulado (ambiente sem privilegio de symlink)');
+      pass('raw symlink-guard: walk (pulado — sem symlink)');
+    }
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) { /* noop */ }
+  }
+}
+
 function checkRawIngest() {
   const script = path.join(ROOT, 'scripts', 'raw-ingest.cjs');
   if (!fs.existsSync(script)) {
@@ -4394,6 +4454,7 @@ checkIntakeState();
 checkScopeGuardRoteirizacao();
 checkRoteiroCommand();
 checkRawIngest();
+checkRawSymlinkHardening();
 checkRawIngestRecursive();
 checkImportaCommand();
 checkRawSkeletonAndScope();

@@ -89,7 +89,30 @@ function realpath(p) {
   return fs.realpathSync.native ? fs.realpathSync.native(p) : fs.realpathSync(p);
 }
 
+// Checa se ALGUM componente do path entre base e target e um symlink. Necessario
+// porque `fs.realpathSync.native` no Windows NAO resolve componente de symlink — o
+// guard so por realpath e enganavel la. lstat de cada componente nao depende disso.
+function pathHasSymlinkComponent(baseAbs, targetAbs) {
+  const rel = path.relative(baseAbs, targetAbs);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return false;
+  let cur = baseAbs;
+  for (const part of rel.split(/[\\/]+/)) {
+    cur = path.join(cur, part);
+    try {
+      if (fs.lstatSync(cur).isSymbolicLink()) return true;
+    } catch (_) {
+      // componente ainda nao existe (ex.: destino novo) — nao e symlink, segue.
+    }
+  }
+  return false;
+}
+
 function assertRealInside(baseAbs, targetAbs, label) {
+  // 1) defesa robusta (independe de plataforma): nenhum componente pode ser symlink.
+  if (pathHasSymlinkComponent(baseAbs, targetAbs)) {
+    return { ok: false, erro: `${label} atravessa symlink: ${targetAbs}` };
+  }
+  // 2) defesa por realpath: o alvo resolvido tem de cair dentro da base resolvida.
   const baseReal = realpath(baseAbs);
   const targetReal = realpath(targetAbs);
   if (!isInside(baseReal, targetReal)) {
@@ -166,9 +189,21 @@ function listLoteFilesRecursive(loteAbs, opts) {
   const out = [];
   if (!fs.existsSync(loteAbs)) return out;
 
+  const visited = new Set();
   function walk(dirAbs, subdir) {
+    // guarda de ciclo: nunca revisita o mesmo diretorio real (protege contra loop
+    // de symlink, embora symlinks ja sejam pulados abaixo).
+    let real;
+    try { real = realpath(dirAbs); } catch (_) { real = dirAbs; }
+    if (visited.has(real)) return;
+    visited.add(real);
+
     const entries = fs.readdirSync(dirAbs, { withFileTypes: true });
     for (const ent of entries) {
+      // NUNCA segue symlink (arquivo ou diretorio): pode apontar pra fora do Raw
+      // (importaria dado externo) ou criar ciclo. Completude vale pra conteudo REAL
+      // do lote, nao pra atalhos que escapam dele.
+      if (ent.isSymbolicLink()) continue;
       if (ent.isDirectory()) {
         // no topo do lote, opcionalmente pula subpastas que sao lotes proprios.
         if (subdir === '' && skipDirs && skipDirs.has(ent.name)) continue;
@@ -599,6 +634,8 @@ module.exports = {
   resolveInside,
   validProjectName,
   classify,
+  assertRealInside,
+  pathHasSymlinkComponent,
   listLoteFilesRecursive,
   summarizeSubpastas,
   plan,
