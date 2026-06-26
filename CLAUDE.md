@@ -541,7 +541,12 @@ real** e só então abre com o quadro já ancorado nele, em vez do texto genéri
 
 1. Rode o agregador puro (filesystem): `node scripts/prestart.cjs --root .`. Ele devolve
    `{ raw: { tem_conteudo, lotes:[{tema,n_arquivos,n_imagens,n_textos,n_outros}] },
-   projetos:[{nome,tipo_marca,status}], perfil:{primeira_vez,expert} }`.
+   projetos:[{ nome, tipo_marca, status, personagens:[nome], tem_biblioteca, modo_visual,
+   elenco:[{nome,n_refs}], n_refs_plano, conteudo:{ n_roteiros, tem_intake, tem_shotlist,
+   n_imagens, n_clipes, n_reels } }], perfil:{primeira_vez,expert} }`. **Use o `elenco` e o
+   `conteudo` para abrir com proatividade real sobre o que existe** ("vi que o <projeto> tem 3
+   personagens — Sofia (16 refs), Dandara (15), Ji-woo (17) — e 12 roteiros; quer continuar um
+   ou começar algo novo?"), em vez de perguntar no escuro.
 2. Colete os **sinais de setup** em runtime (mesma lógica do `/setup` e do `/creditos`):
    Higgsfield autenticado? (`higgsfield account status` → email/saldo); FFmpeg presente?
    (`ffmpeg -version`). **Não trave** se faltar — só sinalize e aponte pro `/setup`.

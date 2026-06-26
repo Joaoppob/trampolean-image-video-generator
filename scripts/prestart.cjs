@@ -16,6 +16,70 @@ const jotaroProfile = require('./jotaro-profile.cjs');
 const identidadeVisual = require('./lib/identidade-visual.cjs');
 
 const PROJECTS_DIR = 'projects';
+const MEDIA_RE = /\.(png|jpg|jpeg|webp|mp4|mov|webm|m4v)$/i;
+const ROTEIRO_RE = /(roteiro|storyboard|script|shotlist)/i;
+const DOC_RE = /\.(json|md|txt)$/i;
+const SKIP_DIRS = new Set(['node_modules', '.git', 'imagens', 'clips', 'clipes', 'reels', 'identidade-visual']);
+
+function contarImagens(dirAbs) {
+  try {
+    return fs.readdirSync(dirAbs, { withFileTypes: true })
+      .filter((e) => e.isFile() && identidadeVisual.IMAGE_RE.test(e.name)).length;
+  } catch (_) { return 0; }
+}
+
+function contarMidiaEm(dirAbs, re) {
+  try {
+    return fs.readdirSync(dirAbs, { withFileTypes: true })
+      .filter((e) => e.isFile() && re.test(e.name)).length;
+  } catch (_) { return 0; }
+}
+
+// Elenco com contagem de referencias por personagem (asset-first) — alimenta a
+// proatividade do Jotaro ("vi que a Sofia tem 16 refs, a Dandara 15...").
+function scanElenco(projRoot, det) {
+  const baseAbs = path.join(projRoot, 'RAG', 'identidade-visual');
+  const elenco = det.personagens.map((nome) => ({
+    nome,
+    n_refs: contarImagens(path.join(baseAbs, nome)),
+  }));
+  const n_refs_plano = det.plano_tem_imagem ? contarImagens(baseAbs) : 0;
+  return { elenco, n_refs_plano };
+}
+
+// Conta docs com cara de roteiro/storyboard que a marca trouxe ou o pipeline salvou,
+// numa varredura limitada (pula midia pesada e dirs irrelevantes).
+function contarRoteiros(projRoot, profundidade = 4) {
+  let n = 0;
+  function walk(dirAbs, depth) {
+    if (depth > profundidade) return;
+    let entries;
+    try { entries = fs.readdirSync(dirAbs, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        if (SKIP_DIRS.has(e.name)) continue;
+        walk(path.join(dirAbs, e.name), depth + 1);
+      } else if (e.isFile() && DOC_RE.test(e.name) && ROTEIRO_RE.test(e.name)) {
+        n += 1;
+      }
+    }
+  }
+  walk(projRoot, 0);
+  return n;
+}
+
+// Estado de conteudo do projeto: roteiros que existem + progresso de pipeline.
+function scanConteudo(projRoot) {
+  const outAbs = path.join(projRoot, 'output');
+  return {
+    n_roteiros: contarRoteiros(projRoot),
+    tem_intake: fs.existsSync(path.join(outAbs, '.intake-state.json')),
+    tem_shotlist: fs.existsSync(path.join(outAbs, 'shotlist-preflight.json')),
+    n_imagens: contarImagens(path.join(outAbs, 'imagens')),
+    n_clipes: contarMidiaEm(path.join(outAbs, 'clips'), MEDIA_RE) + contarMidiaEm(path.join(outAbs, 'clipes'), MEDIA_RE),
+    n_reels: contarMidiaEm(path.join(outAbs, 'reels'), MEDIA_RE),
+  };
+}
 
 function scanRaw(rootAbs) {
   const planResult = rawIngest.plan(rootAbs);
@@ -75,6 +139,7 @@ function scanProjetos(rootAbs) {
     // o passo 0 da intake (Frente 2) e a deteccao de modo_visual (Frente 4).
     const projRoot = path.join(projetosAbs, ent.name);
     const det = identidadeVisual.detect(projRoot);
+    const elenco = scanElenco(projRoot, det);
 
     projetos.push({
       nome: typeof proj.nome === 'string' ? proj.nome : ent.name,
@@ -84,6 +149,10 @@ function scanProjetos(rootAbs) {
       personagens: det.personagens,
       tem_biblioteca: det.tem_personagem,
       modo_visual: proj.modo_visual || det.modo_visual,
+      // ADITIVO: dados que alimentam a proatividade-sobre-conteudo do Jotaro.
+      elenco: elenco.elenco,
+      n_refs_plano: elenco.n_refs_plano,
+      conteudo: scanConteudo(projRoot),
     });
   }
   return { projetos, avisos };
@@ -131,5 +200,8 @@ module.exports = {
   scanRaw,
   scanProjetos,
   scanPerfil,
+  scanElenco,
+  scanConteudo,
+  contarRoteiros,
   prestart,
 };

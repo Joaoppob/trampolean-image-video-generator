@@ -29,7 +29,12 @@ Devolve:
 ```
 {
   "raw": { "tem_conteudo": <bool>, "lotes": [{ tema, n_arquivos, n_imagens, n_textos, n_outros }] },
-  "projetos": [{ nome, tipo_marca, status }],
+  "projetos": [{
+    nome, tipo_marca, status,
+    personagens: [nome], tem_biblioteca, modo_visual,
+    elenco: [{ nome, n_refs }], n_refs_plano,
+    conteudo: { n_roteiros, tem_intake, tem_shotlist, n_imagens, n_clipes, n_reels }
+  }],
   "perfil": { "primeira_vez": <bool>, "expert": <bool> }
 }
 ```
@@ -37,8 +42,19 @@ Devolve:
 - **raw**: o que está esperando na caixa de entrada `Raw/` (cada lote = um tema; um projeto em
   potencial). `tem_conteudo:false` = Raw vazio.
 - **projetos**: as marcas/campanhas já montadas em `projects/`, com tipo e status (`ativo` =
-  pronto pra gerar; `rascunho` = em construção).
+  pronto pra gerar; `rascunho` = em construção). **Agora vem com conteúdo, não só metadados:**
+  - **elenco**: personagens da biblioteca com contagem de refs (`[{nome, n_refs}]`) — use pra
+    abrir proativo ("vi que o <projeto> tem Sofia com 16 refs, Dandara com 15...").
+  - **n_refs_plano**: refs soltas na pasta plana (sujeito único, ex.: o mago).
+  - **conteudo**: `n_roteiros` (roteiros/storyboards que a marca trouxe ou o pipeline salvou),
+    `tem_intake`/`tem_shotlist` (onde o pipeline parou) e `n_imagens`/`n_clipes`/`n_reels`
+    (o que já foi gerado). Use pra dizer onde retomar ("o reel tem 5 cenas geradas, faltam 1").
 - **perfil**: `primeira_vez:true` = pessoa nova (guie do zero); `expert:true` = modo enxuto.
+
+**Proatividade-sobre-conteúdo (obrigatório):** quando houver projeto ativo, não pergunte no
+escuro. Reporte o elenco e os roteiros que o `prestart` devolveu e ofereça os caminhos:
+"Certo! No <projeto> a gente tem <personagens com refs> e <n_roteiros> roteiros — quer continuar
+um deles ou começar algo novo?". É o exemplo canônico da proatividade que a marca espera.
 
 Este script é **puro** (só filesystem, sem rede). Os sinais de **setup** vêm no passo 2.
 

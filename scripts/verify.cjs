@@ -2282,6 +2282,73 @@ function checkInterlockWiring() {
   }
 }
 
+function checkPrestartContent() {
+  const os = require('os');
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'prestart.cjs'));
+  } catch (e) {
+    fail('prestart.cjs loads', e.message);
+    return;
+  }
+  for (const fn of ['scanElenco', 'scanConteudo', 'contarRoteiros', 'prestart']) {
+    if (typeof mod[fn] !== 'function') fail(`prestart exports ${fn}`, typeof mod[fn]);
+  }
+  const idv = require(path.join(ROOT, 'scripts', 'lib', 'identidade-visual.cjs'));
+
+  // Fixture temporario: projeto com 2 personagens + roteiro + imagem gerada.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'prestart-test-'));
+  try {
+    const mk = (rel) => fs.mkdirSync(path.join(tmp, rel), { recursive: true });
+    const touch = (rel, body) => fs.writeFileSync(path.join(tmp, rel), body || 'x');
+    mk('RAG/identidade-visual/sofia'); touch('RAG/identidade-visual/sofia/s1.png'); touch('RAG/identidade-visual/sofia/s2.png');
+    mk('RAG/identidade-visual/dandara'); touch('RAG/identidade-visual/dandara/d1.png');
+    mk('roteiros'); touch('roteiros/roteiro-01.json', '{}'); touch('roteiros/storyboard-01.md', '# sb');
+    mk('output/imagens'); touch('output/imagens/cena-01.png');
+    touch('output/.intake-state.json', '{}');
+
+    const det = idv.detect(tmp);
+    const el = mod.scanElenco(tmp, det);
+    const sofia = el.elenco.find((e) => e.nome === 'sofia');
+    const dandara = el.elenco.find((e) => e.nome === 'dandara');
+    if (sofia && sofia.n_refs === 2 && dandara && dandara.n_refs === 1) {
+      pass('prestart scanElenco conta refs por personagem');
+    } else {
+      fail('prestart scanElenco conta refs por personagem', JSON.stringify(el));
+    }
+
+    const cont = mod.scanConteudo(tmp);
+    if (cont.n_roteiros >= 2 && cont.tem_intake === true && cont.n_imagens === 1) {
+      pass('prestart scanConteudo conta roteiros + progresso de pipeline');
+    } else {
+      fail('prestart scanConteudo conta roteiros + progresso', JSON.stringify(cont));
+    }
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) { /* noop */ }
+  }
+
+  // Projetos reais: o shape estendido aparece em cada projeto.
+  const r = mod.prestart(ROOT);
+  const okShape = Array.isArray(r.projetos) && r.projetos.every((p) =>
+    Array.isArray(p.elenco) && p.conteudo && typeof p.conteudo.n_roteiros === 'number');
+  if (okShape) pass('prestart real: projetos trazem elenco + conteudo');
+  else fail('prestart real: projetos trazem elenco + conteudo', JSON.stringify(r.projetos && r.projetos[0]));
+
+  // Contract drift fechado: docs descrevem o shape novo.
+  for (const [label, rel] of [['CLAUDE.md', 'CLAUDE.md'], ['inicio.md', '.claude/commands/inicio.md']]) {
+    try {
+      const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      if (/elenco/.test(text) && /n_roteiros/.test(text) && /conteudo/.test(text)) {
+        pass(`prestart contract documentado em ${label}`);
+      } else {
+        fail(`prestart contract documentado em ${label}`, 'elenco/conteudo/n_roteiros ausente');
+      }
+    } catch (e) {
+      fail(`prestart contract documentado em ${label}`, e.message);
+    }
+  }
+}
+
 function checkAngleVarietyGate() {
   let mod;
   try {
@@ -4268,6 +4335,7 @@ checkPostRenderCritiqueWiredIntoFlow();
 checkPreflightGateInterlock();
 checkHiggsfieldGateHook();
 checkInterlockWiring();
+checkPrestartContent();
 checkAngleVarietyGate();
 checkAngleVarietyWired();
 checkPostProductionImplementedWaveK();
