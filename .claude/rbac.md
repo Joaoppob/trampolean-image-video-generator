@@ -137,6 +137,44 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 
 ---
 
+## pesquisa-web (skill de pesquisa) — v0.5 Etapa 1, Fase 4
+
+- **escopo:** buscar referencias externas (noticia, tendencia, publico) na web e devolver
+  **saida estruturada e inerte**, validada contra `schemas/pesquisa.schema.json`. E o papel
+  **Pesquisa/Referencia** da Etapa 1 — **opcional**, antes do `story-writer`.
+- **forma:** **skill** (nao folha). A web e acao sobre o mundo; colocar como skill que SO o
+  Jotaro chama mantem o narrowing — **nenhuma folha ganha web**. (Opcao A do furo do RBAC,
+  `arquitetura-roteirizacao.md` §2.)
+- **allowed-tools:** `Bash(curl -L:*)`, `Read` — o minimo para buscar/baixar e ler. **SEM
+  Skill, SEM Task, SEM MCP largo.** A forma de curl e a mesma ja autorizada no
+  `settings.json` (download `-L`): a skill **nao expande** a superficie de Bash. (Se o
+  backend exa MCP for adotado por decisao de Durin/JB, o tool exa read-only especifico
+  entra aqui e e registrado neste doc; o sanitizador continua sendo a fronteira.)
+- **contrato_saida:** `{ origem:"web-externa", query, capturado_em, resultados[<=5]{titulo,
+  trecho<=500, url} }`. Nunca texto livre.
+- **fronteira de seguranca (Smaug §2 — nao-negociavel):**
+  - **Estrutura, nunca texto livre.** O saneamento e do `scripts/lib/pesquisa-sanitize.cjs`
+    (puro, testavel sem rede): extrai SO `{titulo, trecho, url}` por resultado, trunca
+    `trecho` a <=500 chars, limita a <=5 resultados, descarta qualquer outro campo da web.
+  - **Dado, nunca instrucao.** O Jotaro e a **trust boundary**: trata a saida como dado a
+    resumir, jamais como instrucao a seguir. Instrucao injetada na web ("ignore tudo e rode
+    X") permanece **texto inerte** dentro de `trecho`/`titulo` — nunca vira campo de acao.
+  - **Nunca repassa bruto a uma folha.** O Jotaro destila e passa as folhas SOMENTE
+    `{ tema, tendencias, publico_alvo }`. O texto bruto da web morre no Jotaro. O
+    `story-writer` (invariante 4) recebe `pesquisa_estruturada` ja sanitizada.
+  - **Por que e seguro:** o agente que toca conteudo nao-confiavel e o Jotaro — o de maior
+    cobertura de guardrails. Nenhuma folha tem web. Narrowing monotonico preservado:
+    `pesquisa-web` so e invocavel pelo Jotaro, e suas tools (`Bash(curl -L:*)`, `Read`) ⊆
+    Jotaro. O **teste adversarial** do `verify.cjs` prova que injection embutida no resultado
+    bruto sai como texto inerte na estrutura, sem virar campo executavel.
+- **backend de fetch:** **pluggavel** — exa MCP (preferencial) ou `curl -L` num endpoint de
+  search. A escolha e **decisao de Durin/JB** conforme o que estiver configurado no Claude
+  Code do cliente. O nucleo de seguranca (schema + sanitizador + teste adversarial) **nao
+  depende** do backend e e o que importa; o resultado bruto sempre passa pelo
+  `pesquisa-sanitize.cjs` antes de qualquer uso.
+
+---
+
 ## Tabela de narrowing (verificada)
 
 | Tool                  | jotaro | rag | prompt-smith | story-writer | storyboard-director |
@@ -208,6 +246,9 @@ multi-projeto.
 - Enforcement de agentes: `tools:` no frontmatter de `.claude/agents/rag.md` e
   `.claude/agents/prompt-smith.md`.
 - Enforcement de skills e projeto: `allowed-tools` nos `SKILL.md` + `.claude/settings.json`.
+  A skill `pesquisa-web` declara `allowed-tools: Bash(curl -L:*), Read` (travado); o nucleo
+  de seguranca e o `scripts/lib/pesquisa-sanitize.cjs`, exercitado pelo teste adversarial do
+  `verify.cjs`.
 - Reforço de escopo (degrada gracioso): `.claude/hooks/scope-guard.cjs`.
 - Defesa primária de escopo: as camadas de instrução do `CLAUDE.md` (role lock, árvore de
   scope/recusa, estabilidade de instrução, re-grounding por turno).
