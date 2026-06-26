@@ -203,6 +203,20 @@ com o comparativo de modelos e separa: modelo executavel agora no CLI (`nano_ban
 opcoes de teto pago (ex.: `soul_cinematic`, `cinematic_studio_3_0`, `seedance_2_0`) e custos AC.
 Nao invente preco para modelo nao-default: confirme com `higgsfield generate cost` antes de prometer.
 
+### Estrutura do prompt (Wave G)
+
+Antes de gastar credito, verifique que cada prompt de cena `geracao` cobre as 7 camadas
+canonicas (subject, action, environment, composition, lighting, camera/lens, rendering/style):
+
+```bash
+node scripts/lib/prompt-structure.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `prompt-structure.cjs` exige no minimo 5 das 7 camadas e exige obrigatoriamente as 3
+camadas criticas: subject, composition e lighting. Um prompt tipo "beautiful woman, 8K,
+cinematic" reprova com score baixo. Se `ok:false`, volte ao `prompt-smith` e complete as
+camadas faltantes listadas nos erros antes de qualquer geracao.
+
 ### Consistencia de estilo entre cenas (Wave F)
 
 Depois do critique e antes de gastar credito, verifique que todas as cenas de geracao

@@ -160,6 +160,13 @@ style block na primeira cena e repita-o em todas as demais. Se o Jotaro devolver
 
 ## Regras
 
+Wave G: cada prompt de cena `geracao` deve cobrir as 7 camadas canonicas (subject,
+action, environment, composition, lighting, camera/lens, rendering/style) com no
+minimo 5 camadas presentes e obrigatoriamente subject + composition + lighting. O
+`prompt-structure.cjs` avalia cada cena contra essa estrutura. Prompts vagos tipo
+"beautiful woman, 8K, cinematic" reprovam. Se o Jotaro devolver acao do
+`prompt-structure.cjs`, complete as camadas faltantes antes de qualquer geracao.
+
 - **Paths de referência relativos ao projeto ativo** (`RAG/identidade-visual/mage1.png` na pasta
   plana, ou `RAG/identidade-visual/sofia/sofia_05.png` na subpasta de personagem), nunca
   `../../../`. É o formato canônico: a skill de geração resolve contra o root do projeto. As refs

@@ -1693,6 +1693,83 @@ function checkStyleConsistencyWiredIntoFlow() {
   }
 }
 
+function checkPromptStructureWaveG() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'prompt-structure.cjs'));
+  } catch (e) {
+    fail('prompt-structure.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('prompt-structure.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  const strong = {
+    cenas: [
+      { n: 1, fonte: 'geracao', prompt: 'A woman in her 30s, tired, dark hair. Cradling a ceramic mug, looking down. Late morning cafe, marble table, croissant on plate. Medium close-up, off-center right, rule of thirds, 9:16 vertical. Hard window light from camera-left, warm daylight mixing with cooler interior. Shot on Canon AE-1, 50mm, shallow depth of field f/2. Kodak Gold 200 film emulation, fine grain, muted palette.' },
+    ],
+  };
+  const r1 = mod.evaluateShotlist(strong);
+  if (r1.ok && r1.score >= 75) pass('prompt-structure aprova prompt com 7 camadas');
+  else fail('prompt-structure aprova prompt com 7 camadas', JSON.stringify(r1));
+
+  const weak = {
+    cenas: [
+      { n: 1, fonte: 'geracao', prompt: 'A beautiful woman drinking coffee in a cafe, photorealistic, 8K, ultra detailed, cinematic. 9:16.' },
+    ],
+  };
+  const r2 = mod.evaluateShotlist(weak);
+  if (!r2.ok && r2.score < 50) pass('prompt-structure reprova prompt vago sem camadas');
+  else fail('prompt-structure reprova prompt vago sem camadas', JSON.stringify(r2));
+
+  const missingCore = {
+    cenas: [
+      { n: 1, fonte: 'geracao', prompt: 'A product shot. 9:16 vertical frame.' },
+    ],
+  };
+  const r3 = mod.evaluateShotlist(missingCore);
+  if (!r3.ok && r3.errors.some((e) => /subject|sujeito|subject/i.test(e))) {
+    pass('prompt-structure detecta ausencia de subject/sujeito');
+  } else {
+    fail('prompt-structure detecta ausencia de subject/sujeito', JSON.stringify(r3));
+  }
+
+  const multi = {
+    cenas: [
+      { n: 1, fonte: 'geracao', prompt: 'Subject: mago. Action: casting. Environment: dark forest. Composition: centered 9:16. Lighting: rim light. Camera: 50mm. Style: Kodak Gold 200.' },
+      { n: 2, fonte: 'geracao', prompt: '9:16' },
+    ],
+  };
+  const r4 = mod.evaluateShotlist(multi);
+  if (!r4.ok && r4.errors.some((e) => /cena 2/.test(e))) {
+    pass('prompt-structure reprova cena individual, nao a media');
+  } else {
+    fail('prompt-structure reprova cena individual, nao a media', JSON.stringify(r4));
+  }
+}
+
+function checkPromptStructureWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`prompt-structure wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /prompt-structure\.cjs/.test(text);
+    const hasConcept = /7 camadas|camadas do prompt|estrutura do prompt|prompt structure/i.test(text);
+    if (hasTool && hasConcept) pass(`prompt-structure wired ${label}`);
+    else fail(`prompt-structure wired ${label}`, `tool=${hasTool} concept=${hasConcept}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3580,6 +3657,8 @@ checkModelAdvisorWaveE();
 checkModelAdvisorWiredIntoFlow();
 checkStyleConsistencyWaveF();
 checkStyleConsistencyWiredIntoFlow();
+checkPromptStructureWaveG();
+checkPromptStructureWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
