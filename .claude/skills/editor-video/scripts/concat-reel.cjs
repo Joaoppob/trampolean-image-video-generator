@@ -165,6 +165,27 @@ function buildConcatFilter(clips) {
   return parts.join(';') + ';' + concat;
 }
 
+// ---------- 2b. pos-producao Wave K (grading + grao + re-crop) ----------
+// Mandato nivel-100: todo output passa por pos antes da entrega. Quebra a paleta
+// "limpa demais" da IA com split-tone (highlights mais frios, shadows mais quentes),
+// blacks levemente lifted, e um grao sutil que mata o "too clean". O re-crop e um
+// punch-in deliberado de ~2% — descarta as bordas exatas do default da IA e dá um
+// enquadramento escolhido. Cadeia aplicada ao reel concatenado [outv] -> [graded].
+const POSGRADE = {
+  // re-crop: escala 1102x1960 e corta de volta a 1080x1920 centralizado (~2% punch)
+  crop: 'scale=1102:1960,crop=1080:1920',
+  // split-tone: shadows +warm (rs/+red, bs/-blue), highlights +cool (rh/-red, bh/+blue)
+  grade: 'colorbalance=rs=0.025:bs=-0.03:rh=-0.025:bh=0.035',
+  // blacks lifted + leve contraste/saturacao controlada
+  levels: 'eq=contrast=1.04:saturation=1.06:brightness=0.012',
+  // film grain temporal sutil
+  grain: 'noise=alls=10:allf=t+u',
+};
+
+function buildPostGrade() {
+  return [POSGRADE.crop, POSGRADE.grade, POSGRADE.levels, POSGRADE.grain].join(',');
+}
+
 // ---------- 3. drawtext (legenda opcional) ----------
 function buildDrawtext(opts) {
   const font = fontFileForOs();
@@ -362,7 +383,13 @@ function main() {
   let mapLabel = '[outv]';
   let lastFilter = concatFilter;
 
-  // se tem legenda, encadeia o drawtext apos o concat
+  // pos-producao Wave K (default ON; --no-grade desliga p/ debug): [outv] -> [graded]
+  if (!args['no-grade']) {
+    lastFilter = `${lastFilter};[outv]${buildPostGrade()}[graded]`;
+    mapLabel = '[graded]';
+  }
+
+  // se tem legenda, encadeia o drawtext apos o pos-grade
   if (args.legenda && args.legenda !== true) {
     let dt;
     try {
@@ -373,8 +400,8 @@ function main() {
       );
       process.exit(1);
     }
-    // [outv] -> drawtext -> [final]
-    lastFilter = `${concatFilter};[outv]${dt}[final]`;
+    // <ultimo> -> drawtext -> [final]
+    lastFilter = `${lastFilter};${mapLabel}${dt}[final]`;
     mapLabel = '[final]';
   }
 
@@ -469,6 +496,8 @@ if (require.main === module) {
 
 module.exports = {
   buildConcatFilter,
+  buildPostGrade,
+  POSGRADE,
   buildDrawtext,
   escapeDrawtext,
   escapeFilterPath,

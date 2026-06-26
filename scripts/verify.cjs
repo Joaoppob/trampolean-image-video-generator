@@ -2159,10 +2159,10 @@ function checkPreflightGateInterlock() {
 
   // 1. Golden shotlist passa TODOS os gates.
   const golden = mod.runGates('RAG/prompts/exemplo-shotlist-nivel100.json', ROOT);
-  if (golden.ok && golden.gates.length === 8 && golden.gates.every((g) => g.ok)) {
-    pass('preflight-gate: golden nivel-100 passa os 8 gates');
+  if (golden.ok && golden.gates.length === 9 && golden.gates.every((g) => g.ok)) {
+    pass('preflight-gate: golden nivel-100 passa os 9 gates');
   } else {
-    fail('preflight-gate: golden passa os 8 gates', JSON.stringify(golden.gates && golden.gates.filter((g) => !g.ok)));
+    fail('preflight-gate: golden passa os 9 gates', JSON.stringify(golden.gates && golden.gates.filter((g) => !g.ok)));
   }
 
   // 2. Exemplo legado (mago) REPROVA (critique C8/C9) — runner barra.
@@ -2280,6 +2280,91 @@ function checkInterlockWiring() {
   } catch (e) {
     fail('interlock: CLAUDE.md', e.message);
   }
+}
+
+function checkAngleVarietyGate() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'angle-variety.cjs'));
+  } catch (e) {
+    fail('angle-variety.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('angle-variety.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  // 1. Golden passa (variedade real de planos).
+  const golden = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-shotlist-nivel100.json'), 'utf8'));
+  const rg = mod.evaluateShotlist(golden);
+  if (rg.ok && rg.distinct_sizes.length >= 3) pass('angle-variety aprova reel com variedade de planos');
+  else fail('angle-variety aprova golden', JSON.stringify(rg));
+
+  // 2. Reel monotono (4 cenas todas medium eye-level) reprova.
+  const mono = {
+    cenas: [1, 2, 3, 4].map((n) => ({
+      n, fonte: 'geracao', personagem_visivel: 'completo',
+      prompt: 'Same character. Medium shot, eye-level, facing camera. Vertical 9:16. Subject centered with surface texture.',
+      cinematografia: { composicao: 'vertical 9:16, medium shot, eye-level', camera: 'static' },
+    })),
+  };
+  const rm = mod.evaluateShotlist(mono);
+  if (!rm.ok && rm.errors.some((e) => /variedade|enquadramento|mesmo/i.test(e))) pass('angle-variety reprova reel monotono (so medium)');
+  else fail('angle-variety reprova reel monotono', JSON.stringify(rm));
+
+  // 3. Cenas adjacentes com mesmo plano/angulo reprovam.
+  const adj = {
+    cenas: [
+      { n: 1, fonte: 'geracao', prompt: 'Wide low-angle establishing shot. Vertical 9:16, texture.', cinematografia: { composicao: 'wide, low-angle' } },
+      { n: 2, fonte: 'geracao', prompt: 'Wide low-angle action shot. Vertical 9:16, texture.', cinematografia: { composicao: 'wide, low-angle' } },
+      { n: 3, fonte: 'geracao', prompt: 'Close-up eye-level reaction. Vertical 9:16, texture.', cinematografia: { composicao: 'close-up, eye-level' } },
+    ],
+  };
+  const ra = mod.evaluateShotlist(adj);
+  if (!ra.ok && ra.errors.some((e) => /adjacent/i.test(e))) pass('angle-variety reprova cenas adjacentes com mesmo plano/angulo');
+  else fail('angle-variety reprova cenas adjacentes identicas', JSON.stringify(ra));
+}
+
+function checkAngleVarietyWired() {
+  for (const [label, rel, concept] of [
+    ['CLAUDE.md', 'CLAUDE.md', /angle.variety|variedade de (enquadramento|plano|angulo)/i],
+    ['prompt-smith', '.claude/agents/prompt-smith.md', /angle|variedade.*(plano|enquadramento|angulo)|tamanho de plano/i],
+  ]) {
+    try {
+      const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      if (/angle-variety\.cjs/.test(text) && concept.test(text)) pass(`angle-variety wired ${label}`);
+      else fail(`angle-variety wired ${label}`, `tool=${/angle-variety\.cjs/.test(text)} concept=${concept.test(text)}`);
+    } catch (e) {
+      fail(`angle-variety wired ${label}`, e.message);
+    }
+  }
+}
+
+function checkPostProductionImplementedWaveK() {
+  // A Wave K era prosa: o editor nao aplicava grading/grao/crop. Agora deve estar no codigo.
+  let mod;
+  try {
+    mod = require(path.join(ROOT, '.claude', 'skills', 'editor-video', 'scripts', 'concat-reel.cjs'));
+  } catch (e) {
+    fail('concat-reel post-grade loads', e.message);
+    return;
+  }
+  if (typeof mod.buildPostGrade !== 'function') {
+    fail('concat-reel exports buildPostGrade', typeof mod.buildPostGrade);
+    return;
+  }
+  const pg = mod.buildPostGrade();
+  if (/colorbalance/.test(pg)) pass('Wave K codigo: split-tone grading (colorbalance) aplicado');
+  else fail('Wave K codigo: grading aplicado', pg);
+  if (/noise=/.test(pg)) pass('Wave K codigo: film grain (noise) aplicado');
+  else fail('Wave K codigo: grain aplicado', pg);
+  if (/crop=/.test(pg)) pass('Wave K codigo: re-crop deliberado aplicado');
+  else fail('Wave K codigo: re-crop aplicado', pg);
+
+  const src = fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'editor-video', 'scripts', 'concat-reel.cjs'), 'utf8');
+  if (/\[graded\]/.test(src) && /buildPostGrade\(\)/.test(src)) pass('Wave K codigo: pos-grade encadeado no filter_complex ([graded])');
+  else fail('Wave K codigo: pos-grade encadeado', 'graded/buildPostGrade ausente no assembly');
 }
 
 function checkAnchorTraits() {
@@ -4183,6 +4268,9 @@ checkPostRenderCritiqueWiredIntoFlow();
 checkPreflightGateInterlock();
 checkHiggsfieldGateHook();
 checkInterlockWiring();
+checkAngleVarietyGate();
+checkAngleVarietyWired();
+checkPostProductionImplementedWaveK();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

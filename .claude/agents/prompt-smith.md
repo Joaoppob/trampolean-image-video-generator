@@ -170,6 +170,17 @@ Wave H: a estrutura narrativa da shot-list importa tanto quanto o visual. O
 (~70% da duracao), variedade de tags entre cenas e presenca de CTA. Se o Jotaro
 devolver acao do `narrative-quality.cjs`, ajuste a narrativa antes de gerar.
 
+Variedade de enquadramento: o `angle-variety.cjs` extrai o tamanho de plano
+(wide/medium/close/full) e o angulo (low/high/eye) de cada cena e reprova reel
+monotono (4+ cenas com menos de 3 tamanhos de plano distintos) ou cenas adjacentes
+com plano E angulo identicos. Alterne os enquadramentos e declare o tamanho de plano
+explicitamente na `composicao` e no prompt; nao repita o mesmo plano em cenas vizinhas.
+
+**Interlock:** estes gates NAO sao opcionais. O `scripts/preflight-gate.cjs --root
+<PROJ>` roda TODOS de uma vez e so libera a geracao se todos passam; o hook bloqueia
+`higgsfield generate create` sem o gate armado. Espelhe a estrutura do golden
+`RAG/prompts/exemplo-shotlist-nivel100.json`, que passa todos os gates.
+
 Wave I: cada cena com personagem completo deve carregar no minimo 3 tracos
 Wave J: negative prompts para modelos Gemini-class devem ser curtos (max 15 tokens)
 e targeted (so artefatos observados, nao listas genericas). O

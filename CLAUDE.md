@@ -265,6 +265,21 @@ tarde demais (>=80% da duracao), cobra variedade de tags e confere timing coeren
 entre cenas. Se `ok:false`, volte ao `storyboard-director` ou `prompt-smith` com as
 acoes listadas antes de qualquer geracao.
 
+### Variedade de enquadramento (angle-variety)
+
+Um reel inteiro no mesmo plano (ex.: tudo "medium eye-level") mata o ritmo. Este gate
+extrai o tamanho de plano (wide/medium/close/full/...) e o angulo (low/high/eye/...) de
+cada cena e reprova monotonia:
+
+```bash
+node scripts/lib/angle-variety.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `angle-variety.cjs` reprova reel com 4+ cenas e menos de 3 tamanhos de plano distintos,
+e cenas adjacentes com plano E angulo identicos (corte que nao muda nada). Se `ok:false`,
+volte ao `storyboard-director`/`prompt-smith` e varie os enquadramentos. (Rodado tambem
+automaticamente pelo `preflight-gate.cjs`.)
+
 ### Identity trait carry (Wave I)
 
 Cada cena com personagem completo (`personagem_visivel: "completo"`) deve carregar

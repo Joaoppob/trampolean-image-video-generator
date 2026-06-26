@@ -39,6 +39,7 @@ const GATES = [
   { name: 'style-consistency', args: ['scripts/lib/style-consistency.cjs'] },
   { name: 'prompt-structure', args: ['scripts/lib/prompt-structure.cjs'] },
   { name: 'narrative-quality', args: ['scripts/lib/narrative-quality.cjs'] },
+  { name: 'angle-variety', args: ['scripts/lib/angle-variety.cjs'] },
   { name: 'identity-trait-carry', args: ['scripts/lib/identity-trait-carry.cjs'] },
   { name: 'negative-prompt-discipline', args: ['scripts/lib/negative-prompt-discipline.cjs'] },
   { name: 'critique', args: ['scripts/lib/critique.cjs'], stdoutGate: true },
