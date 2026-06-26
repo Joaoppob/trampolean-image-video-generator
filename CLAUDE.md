@@ -262,6 +262,15 @@ targeted (max 15 tokens, sem listas genericas estilo SDXL):
 
 ```bash
 node scripts/lib/negative-prompt-discipline.cjs <PROJ>/output/shotlist-preflight.json
+
+### Pos-producao obrigatoria (Wave K)
+
+Todo output final deve passar por uma etapa de pos-producao antes da entrega:
+color grading (highlights mais frios, shadows mais quentes para quebrar a paleta IA),
+film grain overlay em baixa intensidade (elimina o "too clean"), e re-crop para 9:16
+(porque o crop default da IA quase nunca e o melhor). O editor de video deve aplicar
+esses passos automaticamente; o Jotaro deve conferir antes de entregar o reel final.
+
 ```
 
 O `negative-prompt-discipline.cjs` reprova negatives longos (>15 tokens) e bloqueia

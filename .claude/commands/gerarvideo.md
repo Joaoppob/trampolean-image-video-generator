@@ -1,5 +1,9 @@
 ---
 description: Pipeline completo: gera as cenas, anima em clipes e monta o reel 9:16.
+Depois da montagem e ANTES de entregar o reel final, aplique pos-producao:
+color grading (highlights frios, shadows quentes), film grain overlay sutil
+e re-crop manual para 9:16 (o crop default da IA quase nunca e o melhor).
+
 argument-hint: "[descrição do reel]"
 ---
 

@@ -1,5 +1,13 @@
 ---
 name: editor-video
+
+## Pos-producao obrigatoria (Wave K)
+
+Antes de entregar qualquer reel final, aplique estes tres passos de pos-producao:
+1. **Color grading:** highlights mais frios, shadows mais quentes — quebra a "paleta IA"
+2. **Film grain overlay:** baixa intensidade — elimina o "too clean" e adiciona textura
+3. **Re-crop:** o crop default da IA quase nunca e o melhor; ajuste manual para 9:16
+
 description: Monta N clipes num reel único 9:16 (1080×1920) via FFmpeg, com legenda opcional queimada (drawtext). Checa FFmpeg ANTES e para com instruções de instalação se ausente. Saída com timestamp (não sobrescreve). Use na etapa final do pipeline, depois que os clipes das cenas foram gerados.
 argument-hint: "[clipes] [legenda?]"
 allowed-tools: Bash, Read

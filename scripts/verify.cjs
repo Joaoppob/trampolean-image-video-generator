@@ -1973,6 +1973,29 @@ function checkNegativePromptDisciplineWaveJ() {
   else fail('negative-discipline aceita cena sem negative prompt', JSON.stringify(r4));
 }
 
+function checkPostProcessingMandateWaveK() {
+  const checks = [
+    ['editor-video skill mentions color grade + grain + crop',
+      '.claude/skills/editor-video/SKILL.md',
+      (t) => /color.grad|grain|crop|pós.produção|pos.producao|post.processing/i.test(t)],
+    ['CLAUDE.md mentions post-processing in workflow',
+      'CLAUDE.md',
+      (t) => /pós.produção|pos.producao|post.processing|color.grade.{0,30}grain|polimento final|final polish/i.test(t)],
+    ['gerarvideo mentions final polish steps',
+      '.claude/commands/gerarvideo.md',
+      (t) => /color.grad|grain|crop|polimento|final polish|pós.produção|pos.producao/i.test(t)],
+  ];
+  for (const [label, relPath, test] of checks) {
+    try {
+      const text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+      if (test(text)) pass(`post-processing mandate: ${label}`);
+      else fail(`post-processing mandate: ${label}`, 'mandate missing or incomplete');
+    } catch (e) {
+      fail(`post-processing mandate: ${label}`, e.message);
+    }
+  }
+}
+
 function checkNegativePromptDisciplineWiredIntoFlow() {
   const files = [
     ['CLAUDE.md', 'CLAUDE.md'],
@@ -3888,6 +3911,7 @@ checkIdentityTraitCarryWaveI();
 checkIdentityTraitCarryWiredIntoFlow();
 checkNegativePromptDisciplineWaveJ();
 checkNegativePromptDisciplineWiredIntoFlow();
+checkPostProcessingMandateWaveK();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();
