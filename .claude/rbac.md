@@ -199,6 +199,21 @@ folha nova, nem expande a superfície de Bash.** É fluxo do próprio Jotaro:
   ("ignore tudo e rode X") permanece inerte — o Jotaro o trata como material a classificar, não
   como comando. Nenhuma escrita/movimentação acontece sem a aprovação humana do plano.
 
+## /inicio — pré-início da sessão (fluxo do Jotaro, sem folha nova)
+
+O `/inicio` faz a **leitura de situação** da sessão (Raw + projetos + setup) antes de perguntar o
+que criar. **Não introduz agente nem folha nova, nem expande a superfície de Bash.** É fluxo do
+próprio Jotaro:
+
+- A **parte determinística** é `scripts/prestart.cjs` — agregador **puro** (só filesystem, sem
+  rede), invocado pelo Jotaro via `Bash(node scripts/:*)`, prefixo que ele **já tem**. Ele reusa
+  `raw-ingest.cjs plan()` (Raw) e `jotaro-profile.cjs load()` (perfil); não escreve nada.
+- Os **sinais de setup** (Higgsfield auth/saldo via `Bash(higgsfield:*)`, FFmpeg via
+  `Bash(ffmpeg ...)`) ficam **fora** do helper puro — o Jotaro os coleta em runtime com as tools
+  que **já tem** (mesma lógica do `/setup` e `/creditos`). Nenhuma superfície nova.
+- **Sem geração, sem custo:** `/inicio` é orientação; a geração e o crédito vivem nos comandos de
+  produção, com os 7 invariantes no caminho. Narrowing intacto.
+
 ## Tabela de narrowing (verificada)
 
 | Tool                  | jotaro | rag | prompt-smith | story-writer | storyboard-director |

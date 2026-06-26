@@ -86,6 +86,8 @@ var IN_DOMAIN = [
   /\b(roteiro|storyboard|story|narrativa|tendencia|viral|publico|conteudo|plataforma|instagram)\b/,
   // Ingestao do Raw/ (/importa): organizar material solto num projeto.
   /\b(importa|importar|raw|organiza|organizar|material)\b/,
+  // Pre-inicio (/inicio): leitura de situacao / por onde comecar.
+  /\b(inicio|comecar|painel|situacao|panorama)\b/,
 ];
 
 var OFFTOPIC = [

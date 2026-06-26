@@ -1897,6 +1897,165 @@ function checkRawSkeletonAndScope() {
   }
 }
 
+// Pre-inicio (/inicio) — checkPrestart faz um TESTE COMPORTAMENTAL num tmp dir:
+// monta um root fake com Raw/<tema> (1 img + 1 txt), projects/<X>/project.json
+// (status ativo) e SEM perfil; roda prestart e confere que: raw.tem_conteudo===true,
+// o lote traz contadores certos, projetos lista X com status, perfil.primeira_vez===true.
+// E um caso Raw vazio -> tem_conteudo===false, lotes:[]. O helper e PURO (so
+// filesystem): nenhum sinal de setup (Higgsfield/FFmpeg) entra na saida.
+function checkPrestart() {
+  const script = path.join(ROOT, 'scripts', 'prestart.cjs');
+  if (!fs.existsSync(script)) {
+    fail('prestart.cjs existe', 'scripts/prestart.cjs ausente');
+    return;
+  }
+  pass('prestart.cjs existe');
+
+  function call(cwd) {
+    const r = spawnSync('node', [script, '--root', '.'], { cwd, encoding: 'utf8', windowsHide: true });
+    return { status: r.status, json: safeJson(r.stdout), stdout: r.stdout, stderr: r.stderr };
+  }
+
+  // Caso 1: root com conteudo.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-prestart-'));
+  try {
+    fs.mkdirSync(path.join(tmp, 'Raw', 'meu-tema'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'Raw', 'meu-tema', 'heroi.png'), 'fake-png-bytes');
+    fs.writeFileSync(path.join(tmp, 'Raw', 'meu-tema', 'sobre.md'), '# marca\n');
+    fs.mkdirSync(path.join(tmp, 'projects', 'MinhaMarca'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmp, 'projects', 'MinhaMarca', 'project.json'),
+      JSON.stringify({ nome: 'MinhaMarca', tipo_marca: 'servico', status: 'ativo' }, null, 2) + '\n'
+    );
+    // sem .claude/state/.jotaro-profile.json -> primeira_vez true.
+
+    const r = call(tmp);
+    const j = r.json || {};
+    const lote = j.raw && Array.isArray(j.raw.lotes) ? j.raw.lotes.find((l) => l.tema === 'meu-tema') : null;
+    const proj = Array.isArray(j.projetos) ? j.projetos.find((p) => p.nome === 'MinhaMarca') : null;
+
+    const okStruct =
+      r.status === 0 &&
+      j.ok === true &&
+      j.raw && typeof j.raw.tem_conteudo === 'boolean' &&
+      Array.isArray(j.raw.lotes) &&
+      Array.isArray(j.projetos) &&
+      j.perfil && typeof j.perfil.primeira_vez === 'boolean' && typeof j.perfil.expert === 'boolean';
+    if (okStruct) pass('prestart retorna a estrutura esperada (raw/projetos/perfil)');
+    else fail('prestart retorna a estrutura esperada (raw/projetos/perfil)', JSON.stringify(j));
+
+    const okRaw =
+      j.raw && j.raw.tem_conteudo === true &&
+      lote &&
+      lote.n_arquivos === 2 &&
+      lote.n_imagens === 1 &&
+      lote.n_textos === 1 &&
+      lote.n_outros === 0;
+    if (okRaw) pass('prestart conta o lote do Raw (tem_conteudo + contadores)');
+    else fail('prestart conta o lote do Raw (tem_conteudo + contadores)', JSON.stringify(j.raw));
+
+    const okProj = proj && proj.tipo_marca === 'servico' && proj.status === 'ativo';
+    if (okProj) pass('prestart lista projeto com status');
+    else fail('prestart lista projeto com status', JSON.stringify(j.projetos));
+
+    const okPerfil = j.perfil && j.perfil.primeira_vez === true && j.perfil.expert === false;
+    if (okPerfil) pass('prestart marca primeira_vez quando nao ha perfil');
+    else fail('prestart marca primeira_vez quando nao ha perfil', JSON.stringify(j.perfil));
+
+    // PUREZA: a saida nao carrega sinais de setup (Higgsfield/FFmpeg).
+    const semSetup =
+      r.status === 0 &&
+      !('setup' in j) &&
+      !/higgsfield|ffmpeg/i.test(r.stdout);
+    if (semSetup) pass('prestart e puro (sem sinais de setup na saida)');
+    else fail('prestart e puro (sem sinais de setup na saida)', r.stdout);
+  } catch (e) {
+    fail('prestart command sequence', e.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+
+  // Caso 2: Raw vazio -> tem_conteudo false, lotes [].
+  const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'trampolean-prestart-empty-'));
+  try {
+    fs.mkdirSync(path.join(tmp2, 'Raw'), { recursive: true });
+    fs.mkdirSync(path.join(tmp2, 'projects'), { recursive: true });
+    const r = call(tmp2);
+    const j = r.json || {};
+    const okEmpty =
+      r.status === 0 &&
+      j.ok === true &&
+      j.raw && j.raw.tem_conteudo === false &&
+      Array.isArray(j.raw.lotes) && j.raw.lotes.length === 0;
+    if (okEmpty) pass('prestart com Raw vazio: tem_conteudo false, lotes []');
+    else fail('prestart com Raw vazio: tem_conteudo false, lotes []', JSON.stringify(j.raw));
+  } catch (e) {
+    fail('prestart empty case', e.message);
+  } finally {
+    fs.rmSync(tmp2, { recursive: true, force: true });
+  }
+}
+
+// /inicio tem frontmatter description.
+function checkInicioCommand() {
+  const file = path.join(ROOT, '.claude', 'commands', 'inicio.md');
+  if (!fs.existsSync(file)) {
+    fail('/inicio tem frontmatter description', 'commands/inicio.md ausente');
+    return;
+  }
+  const fm = parseFrontmatter(file);
+  if (fm.description && fm.description.trim().length > 0) pass('/inicio tem frontmatter description');
+  else fail('/inicio tem frontmatter description', 'description ausente no frontmatter');
+}
+
+// A onboarding do CLAUDE.md e state-aware: referencia o pre-inicio/prestart e o /inicio.
+function checkOnboardingStateAware() {
+  const file = path.join(ROOT, 'CLAUDE.md');
+  let claude;
+  try {
+    claude = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    fail('onboarding referencia o pre-inicio/inicio', e.message);
+    return;
+  }
+  const refsPrestart = /prestart\.cjs/.test(claude);
+  const refsInicio = /\/inicio/.test(claude);
+  const stateAware = /pr[eé]-in[ií]cio/i.test(claude) || /leitura de situa/i.test(claude);
+  if (refsPrestart && refsInicio && stateAware) {
+    pass('onboarding referencia o pre-inicio/inicio (abertura state-aware)');
+  } else {
+    fail(
+      'onboarding referencia o pre-inicio/inicio (abertura state-aware)',
+      'CLAUDE.md deve referenciar prestart.cjs, /inicio e a leitura de situacao na onboarding'
+    );
+  }
+}
+
+// scope-guard libera os termos do pre-inicio (inicio, comecar, panorama, situacao).
+function checkScopeGuardInicio() {
+  const hook = path.join(ROOT, '.claude', 'hooks', 'scope-guard.cjs');
+  const cases = [
+    ['scope-guard allows inicio request', 'jotaro, por onde eu comeco?'],
+    ['scope-guard allows panorama request', 'me da um panorama da situacao'],
+  ];
+  for (const [name, prompt] of cases) {
+    const r = spawnSync('node', [hook], {
+      cwd: ROOT,
+      input: JSON.stringify({ prompt }),
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    let blocked = false;
+    try {
+      blocked = JSON.parse(r.stdout || '{}').decision === 'block';
+    } catch (_) {
+      blocked = false;
+    }
+    if (r.status === 0 && blocked === false) pass(name);
+    else fail(name, `stdout=${r.stdout} stderr=${r.stderr} status=${r.status}`);
+  }
+}
+
 checkCjsSyntax();
 checkHook();
 checkHookRegistered();
@@ -1913,6 +2072,10 @@ checkRoteiroCommand();
 checkRawIngest();
 checkImportaCommand();
 checkRawSkeletonAndScope();
+checkPrestart();
+checkInicioCommand();
+checkOnboardingStateAware();
+checkScopeGuardInicio();
 checkRbacContracts();
 checkSchemas();
 checkFase0Schemas();
