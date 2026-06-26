@@ -1615,6 +1615,84 @@ function checkModelAdvisorWiredIntoFlow() {
   }
 }
 
+function checkStyleConsistencyWaveF() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'style-consistency.cjs'));
+  } catch (e) {
+    fail('style-consistency.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('style-consistency.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  const styleFields = ['film_stock', 'lente', 'grade_cor', 'grao'];
+
+  const strongPlan = {
+    cenas: [
+      { n: 1, fonte: 'geracao', cinematografia: { film_stock: 'Kodak Gold 200', lente: '50mm', grade_cor: 'warm muted amber', grao: 'fine' }, prompt: 'cena 1 Kodak Gold 200 50mm 9:16' },
+      { n: 2, fonte: 'geracao', cinematografia: { film_stock: 'Kodak Gold 200', lente: '50mm', grade_cor: 'warm muted amber', grao: 'fine' }, prompt: 'cena 2 Kodak Gold 200 50mm 9:16' },
+    ],
+  };
+  const r1 = mod.evaluateShotlist(strongPlan);
+  if (r1.ok && r1.score >= 85) pass('style-consistency separa estilo consistente de estilo driftado');
+  else fail('style-consistency separa estilo consistente de estilo driftado', JSON.stringify(r1));
+
+  const weakPlan = {
+    cenas: [
+      { n: 1, fonte: 'geracao', cinematografia: { film_stock: 'Kodak Gold 200', lente: '50mm', grade_cor: 'warm muted amber' }, prompt: 'cena 1 Kodak Gold 200 9:16' },
+      { n: 2, fonte: 'geracao', cinematografia: { film_stock: 'Portra 400', lente: '85mm', grade_cor: 'cool teal' }, prompt: 'cena 2 Portra 400 85mm 9:16' },
+    ],
+  };
+  const r2 = mod.evaluateShotlist(weakPlan);
+  if (!r2.ok && r2.errors.some((e) => /divergente/.test(e))) pass('style-consistency reprova drift de estilo entre cenas');
+  else fail('style-consistency reprova drift de estilo entre cenas', JSON.stringify(r2));
+
+  const mixedPlan = {
+    cenas: [
+      { n: 1, fonte: 'geracao', cinematografia: { film_stock: 'Kodak Gold 200', lente: '50mm' }, prompt: 'cena 1 9:16' },
+      { n: 2, fonte: 'geracao', cinematografia: {}, prompt: 'cena 2 sem bloco 9:16' },
+    ],
+  };
+  const r3 = mod.evaluateShotlist(mixedPlan);
+  if (!r3.ok && r3.warnings.some((w) => /ausente/.test(w)) || r3.errors.some((e) => /ausente/.test(e))) {
+    pass('style-consistency detecta cena sem bloco de estilo');
+  } else {
+    fail('style-consistency detecta cena sem bloco de estilo', JSON.stringify(r3));
+  }
+
+  const singleScene = {
+    cenas: [
+      { n: 1, fonte: 'geracao', cinematografia: { film_stock: 'Kodak Gold 200', lente: '50mm' }, prompt: 'cena unica 9:16' },
+    ],
+  };
+  const r4 = mod.evaluateShotlist(singleScene);
+  if (r4.ok && r4.score >= 90) pass('style-consistency nao penaliza shot-list de cena unica');
+  else fail('style-consistency nao penaliza shot-list de cena unica', JSON.stringify(r4));
+}
+
+function checkStyleConsistencyWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`style-consistency wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /style-consistency\.cjs/.test(text);
+    const hasConcept = /style block|bloco de estilo|consistencia de estilo|consistência de estilo|style lock/i.test(text);
+    if (hasTool && hasConcept) pass(`style-consistency wired ${label}`);
+    else fail(`style-consistency wired ${label}`, `tool=${hasTool} concept=${hasConcept}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3500,6 +3578,8 @@ checkDpQualityWaveD();
 checkDpQualityWiredIntoFlow();
 checkModelAdvisorWaveE();
 checkModelAdvisorWiredIntoFlow();
+checkStyleConsistencyWaveF();
+checkStyleConsistencyWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

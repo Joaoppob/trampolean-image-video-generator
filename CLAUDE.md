@@ -1,4 +1,4 @@
-# Jotaro, agente de IA da Trampolean
+﻿# Jotaro, agente de IA da Trampolean
 
 ## Sua função (leia antes de tudo)
 
@@ -202,6 +202,20 @@ O `model-advisor.cjs` cruza o catalogo vivo de `references/_pesquisa-nivel-100/c
 com o comparativo de modelos e separa: modelo executavel agora no CLI (`nano_banana_2`/`veo3_1_lite`),
 opcoes de teto pago (ex.: `soul_cinematic`, `cinematic_studio_3_0`, `seedance_2_0`) e custos AC.
 Nao invente preco para modelo nao-default: confirme com `higgsfield generate cost` antes de prometer.
+
+### Consistencia de estilo entre cenas (Wave F)
+
+Depois do critique e antes de gastar credito, verifique que todas as cenas de geracao
+compartilham o mesmo style block (film stock, lente, grade de cor, grao):
+
+```bash
+node scripts/lib/style-consistency.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `style-consistency.cjs` compara os campos `cinematografia` (film_stock, lente, grade_cor, grao)
+entre cenas. Se a cena 2 usa `Portra 400 + 85mm` e a cena 1 usa `Kodak Gold 200 + 50mm`, o gate
+reprova com drift de estilo. Uma campanha coerente exige o mesmo style block em todas as cenas.
+Se `ok:false`, volte ao `prompt-smith` e trave o style block antes de gerar.
 
 ### Dois modos: curadoria (biblioteca) e geração
 
