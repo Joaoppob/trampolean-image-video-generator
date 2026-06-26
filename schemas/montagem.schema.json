@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trampolean.local/schemas/montagem.schema.json",
+  "title": "Trampolean montagem nivel-100 contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["campanha", "cliente", "formato", "duracao_total_seg", "ordem_cenas", "captions", "ritmo"],
+  "properties": {
+    "campanha": { "type": "string", "minLength": 1 },
+    "cliente": { "type": "string", "minLength": 1 },
+    "formato": { "type": "string", "pattern": "9:16" },
+    "duracao_total_seg": { "type": "integer", "minimum": 4 },
+    "ordem_cenas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["n", "funcao", "tempo_seg", "informacao_nova"],
+        "properties": {
+          "n": { "type": "integer", "minimum": 1 },
+          "funcao": { "type": "string", "minLength": 3 },
+          "tempo_seg": { "type": "string", "pattern": "^[0-9]+-[0-9]+$" },
+          "informacao_nova": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "captions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cena", "texto", "posicao"],
+        "properties": {
+          "cena": { "type": "integer", "minimum": 1 },
+          "texto": { "type": "string", "minLength": 1 },
+          "posicao": { "type": "string", "enum": ["centro", "terco_inferior", "topo_seguro"] }
+        }
+      }
+    },
+    "ritmo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_1", "payoff_percentual", "regra_corte"],
+      "properties": {
+        "frame_1": { "type": "string", "minLength": 10 },
+        "payoff_percentual": { "type": "integer", "minimum": 50, "maximum": 85 },
+        "regra_corte": { "type": "string", "minLength": 10 }
+      }
+    }
+  }
+}

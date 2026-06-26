@@ -165,6 +165,20 @@ de produção começam:
 A geração de vídeo (etapa 3) usa o **Higgsfield CLI** (`higgsfield ...` via Bash), não o MCP.
 O FFmpeg (etapa 4) é local.
 
+### Crítica pré-crédito (gate nivel-100)
+
+Depois que o `prompt-smith` devolver a shot-list e antes de chamar `gera-imagem` ou
+`gera-video`, salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
+
+```bash
+node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+Esse gate aplica proxies determinísticos da `RAG/review/rubrica-nivel-100.md` (16 critérios,
+anti-IA C8-C11, quality-words, luz, refs/anchor, hook e ritmo). Se `gate_aprovado:false`,
+**não gaste crédito**: apresente os critérios reprovados e volte ao `prompt-smith` ou ao
+`storyboard-director` com as ações do critique.
+
 ### Dois modos: curadoria (biblioteca) e geração
 
 A etapa 2 (imagens) trabalha em um de dois modos, e o sistema **detecta em qual está**:

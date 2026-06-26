@@ -34,6 +34,14 @@
           "asset_path": {
             "type": ["string", "null"],
             "description": "ADITIVO (asset-first). Quando fonte=biblioteca: path relativo do asset escolhido, DENTRO de RAG/identidade-visual/ (ex: \"RAG/identidade-visual/sofia/sofia_05_cafe.png\"). Quando fonte=geracao: deve ser null. A regra condicional fonte<->asset_path e validada pelo verify (o validador do projeto nao tem condicionais)."
+          },
+          "cinematografia": {
+            "type": "object",
+            "description": "ADITIVO (nivel-100). Intencao cinematografica por cena: plano, composicao vertical 9:16, luz, paleta e movimento de camera. Opcional para compatibilidade com exemplos antigos."
+          },
+          "anti_ia": {
+            "type": "object",
+            "description": "ADITIVO (nivel-100). Guardrails de ausencia de tell IA antes de gastar credito: evitar e foco. O gate real C8-C11 acontece pos-render."
           }
         }
       }

@@ -497,6 +497,10 @@ function checkSchemas() {
     'storyboard.schema.json',
     // v0.5 Etapa 1 (roteirizacao): contrato de saida da skill pesquisa-web (Fase 4).
     'pesquisa.schema.json',
+    // Nivel-100 Wave A: contratos de intencao cinematografica, critica e montagem.
+    'cinematografia.schema.json',
+    'critique.schema.json',
+    'montagem.schema.json',
   ];
   for (const name of required) {
     const file = path.join(schemaDir, name);
@@ -511,6 +515,114 @@ function checkSchemas() {
     } catch (e) {
       fail(`schema valid JSON ${name}`, e.message);
     }
+  }
+}
+
+// Nivel-100 Wave A: contratos mecanicos para a rubrica virar dado validavel.
+// Prova:
+//   (1) os 3 schemas novos usam apenas keywords suportadas pelo validador local;
+//   (2) exemplos minimos validam contra cada schema;
+//   (3) storyboard/shotlist aceitam campos aditivos de cinematografia/anti-IA;
+//   (4) a rubrica nivel-100 declara 16 criterios, pesos e gate duro C8-C11.
+function checkNivel100Contracts() {
+  const novos = [
+    ['cinematografia.schema.json', 'RAG/prompts/exemplo-cinematografia-mago.json'],
+    ['critique.schema.json', 'RAG/review/exemplo-critique-mago.json'],
+    ['montagem.schema.json', 'RAG/prompts/exemplo-montagem-mago.json'],
+  ];
+
+  for (const [schemaName, exampleRel] of novos) {
+    let schema;
+    try {
+      schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', schemaName), 'utf8'));
+    } catch (e) {
+      fail(`nivel100 schema parseavel ${schemaName}`, e.message);
+      continue;
+    }
+    const probe = validateSchema(schema, {});
+    const unsupported = probe.errors.filter((e) => /keyword de schema nao suportada/.test(e));
+    if (unsupported.length === 0) pass(`nivel100 schema usa so keywords suportadas ${schemaName}`);
+    else fail(`nivel100 schema usa so keywords suportadas ${schemaName}`, unsupported.join('; '));
+
+    try {
+      const example = JSON.parse(fs.readFileSync(path.join(ROOT, exampleRel), 'utf8'));
+      const res = validateSchema(schema, example);
+      if (res.valid) pass(`nivel100 exemplo valida ${exampleRel}`);
+      else fail(`nivel100 exemplo valida ${exampleRel}`, res.errors.join('; '));
+    } catch (e) {
+      fail(`nivel100 exemplo valida ${exampleRel}`, e.message);
+    }
+  }
+
+  try {
+    const sbSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'storyboard.schema.json'), 'utf8'));
+    const slSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'shotlist.schema.json'), 'utf8'));
+    const storyboardCena = {
+      n: 1,
+      beat_narrativo: 'gancho',
+      descricao_visual: 'Frame 1 revela a ameaca ja em movimento, com o sujeito ainda fora de quadro.',
+      mood: 'urgente',
+      duracao_seg: 4,
+      personagem_presente: 'ausente',
+      cinematografia: {
+        plano: 'wide low angle reveal',
+        composicao: 'sujeito implicito no centro vertical, ameaca atravessando a faixa segura 9:16',
+        luz: 'late-afternoon side key from frame left with warm spill',
+        paleta: ['warm amber', 'cool violet shadow'],
+        camera: 'slow push-in motivated by threat reveal',
+      },
+      anti_ia: {
+        evitar: ['flat frontal light', 'plastic skin', 'random camera drift'],
+        foco: ['coherent shadows', 'physical weight', 'stable silhouettes'],
+      },
+    };
+    const shotlistCena = {
+      n: 1,
+      tag: 'hook',
+      tempo_seg: '0-4',
+      intencao: 'Frame 1 abre com ameaca clara e movimento legivel.',
+      personagem_visivel: 'ausente',
+      fonte: 'geracao',
+      asset_path: null,
+      prompt: 'Documentary-grade mobile ad frame, vertical 9:16. Wide low-angle reveal with warm side key from frame left, cool violet shadow, stable silhouettes, coherent contact shadows, no random camera drift.',
+      salvar_em: 'output/imagens/cena-01-hook.png',
+      cinematografia: storyboardCena.cinematografia,
+      anti_ia: storyboardCena.anti_ia,
+    };
+    const sbRes = validateSchema(sbSchema, {
+      campanha: 'nivel100-contract-probe',
+      cliente: 'demo',
+      plataforma: 'tiktok',
+      formato: 'vertical 9:16',
+      n_cenas: 1,
+      cenas: [storyboardCena],
+    });
+    const slRes = validateSchema(slSchema, {
+      campanha: 'nivel100-contract-probe',
+      cliente: 'demo',
+      formato: 'vertical 9:16 mobile/TikTok',
+      duracao_total_seg: 4,
+      modelo: 'nano_banana_2',
+      referencias_obrigatorias: ['RAG/identidade-visual/mage1.png'],
+      anchor_personagem: 'Same wizard character from reference images, vertical 9:16, with stable hat, beard, robe, staff, material texture and coherent silhouette across every generated shot.',
+      cenas: [shotlistCena],
+      gate_consistencia: { criterio: 'estabilidade visual', passa: 'sem tell forte' },
+    });
+    if (sbRes.valid && slRes.valid) pass('nivel100 campos aditivos em storyboard/shotlist sao backward-compatible');
+    else fail('nivel100 campos aditivos em storyboard/shotlist sao backward-compatible', `storyboard=${sbRes.errors.join('; ')} shotlist=${slRes.errors.join('; ')}`);
+  } catch (e) {
+    fail('nivel100 campos aditivos em storyboard/shotlist sao backward-compatible', e.message);
+  }
+
+  try {
+    const rubrica = fs.readFileSync(path.join(ROOT, 'RAG', 'review', 'rubrica-nivel-100.md'), 'utf8');
+    const criterios = (rubrica.match(/\| C([0-9]+) \|/g) || []).length;
+    const pesos = /Realismo \/ anti-IA/.test(rubrica) && /30%/.test(rubrica) && /Luz e cor/.test(rubrica) && /25%/.test(rubrica);
+    const gate = /C8-C11/.test(rubrica) && /<= 20|â‰¤ 20|≤ 20/.test(rubrica) && /REPROVADO/.test(rubrica);
+    if (criterios === 16 && pesos && gate) pass('nivel100 rubrica declara 16 criterios, pesos e gate anti-IA');
+    else fail('nivel100 rubrica declara 16 criterios, pesos e gate anti-IA', `criterios=${criterios} pesos=${pesos} gate=${gate}`);
+  } catch (e) {
+    fail('nivel100 rubrica declara 16 criterios, pesos e gate anti-IA', e.message);
   }
 }
 
@@ -962,6 +1074,7 @@ function checkPromptLint() {
   const dir = path.join(ROOT, 'RAG', 'prompts');
   const files = walk(dir, (p) => /^exemplo-shotlist-.*\.json$/.test(path.basename(p)));
   const BANNED_IN_NON_CTA = /\b(text overlay|logo|UI elements?|on-screen text|subtitles?|title card)\b/gi;
+  const QUALITY_WORDS = /\b(8K|ultra-realistic|photoreal(?:istic)?|masterpiece|best quality|cinematic|supersaturated)\b/gi;
 
   function isNegated(prompt, idx) {
     const before = prompt.slice(Math.max(0, idx - 30), idx).toLowerCase();
@@ -1008,6 +1121,12 @@ function checkPromptLint() {
       if (!prompt.includes('9:16')) {
         fail(`prompt-lint aspect ${cenaLabel}`, 'prompt nao menciona 9:16');
       }
+
+      QUALITY_WORDS.lastIndex = 0;
+      const q = QUALITY_WORDS.exec(prompt);
+      if (q) {
+        fail(`prompt-lint quality-word ${cenaLabel}`, `"${q[0]}" deve virar fato visual concreto`);
+      }
     }
 
     const refs = Array.isArray(json.referencias_obrigatorias) ? json.referencias_obrigatorias : [];
@@ -1020,6 +1139,143 @@ function checkPromptLint() {
 
   if (!results.some((r) => r.name.startsWith('prompt-lint') && !r.ok)) {
     pass('prompt-lint all shot-lists clean');
+  }
+}
+
+function checkCritiquePrecredit() {
+  let critique;
+  try {
+    critique = require(path.join(ROOT, 'scripts', 'lib', 'critique.cjs'));
+  } catch (e) {
+    fail('critique.cjs carrega', e.message);
+    return;
+  }
+  if (typeof critique.evaluateShotlist !== 'function') {
+    fail('critique.cjs exporta evaluateShotlist', 'funcao ausente');
+    return;
+  }
+
+  let critiqueSchema;
+  try {
+    critiqueSchema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas', 'critique.schema.json'), 'utf8'));
+  } catch (e) {
+    fail('critique schema readable for precredit', e.message);
+    return;
+  }
+
+  const strong = {
+    campanha: 'critique-strong',
+    cliente: 'demo',
+    formato: 'vertical 9:16 mobile/TikTok',
+    duracao_total_seg: 8,
+    modelo: 'nano_banana_2',
+    referencias_obrigatorias: ['RAG/identidade-visual/mage1.png', 'RAG/identidade-visual/mage2.png'],
+    anchor_personagem: 'Same wizard character from reference images: short stout elderly mage, long white beard, purple pointed hat with square gold buckle, purple robe with lime-green trim, wooden staff with purple crystal, vertical 9:16 frame.',
+    cenas: [
+      {
+        n: 1,
+        tag: 'hook',
+        tempo_seg: '0-4',
+        intencao: 'Frame 1 reveals the threat already crossing the safe vertical center.',
+        personagem_visivel: 'ausente',
+        fonte: 'geracao',
+        asset_path: null,
+        prompt: 'Mobile ad frame, vertical 9:16. Low-angle reveal of a threat crossing the central safe area, warm side key from frame left, cool violet shadow, layered foreground dust, coherent contact shadows, grounded silhouettes, no random camera drift.',
+        salvar_em: 'output/imagens/cena-01-hook.png',
+        cinematografia: {
+          plano: 'low-angle reveal',
+          composicao: 'central safe vertical action with layered foreground and background',
+          luz: 'warm side key from frame left with cool shadow',
+          paleta: ['warm amber', 'cool violet'],
+          camera: 'slow push-in motivated by threat reveal',
+        },
+        anti_ia: {
+          evitar: ['flat frontal light', 'plastic skin', 'random camera drift'],
+          foco: ['coherent contact shadows', 'physical weight', 'stable silhouettes'],
+        },
+      },
+      {
+        n: 2,
+        tag: 'hero',
+        tempo_seg: '4-8',
+        intencao: 'The same wizard enters with stable silhouette and visible material texture.',
+        personagem_visivel: 'completo',
+        fonte: 'geracao',
+        asset_path: null,
+        prompt: 'Same wizard character from reference images: short stout elderly mage, long white beard, purple pointed hat with square gold buckle, purple robe with lime-green trim, wooden staff with purple crystal. Three-quarter hero pose under warm side key, fabric texture on robe, grounded boots, stable silhouette, vertical 9:16 frame.',
+        salvar_em: 'output/imagens/cena-02-hero.png',
+      },
+    ],
+    gate_consistencia: { criterio: 'sem tell forte', passa: 'sem C8-C11 <=20' },
+  };
+
+  const weak = {
+    campanha: 'critique-weak',
+    cliente: 'demo',
+    formato: 'vertical 9:16 mobile/TikTok',
+    duracao_total_seg: 4,
+    modelo: 'nano_banana_2',
+    referencias_obrigatorias: [],
+    anchor_personagem: 'generic character vertical 9:16',
+    cenas: [
+      {
+        n: 1,
+        tag: 'intro',
+        tempo_seg: '0-4',
+        intencao: 'slow logo intro',
+        personagem_visivel: 'completo',
+        fonte: 'geracao',
+        asset_path: null,
+        prompt: '8K ultra-realistic cinematic photoreal masterpiece, beautiful scene, random motion, plastic skin, floating hands, no clear light, logo intro, vertical 9:16.',
+        salvar_em: 'output/imagens/cena-01-intro.png',
+      },
+    ],
+    gate_consistencia: { criterio: 'vibe', passa: 'ok' },
+  };
+
+  const strongCrit = critique.evaluateShotlist(strong, 'strong');
+  const weakCrit = critique.evaluateShotlist(weak, 'weak');
+  const strongValid = validateSchema(critiqueSchema, strongCrit);
+  const weakValid = validateSchema(critiqueSchema, weakCrit);
+
+  if (strongValid.valid && weakValid.valid) pass('critique precredit gera JSON valido contra critique.schema.json');
+  else fail('critique precredit gera JSON valido contra critique.schema.json', `strong=${strongValid.errors.join('; ')} weak=${weakValid.errors.join('; ')}`);
+
+  if (strongCrit.criterios.length === 16 && weakCrit.criterios.length === 16) pass('critique precredit pontua os 16 criterios');
+  else fail('critique precredit pontua os 16 criterios', `strong=${strongCrit.criterios.length} weak=${weakCrit.criterios.length}`);
+
+  if (strongCrit.score_ponderado > weakCrit.score_ponderado && strongCrit.gate_aprovado === true) {
+    pass('critique precredit separa plano forte de plano fraco');
+  } else {
+    fail('critique precredit separa plano forte de plano fraco', `strong=${strongCrit.score_ponderado}/${strongCrit.gate_aprovado} weak=${weakCrit.score_ponderado}/${weakCrit.gate_aprovado}`);
+  }
+
+  const weakRejected = weakCrit.gate_aprovado === false && weakCrit.gate_anti_ia.reprovado_por.length > 0;
+  if (weakRejected) pass('critique precredit reprova tells fortes antes de gastar credito');
+  else fail('critique precredit reprova tells fortes antes de gastar credito', JSON.stringify(weakCrit.gate_anti_ia));
+}
+
+function checkCritiqueWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+    ['gerarimagem', '.claude/commands/gerarimagem.md'],
+    ['gerarvideo', '.claude/commands/gerarvideo.md'],
+    ['padroes-de-prompt', 'RAG/prompts/padroes-de-prompt.md'],
+    ['qualidade-prompt', 'RAG/review/qualidade-prompt.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`critique wired ${label}`, e.message);
+      continue;
+    }
+    const hasCritique = /scripts\/lib\/critique\.cjs|critique\.cjs/.test(text);
+    const hasRubrica = /rubrica-nivel-100|quality-words|quality words|anti-IA|anti_ia/i.test(text);
+    if (hasCritique && hasRubrica) pass(`critique wired ${label}`);
+    else fail(`critique wired ${label}`, `critique=${hasCritique} rubrica=${hasRubrica}`);
   }
 }
 
@@ -2892,6 +3148,7 @@ checkCiConfig();
 checkRbacContracts();
 checkSchemas();
 checkFase0Schemas();
+checkNivel100Contracts();
 checkRoundtripE1E2();
 checkStoryWriterFase2();
 checkStoryboardDirectorFase3();
@@ -2899,6 +3156,8 @@ checkPesquisaWebFase4();
 checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();
+checkCritiquePrecredit();
+checkCritiqueWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

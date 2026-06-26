@@ -19,7 +19,7 @@
       "tempo_seg": "0-4",
       "intencao": "Mostrar o problema antes do produto",
       "personagem_visivel": "ausente",
-      "prompt": "Premium lifestyle product ad style, vertical 9:16 frame. Close shot of a cluttered bathroom counter at warm morning light, ordinary bottles scattered, visual tension and lack of focus, no readable text, no logo, clean cinematic shadows.",
+      "prompt": "Premium lifestyle product ad style, vertical 9:16 frame. Close shot of a cluttered bathroom counter at warm morning light, ordinary bottles scattered, visual tension and lack of focus, no readable text, no logo, clean side shadows from a window on frame left.",
       "salvar_em": "output/imagens/produto-cena-01-hook.png"
     },
     {

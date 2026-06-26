@@ -52,7 +52,7 @@
       "tempo_seg": "12-16",
       "intencao": "Carga da magia, expectativa do disparo",
       "personagem_visivel": "completo",
-      "prompt": "Close-up three-quarter shot of same wizard character from reference images: short elderly mage with long white beard, purple pointed hat with gold buckle, purple robe with lime-green trim. Staff raised high above head with both hands, purple crystal at top of staff emitting intense radiant glow, golden sparkle particles gathering and swirling around the crystal. Wizard eyes glowing faintly amber, mouth chanting, cape billowing dramatically. Dark forest background, dramatic purple-magenta backlight. Mobile cartoon RPG style, vertical 9:16, supersaturated magic colors.",
+      "prompt": "Close-up three-quarter shot of same wizard character from reference images: short elderly mage with long white beard, purple pointed hat with gold buckle, purple robe with lime-green trim. Staff raised high above head with both hands, purple crystal at top of staff emitting intense radiant glow, golden sparkle particles gathering and swirling around the crystal. Wizard eyes glowing faintly amber, mouth chanting, cape billowing dramatically. Dark forest background, purple-magenta backlight from behind the crystal, warm amber spill on beard edges. Mobile cartoon RPG style, vertical 9:16, saturated purple magic glow with controlled highlights.",
       "salvar_em": "output/imagens/cena-04-carga.png"
     },
     {
@@ -62,7 +62,7 @@
       "tempo_seg": "16-20",
       "intencao": "Payoff: o feitico explode e varre os inimigos",
       "personagem_visivel": "completo",
-      "prompt": "Wide action shot. Same wizard character from reference images mid-cast, both hands outstretched forward (staff in left hand pointing forward), massive purple-magenta magical vortex erupting outward from his hands, golden sparkle particles and magenta energy bolts swirling. Monsters (blue slime, green armored goblin, small red dragon) being swept backward through the air by the magic blast, impact effects, motion blur lines. Forest battleground, vortex lighting up the scene purple. Mobile cartoon RPG style, vertical 9:16, supersaturated colors, dramatic action pose matching reference image energy.",
+      "prompt": "Wide action shot. Same wizard character from reference images mid-cast, both hands outstretched forward (staff in left hand pointing forward), massive purple-magenta magical vortex erupting outward from his hands, golden sparkle particles and magenta energy bolts swirling. Monsters (blue slime, green armored goblin, small red dragon) being swept backward through the air by the magic blast, impact effects, motion blur lines. Forest battleground, vortex casting purple light on ground contact shadows. Mobile cartoon RPG style, vertical 9:16, intense purple and gold palette with controlled highlight bloom, action pose matching reference image energy.",
       "salvar_em": "output/imagens/cena-05-impacto.png"
     },
     {

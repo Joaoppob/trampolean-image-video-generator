@@ -91,6 +91,14 @@
           "salvar_em": {
             "type": "string",
             "pattern": "^output/imagens/[^/]+\\.png$"
+          },
+          "cinematografia": {
+            "type": "object",
+            "description": "ADITIVO (nivel-100). Intencao cinematografica preservada do storyboard/DP: composicao, luz, camera, cor. Opcional para manter compatibilidade com shot-lists antigos."
+          },
+          "anti_ia": {
+            "type": "object",
+            "description": "ADITIVO (nivel-100). Guardrails de prompt contra tell IA: evitar quality-words/plastico/luz chapada e focar fisica, textura e estabilidade."
           }
         }
       }

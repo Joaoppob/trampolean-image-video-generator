@@ -129,6 +129,20 @@ Antes de devolver, confira os materiais de revisão:
 
 - `RAG/review/qualidade-prompt.md` para checar se cada prompt está forte o bastante.
 - `RAG/review/consistencia-personagem.md` para preservar anchor, refs e detalhes distintivos.
+- `RAG/review/rubrica-nivel-100.md` para entender o gate anti-IA C8-C11.
+
+## Disciplina nivel-100
+
+Prompt agora e restricao, nao pedido. Evite quality-words que puxam look plastico ou generico:
+`8K`, `ultra-realistic`, `photoreal`, `masterpiece`, `best quality`, `cinematic` como adjetivo
+vazio e `supersaturated`. Troque por fatos visuais: fonte de luz nomeada, direcao de luz,
+textura/material, composicao 9:16, peso fisico, refs/anchor e um movimento de camera por shot.
+
+Voce nao roda Bash, mas sua shot-list precisa nascer pronta para passar no gate:
+`node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json`. Se o Jotaro devolver
+acoes do critique, corrija a shot-list antes de qualquer geracao. Use os campos aditivos
+`cinematografia` e `anti_ia` quando eles ajudarem a preservar a intencao sem depender de prosa
+solta no prompt.
 
 ## Regras
 

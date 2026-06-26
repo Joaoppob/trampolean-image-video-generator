@@ -97,6 +97,18 @@ Spawne o `rag` (via Task) para a identidade da marca — **diga qual é o projet
 (via Task) com a identidade e a intenção das cenas. Ele devolve a shot-list no formato
 canônico, uma entrada por cena, com os prompts prontos (paths relativos ao projeto).
 
+Salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
+
+```bash
+node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+Mostre ao usuário o `score_ponderado`, o `gate_aprovado` e qualquer reprovação anti-IA
+(C8-C11) da `RAG/review/rubrica-nivel-100.md`. Se `gate_aprovado:false`, **não gere a primeira
+imagem**: volte ao `prompt-smith`/storyboard com as ações do critique. Esse gate pega
+quality-words, luz chapada, prompt genérico, falta de refs/anchor e tells textuais antes de
+queimar crédito.
+
 Antes de entrar no loop, derive para cada cena um **prompt de movimento** curto para o vídeo.
 O `veo3_1_lite` exige `--prompt` mesmo quando recebe `--start-image`; sem isso o CLI pode falhar
 mal e deixar o fluxo esperando um job que nem nasceu. Use o `intencao`, o `tag` e o prompt da

@@ -2,12 +2,18 @@
 
 Use antes de chamar `gera-imagem`.
 
+Gate mecanico: salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode
+`node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json`. Ele aplica proxies da
+`RAG/review/rubrica-nivel-100.md` (16 criterios, anti-IA C8-C11) antes de gastar credito.
+
 ## Prompt bom
 
 - abre com medium/estilo;
 - descreve enquadramento e angulo;
 - inclui o anchor textual quando o personagem aparece;
 - descreve acao, cenario, luz e paleta;
+- nomeia fonte/direcao de luz, textura/materialidade, composicao 9:16 e peso fisico quando a
+  cena for geracao;
 - termina com `vertical 9:16 frame`;
 - usa paths de referencia relativos ao repo;
 - nao pede texto, logo ou UI dentro da imagem, exceto quando a cena explicitamente for sobre
@@ -16,6 +22,8 @@ Use antes de chamar `gera-imagem`.
 ## Alertas
 
 - prompt muito curto ou generico;
+- quality-words vazias: `8K`, `ultra-realistic`, `photoreal`, `masterpiece`, `best quality`,
+  `cinematic` como atalho e `supersaturated`;
 - anchor reescrito fora da ordem canonica;
 - cena vaga sem acao visual;
 - CTA sem espaco limpo para legenda;

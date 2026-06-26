@@ -16,6 +16,13 @@ Estes modelos respondem melhor a prosa descritiva estruturada do que a listas de
 soltas. A ordem de leitura abaixo é o que rende consistência (provado no reel do mago, 6/6
 no gate). Monte o prompt nesta ordem:
 
+**Atualizacao nivel-100:** prompt e restricao, nao pedido. A rubrica
+`RAG/review/rubrica-nivel-100.md` e o gate `scripts/lib/critique.cjs` penalizam quality-words
+que costumam puxar look plastico/generico: `8K`, `ultra-realistic`, `photoreal`,
+`masterpiece`, `best quality`, `cinematic` usado como adjetivo vazio e `supersaturated`.
+Troque esses atalhos por fatos observaveis: fonte de luz, direcao, textura, paleta, composicao,
+peso fisico, refs/anchor e movimento de camera motivado.
+
 | # | Slot | O que entra | Exemplo (mago) |
 |---|------|-------------|----------------|
 | 1 | Estilo / medium | abre definindo o mundo visual | `Mobile game cartoon style` |
@@ -30,6 +37,9 @@ no gate). Monte o prompt nesta ordem:
 
 ### Regras de ouro
 
+- **Sem quality-words vazias.** Nao escreva "cinematic" esperando que o modelo entenda
+  cinematografia. Escreva a cinematografia: `warm side key from frame left`, `cool violet
+  shadow`, `grounded boots`, `fabric texture`, `central safe 9:16 composition`.
 - **Aspect ratio em dois lugares.** Escreva `vertical 9:16 frame` no texto do prompt E passe
   `aspect_ratio: '9:16'` no parâmetro da geração. A redundância é rede de segurança.
 - **Espaço para texto é instrução positiva.** Esses modelos não têm "negative prompt" forte.
@@ -103,7 +113,7 @@ Three-quarter front view, dynamic hero pose. {ANCHOR}. {fundo}, {iluminação}.
 Use para construir expectativa antes do clímax (a magia carregando, o motor ligando).
 ```
 Close-up three-quarter shot. {ANCHOR}. {AÇÃO INTENSA + efeito de partícula ou luz}.
-{backlight dramático}. {ESTILO+PALETA}, vertical 9:16, supersaturated.
+{backlight dramatico com direcao e cor nomeadas}. {ESTILO+PALETA}, vertical 9:16, highlights controlados.
 ```
 
 ### 4. Over-the-shoulder / confronto: POV, personagem contra o obstáculo
@@ -117,7 +127,7 @@ Low-angle dramatic shot. {ANCHOR parcial, de costas em primeiro plano}. Facing c
 Use no auge: o feitiço explode, o produto resolve, a ação acontece.
 ```
 Wide action shot. {ANCHOR} mid-action, {EFEITO PRINCIPAL erupting/expanding}.
-{resultado visível na cena}, motion blur. {ESTILO+PALETA}, vertical 9:16, supersaturated.
+{resultado visível na cena}, motion blur. {ESTILO+PALETA}, vertical 9:16, cor intensa com highlights controlados.
 ```
 
 ### 6. CTA limpo: frame final com espaço para a chamada

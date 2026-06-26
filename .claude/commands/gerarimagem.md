@@ -64,7 +64,20 @@ Spawne o agente `prompt-smith` (via Task), passando a identidade que o `rag` dev
 intenção da cena. Ele devolve a shot-list no formato canônico, com o prompt pronto e os paths
 de referência relativos ao projeto.
 
-## Passo 6: gere
+## Passo 6: critique antes de gastar
+
+Salve a shot-list em `<PROJ>/output/shotlist-preflight.json` e rode:
+
+```bash
+node scripts/lib/critique.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+Mostre ao usuário o `score_ponderado`, o `gate_aprovado` e qualquer reprovação anti-IA
+(C8-C11) da `RAG/review/rubrica-nivel-100.md`. Se `gate_aprovado:false`, **não chame
+`gera-imagem`**: volte ao `prompt-smith` com as ações do critique. Esse gate pega quality-words,
+luz chapada, prompt genérico, falta de refs/anchor e tells textuais antes de queimar crédito.
+
+## Passo 7: gere
 
 Chame a skill `gera-imagem` (com `--root <PROJ>`) para cada cena da shot-list. A skill usa as
 referências de `<PROJ>/RAG/` e salva em `<PROJ>/output/imagens/`. Depois de gerar, mostre ao
