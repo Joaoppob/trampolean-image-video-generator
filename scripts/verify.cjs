@@ -1865,6 +1865,73 @@ function checkNarrativeQualityWiredIntoFlow() {
   }
 }
 
+function checkIdentityTraitCarryWaveI() {
+  let mod;
+  try {
+    mod = require(path.join(ROOT, 'scripts', 'lib', 'identity-trait-carry.cjs'));
+  } catch (e) {
+    fail('identity-trait-carry.cjs loads', e.message);
+    return;
+  }
+  if (typeof mod.evaluateShotlist !== 'function') {
+    fail('identity-trait-carry.cjs exports evaluateShotlist', typeof mod.evaluateShotlist);
+    return;
+  }
+
+  const strong = {
+    anchor_personagem: 'mage with deep-set emerald eyes, aquiline nose, strong jawline, silver-streaked dark hair, weathered hands with visible veins, tall lean frame',
+    cenas: [
+      { n: 1, fonte: 'geracao', personagem_visivel: 'completo', prompt: 'A tall lean mage with deep-set emerald eyes and aquiline nose casts a spell. His silver-streaked dark hair catches the rim light. Weathered hands with visible veins grip the staff. 9:16 frame.' },
+    ],
+  };
+  const r1 = mod.evaluateShotlist(strong);
+  if (r1.ok && r1.score >= 80) pass('identity-trait-carry aprova cena que carrega 3+ traits do anchor');
+  else fail('identity-trait-carry aprova cena que carrega 3+ traits do anchor', JSON.stringify(r1));
+
+  const weak = {
+    anchor_personagem: 'mage with deep-set emerald eyes, aquiline nose, strong jawline, silver-streaked dark hair, weathered hands with visible veins, tall lean frame',
+    cenas: [
+      { n: 1, fonte: 'geracao', personagem_visivel: 'completo', prompt: 'A mage casts a spell. 9:16 frame.' },
+    ],
+  };
+  const r2 = mod.evaluateShotlist(weak);
+  if (!r2.ok && r2.errors.some((e) => /trait|traço|traco|anchor/i.test(e))) {
+    pass('identity-trait-carry reprova cena completa sem traits do anchor');
+  } else {
+    fail('identity-trait-carry reprova cena completa sem traits do anchor', JSON.stringify(r2));
+  }
+
+  const partial = {
+    anchor_personagem: 'mage with deep-set emerald eyes, aquiline nose, strong jawline, silver-streaked dark hair, weathered hands, tall lean frame',
+    cenas: [
+      { n: 1, fonte: 'geracao', personagem_visivel: 'parcial', prompt: 'A mage from behind. 9:16.' },
+    ],
+  };
+  const r3 = mod.evaluateShotlist(partial);
+  if (r3.ok && r3.score >= 90) pass('identity-trait-carry isenta cena parcial do trait-check');
+  else fail('identity-trait-carry isenta cena parcial do trait-check', JSON.stringify(r3));
+}
+
+function checkIdentityTraitCarryWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['prompt-smith', '.claude/agents/prompt-smith.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`identity-trait-carry wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /identity-trait-carry\.cjs/.test(text);
+    const hasConcept = /trait.carry|traços do anchor|trait lock|anchor traits.*cena|traços.*prompt/i.test(text);
+    if (hasTool && hasConcept) pass(`identity-trait-carry wired ${label}`);
+    else fail(`identity-trait-carry wired ${label}`, `tool=${hasTool} concept=${hasConcept}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3756,6 +3823,8 @@ checkPromptStructureWaveG();
 checkPromptStructureWiredIntoFlow();
 checkNarrativeQualityWaveH();
 checkNarrativeQualityWiredIntoFlow();
+checkIdentityTraitCarryWaveI();
+checkIdentityTraitCarryWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

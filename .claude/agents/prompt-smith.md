@@ -158,6 +158,32 @@ e reprova drift (ex.: cena 1 Kodak Gold 200 + 50mm, cena 2 Portra 400 + 85mm). T
 style block na primeira cena e repita-o em todas as demais. Se o Jotaro devolver acao do
 `style-consistency.cjs`, corrija a shot-list travando os campos antes de qualquer geracao.
 
+Wave G: cada prompt de cena `geracao` deve cobrir as 7 camadas canonicas (subject,
+action, environment, composition, lighting, camera/lens, rendering/style) com no
+minimo 5 camadas presentes e obrigatoriamente subject + composition + lighting. O
+`prompt-structure.cjs` avalia cada cena contra essa estrutura. Prompts vagos tipo
+"beautiful woman, 8K, cinematic" reprovam. Se o Jotaro devolver acao do
+`prompt-structure.cjs`, complete as camadas faltantes antes de qualquer geracao.
+
+Wave H: a estrutura narrativa da shot-list importa tanto quanto o visual. O
+`narrative-quality.cjs` avalia hook no frame 1 (sem logo/fade), posicao do climax
+(~70% da duracao), variedade de tags entre cenas e presenca de CTA. Se o Jotaro
+devolver acao do `narrative-quality.cjs`, ajuste a narrativa antes de gerar.
+
+Wave I: cada cena com personagem completo deve carregar no minimo 3 tracos
+distintivos do `anchor_personagem` no prompt. O `identity-trait-carry.cjs`
+verifica se os tokens do anchor (ex.: emerald eyes, aquiline nose, strong
+jawline) aparecem no prompt de cada cena `personagem_visivel: "completo"`.
+Cenas parciais sao isentas. Se o Jotaro devolver acao do gate, reforce os
+tracos faltantes antes de gerar.
+
+
+Wave F: o style block (film_stock, lente, grade_cor, grao) deve ser identico em todas as
+cenas `geracao`. O `style-consistency.cjs` compara os campos `cinematografia` entre cenas
+e reprova drift (ex.: cena 1 Kodak Gold 200 + 50mm, cena 2 Portra 400 + 85mm). Trave o
+style block na primeira cena e repita-o em todas as demais. Se o Jotaro devolver acao do
+`style-consistency.cjs`, corrija a shot-list travando os campos antes de qualquer geracao.
+
 ## Regras
 
 Wave G: cada prompt de cena `geracao` deve cobrir as 7 camadas canonicas (subject,

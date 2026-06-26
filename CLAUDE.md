@@ -204,6 +204,64 @@ opcoes de teto pago (ex.: `soul_cinematic`, `cinematic_studio_3_0`, `seedance_2_
 Nao invente preco para modelo nao-default: confirme com `higgsfield generate cost` antes de prometer.
 
 ### Estrutura do prompt (Wave G)
+### Consistencia de estilo entre cenas (Wave F)
+
+Depois do critique e antes de gastar credito, verifique que todas as cenas de geracao
+compartilham o mesmo style block (film stock, lente, grade de cor, grao):
+
+```bash
+node scripts/lib/style-consistency.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `style-consistency.cjs` compara os campos `cinematografia` (film_stock, lente, grade_cor, grao)
+entre cenas. Se a cena 2 usa `Portra 400 + 85mm` e a cena 1 usa `Kodak Gold 200 + 50mm`, o gate
+reprova com drift de estilo. Uma campanha coerente exige o mesmo style block em todas as cenas.
+Se `ok:false`, volte ao `prompt-smith` e trave o style block antes de gerar.
+
+### Estrutura do prompt (Wave G)
+
+Antes de gastar credito, verifique que cada prompt de cena `geracao` cobre as 7 camadas
+canonicas (subject, action, environment, composition, lighting, camera/lens, rendering/style):
+
+```bash
+node scripts/lib/prompt-structure.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `prompt-structure.cjs` exige no minimo 5 das 7 camadas e exige obrigatoriamente as 3
+camadas criticas: subject, composition e lighting. Um prompt tipo "beautiful woman, 8K,
+cinematic" reprova com score baixo. Se `ok:false`, volte ao `prompt-smith` e complete as
+camadas faltantes listadas nos erros antes de qualquer geracao.
+
+### Qualidade narrativa (Wave H)
+
+Antes de gastar credito, avalie a estrutura narrativa da shot-list: hook no primeiro
+frame (sem logo/fade), climax posicionado a ~70% da duracao, variedade de tags entre
+cenas e CTA no fechamento:
+
+```bash
+node scripts/lib/narrative-quality.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `narrative-quality.cjs` reprova abertura com logo/fade/title-card, alerta climax
+tarde demais (>=80% da duracao), cobra variedade de tags e confere timing coerente
+entre cenas. Se `ok:false`, volte ao `storyboard-director` ou `prompt-smith` com as
+acoes listadas antes de qualquer geracao.
+
+### Identity trait carry (Wave I)
+
+Cada cena com personagem completo (`personagem_visivel: "completo"`) deve carregar
+no minimo 3 tracos distintivos do `anchor_personagem` no prompt:
+
+```bash
+node scripts/lib/identity-trait-carry.cjs <PROJ>/output/shotlist-preflight.json
+```
+
+O `identity-trait-carry.cjs` extrai os tokens distintivos do anchor e confere se
+cada cena de personagem completo os repete. Cenas parciais/ausentes sao isentas.
+Se `ok:false`, volte ao `prompt-smith` e reforce os tracos faltantes nos prompts
+antes de qualquer geracao.
+
+
 
 Antes de gastar credito, verifique que cada prompt de cena `geracao` cobre as 7 camadas
 canonicas (subject, action, environment, composition, lighting, camera/lens, rendering/style):
