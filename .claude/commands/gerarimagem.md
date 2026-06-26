@@ -46,6 +46,17 @@ Não gere no escuro. Espere as respostas.
 
 ## Passo 3: preflight de custo
 
+Antes do preflight, rode a assessoria de modelo e mostre a tabela de modelos/opcoes ao usuario:
+
+```bash
+node scripts/lib/model-advisor.cjs image --objetivo "<resumo-da-imagem>" --plano "<plano-do-account-status>" --saldo "<creditos-do-account-status>"
+```
+
+Explique o tradeoff: `nano_banana_2` e o modelo executavel agora via CLI; opcoes como
+`nano_banana_pro`, `soul_cinematic`, `cinematic_studio_2_5` ou `ms_image` podem elevar o teto,
+mas custo/plano sao AC e precisam de `higgsfield generate cost` antes de prometer preco. Se o
+usuario quiser seguir agora no fluxo atual, o preflight abaixo continua calculando o default CLI.
+
 Rode `higgsfield-preflight` para o número de imagens que vai gerar, **com `--com-video false`**
 (cada imagem = 2 créditos; não inclua custo de vídeo neste comando).
 Mostre o custo total e o saldo, e **reconfirme o projeto `<PROJ>`** junto do custo. Avise que a

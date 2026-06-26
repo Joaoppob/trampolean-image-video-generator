@@ -1527,6 +1527,94 @@ function checkDpQualityWiredIntoFlow() {
   }
 }
 
+function checkModelAdvisorWaveE() {
+  let advisor;
+  try {
+    advisor = require(path.join(ROOT, 'scripts', 'lib', 'model-advisor.cjs'));
+  } catch (e) {
+    fail('model-advisor.cjs carrega', e.message);
+    return;
+  }
+  if (typeof advisor.recommendModels !== 'function') {
+    fail('model-advisor.cjs exporta recommendModels', 'funcao ausente');
+    return;
+  }
+
+  const imageAdvice = advisor.recommendModels({
+    kind: 'image',
+    objective: 'personagem cinematografico com identidade consistente e still cinema-grade',
+    plan: 'free',
+    credits: 0,
+  });
+  const videoAdvice = advisor.recommendModels({
+    kind: 'video',
+    objective: 'hero shot cinematografico com audio nativo, fisica realista e qualidade maxima',
+    plan: 'free',
+    credits: 0,
+  });
+  const volumeAdvice = advisor.recommendModels({
+    kind: 'video',
+    objective: 'volume rapido para testar muitos hooks simples no free tier',
+    plan: 'free',
+    credits: 10,
+  });
+
+  if (
+    imageAdvice.kind === 'image' &&
+    imageAdvice.current_executable_model.id === 'nano_banana_2' &&
+    imageAdvice.options.some((o) => o.id === 'soul_cinematic' || o.id === 'soul_2') &&
+    imageAdvice.warnings.some((w) => /free|plano|credito|crédito/i.test(w))
+  ) {
+    pass('model-advisor imagem recomenda teto pago sem perder default CLI');
+  } else {
+    fail('model-advisor imagem recomenda teto pago sem perder default CLI', JSON.stringify(imageAdvice));
+  }
+
+  if (
+    videoAdvice.kind === 'video' &&
+    videoAdvice.current_executable_model.id === 'veo3_1_lite' &&
+    videoAdvice.recommended.id !== 'veo3_1_lite' &&
+    videoAdvice.options.some((o) => o.id === 'cinematic_studio_3_0' || o.id === 'veo3_1')
+  ) {
+    pass('model-advisor video escala hero shot para modelo de teto');
+  } else {
+    fail('model-advisor video escala hero shot para modelo de teto', JSON.stringify(videoAdvice));
+  }
+
+  if (
+    volumeAdvice.recommended.id === 'veo3_1_lite' &&
+    volumeAdvice.current_executable_model.executable_now === true &&
+    volumeAdvice.options.every((o) => /AC|confirmar|fixo|free|CLI/i.test(o.cost_note))
+  ) {
+    pass('model-advisor preserva free tier para volume e marca custos AC');
+  } else {
+    fail('model-advisor preserva free tier para volume e marca custos AC', JSON.stringify(volumeAdvice));
+  }
+}
+
+function checkModelAdvisorWiredIntoFlow() {
+  const files = [
+    ['CLAUDE.md', 'CLAUDE.md'],
+    ['gerarimagem', '.claude/commands/gerarimagem.md'],
+    ['gerarvideo', '.claude/commands/gerarvideo.md'],
+    ['higgsfield-preflight', '.claude/skills/higgsfield-preflight/SKILL.md'],
+    ['catalogo-vivo', 'references/_pesquisa-nivel-100/catalogo-higgsfield-vivo.md'],
+  ];
+  for (const [label, relPath] of files) {
+    let text = '';
+    try {
+      text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+    } catch (e) {
+      fail(`model-advisor wired ${label}`, e.message);
+      continue;
+    }
+    const hasTool = /model-advisor\.cjs/.test(text);
+    const hasTable = /assessoria de modelo|tabela de modelos|tradeoff|opcoes|opções|modelo/i.test(text);
+    if (hasTool && hasTable) pass(`model-advisor wired ${label}`);
+    else fail(`model-advisor wired ${label}`, `tool=${hasTool} table=${hasTable}`);
+  }
+}
+
 function checkAnchorTraits() {
   // Trava de consistencia do anchor, brand-agnostic. Em cada cena com o
   // personagem/sujeito COMPLETO, o prompt deve repetir traços distintivos do
@@ -3410,6 +3498,8 @@ checkIdentityQualityWaveC();
 checkIdentityQualityWiredIntoFlow();
 checkDpQualityWaveD();
 checkDpQualityWiredIntoFlow();
+checkModelAdvisorWaveE();
+checkModelAdvisorWiredIntoFlow();
 checkAnchorTraits();
 checkAssetFirstFrentes24();
 checkEditorOutputAndFont();

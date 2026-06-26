@@ -64,6 +64,18 @@ legenda no fim), faça **até 3 perguntas específicas** antes de gerar:
 
 ## Passo 4: preflight do custo total
 
+Antes do preflight, rode a assessoria de modelo e mostre a tabela de modelos/opcoes ao usuario:
+
+```bash
+node scripts/lib/model-advisor.cjs video --objetivo "<resumo-do-reel>" --plano "<plano-do-account-status>" --saldo "<creditos-do-account-status>"
+```
+
+Explique o tradeoff: `veo3_1_lite` e o modelo executavel agora no CLI/free; `veo3_1`,
+`cinematic_studio_3_0`, `seedance_2_0`, `kling3_0` e `marketing_studio_video` elevam teto ou
+controle conforme o objetivo, mas custo/plano sao AC e precisam de `higgsfield generate cost`
+antes de prometer preco. Se o usuario quiser seguir agora no fluxo atual, o preflight abaixo
+continua calculando o default CLI.
+
 Rode `higgsfield-preflight` para o número de cenas do reel. Ele calcula o custo total:
 cada cena = 1 imagem (2 créditos) + 1 vídeo (4 créditos) = 6 créditos por cena. Um reel de 6
 cenas = 36 créditos.

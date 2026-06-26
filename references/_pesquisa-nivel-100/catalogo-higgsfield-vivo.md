@@ -94,3 +94,10 @@
 
 **Custos:** todos AC via `higgsfield generate cost` / `custos.cjs` antes de qualquer
 tabela de assessoria fechar número.
+
+## Wave E operacional
+
+A tabela de modelos/opcoes virou contrato executavel em `scripts/lib/model-advisor.cjs`.
+Ele usa este catalogo vivo + `references/_pesquisa-nivel-100/modelos-comparativo.md` para mostrar
+tradeoffs antes do preflight: modelo default do CLI, alternativas de teto, plano provavel e custo
+AC. Atualize o script quando este catalogo for re-probado.

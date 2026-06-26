@@ -188,6 +188,21 @@ anti-IA C8-C11, quality-words, luz, refs/anchor, hook e ritmo). Se `gate_aprovad
 **não gaste crédito**: apresente os critérios reprovados e volte ao `prompt-smith` ou ao
 `storyboard-director` com as ações do critique.
 
+### Assessoria de modelo (Wave E)
+
+Antes do preflight de custo e antes de qualquer geracao, apresente uma tabela de modelos com
+tradeoff honesto:
+
+```bash
+node scripts/lib/model-advisor.cjs image --objetivo "<resumo-do-job>" --plano "<free|paid>" --saldo "<creditos>"
+node scripts/lib/model-advisor.cjs video --objetivo "<resumo-do-job>" --plano "<free|paid>" --saldo "<creditos>"
+```
+
+O `model-advisor.cjs` cruza o catalogo vivo de `references/_pesquisa-nivel-100/catalogo-higgsfield-vivo.md`
+com o comparativo de modelos e separa: modelo executavel agora no CLI (`nano_banana_2`/`veo3_1_lite`),
+opcoes de teto pago (ex.: `soul_cinematic`, `cinematic_studio_3_0`, `seedance_2_0`) e custos AC.
+Nao invente preco para modelo nao-default: confirme com `higgsfield generate cost` antes de prometer.
+
 ### Dois modos: curadoria (biblioteca) e geração
 
 A etapa 2 (imagens) trabalha em um de dois modos, e o sistema **detecta em qual está**:

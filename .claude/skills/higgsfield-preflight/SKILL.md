@@ -11,6 +11,21 @@ Disparos recusados por falta de crédito **não cobram**. Mesmo assim, checar an
 evita um run pela metade (gerar 5 imagens e travar na 6ª por falta de pool). Esta
 skill calcula o custo **total** do run e compara com o saldo real.
 
+## Antes do preflight: assessoria de modelo (Wave E)
+
+O preflight calcula o custo do **default executavel no CLI** (`nano_banana_2` e
+`veo3_1_lite`). Antes dele, o Jotaro deve rodar a tabela de modelos/opcoes:
+
+```bash
+node scripts/lib/model-advisor.cjs image --objetivo "<job>" --plano "<plano>" --saldo "<creditos>"
+node scripts/lib/model-advisor.cjs video --objetivo "<job>" --plano "<plano>" --saldo "<creditos>"
+```
+
+O `model-advisor.cjs` mostra tradeoffs (`soul_cinematic`, `cinematic_studio_3_0`,
+`seedance_2_0`, etc.), mas custos de modelos nao-default sao AC. Se o usuario escolher um
+modelo fora do default CLI, confirme preco/plano com `higgsfield generate cost` antes de prometer
+ou adaptar a execucao.
+
 ## Custos fixos (free tier, provados ao vivo no CLI 2026-06-18)
 
 | Item | Modelo (id CLI) | Custo |
