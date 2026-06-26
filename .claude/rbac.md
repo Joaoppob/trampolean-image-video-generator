@@ -74,17 +74,45 @@ também descreve fronteiras instrucionais que o harness não consegue expressar 
 
 ---
 
+## story-writer (folha de roteirização) — v0.5 Etapa 1
+
+- **escopo:** receber identidade + intake (+ pesquisa estruturada opcional) e devolver o roteiro
+  (fio narrativo) antes de qualquer geração. É a primeira folha da Etapa 1 de roteirização.
+- **tools:** `Read`, `Glob`, `Grep` — **SEM Bash, SEM MCP, SEM Task, SEM Skill.**
+- **pode_spawnar:** nenhum.
+- **contrato_entrada:** `{ identidade: <saída do rag>, intake_completo: <campos da intake>,
+  pesquisa_estruturada: <opcional> }`.
+- **contrato_saida:** roteiro JSON (schema de `schemas/roteiro.schema.json`): `titulo`, `gancho`,
+  `desenvolvimento[beats]`, `cta`, `plataforma`, `tom`, e opcionais `duracao_alvo_seg`,
+  `referencias_usadas`.
+- **fronteira:** não gera imagem, não anima, não chama skills nem Higgsfield, não chama o `rag`
+  diretamente, não spawna. **Hook-first**: decide o gancho antes de tudo (gancho de ~1s que a 1ª
+  frame carrega sozinha); beats hook/contexto/problema/revelação/CTA; escolhe molde PAS/AIDA/Hero
+  pelo objetivo do post; ancora tom e identidade na marca. Não lê o `RAG/` de marca de nenhum
+  projeto — a identidade chega pelo input, vinda do Jotaro; se não vier, informa que o `rag` deve
+  ser consultado antes.
+
+  > **Natureza da fronteira:** igual ao `prompt-smith`, a restrição de path é **instrucional**, não
+  > técnica — o `tools:` concede `Read` irrestrito porque o harness não permite granularidade de
+  > path por agente. O `story-writer` é folha de síntese e **não age sobre o mundo** (sem Bash, sem
+  > MCP, sem Task, sem Skill): mesmo que recebesse conteúdo injetável, não tem como executá-lo. A
+  > `pesquisa_estruturada` chega já sanitizada pelo Jotaro (campos tipados, nunca texto bruto da
+  > web) — o agente que tocaria conteúdo externo não-confiável é o Jotaro, dentro da sua fronteira,
+  > não esta folha. Narrowing monotônico preservado: `story-writer` ⊆ Jotaro em tools.
+
+---
+
 ## Tabela de narrowing (verificada)
 
-| Tool                  | jotaro | rag | prompt-smith |
-|-----------------------|:------:|:---:|:------------:|
-| Read                  |   ✓    |  ✓  |      ✓       |
-| Glob                  |   ✓    |  ✓  |      ✓       |
-| Grep                  |   ✓    |  ✓  |      ✓       |
-| Bash (lista restrita) |   ✓    |  —  |      —       |
-| Bash(higgsfield/hf)   |   ✓    |  —  |      —       |
-| Task                  |   ✓    |  —  |      —       |
-| Skill                 |   ✓    |  —  |      —       |
+| Tool                  | jotaro | rag | prompt-smith | story-writer |
+|-----------------------|:------:|:---:|:------------:|:------------:|
+| Read                  |   ✓    |  ✓  |      ✓       |      ✓       |
+| Glob                  |   ✓    |  ✓  |      ✓       |      ✓       |
+| Grep                  |   ✓    |  ✓  |      ✓       |      ✓       |
+| Bash (lista restrita) |   ✓    |  —  |      —       |      —       |
+| Bash(higgsfield/hf)   |   ✓    |  —  |      —       |      —       |
+| Task                  |   ✓    |  —  |      —       |      —       |
+| Skill                 |   ✓    |  —  |      —       |      —       |
 
 Leitura (Read/Glob/Grep): todos. Ação (Bash/Task/Skill): só o Jotaro.
 Cada coluna de folha é subconjunto da coluna do Jotaro — narrowing monotônico satisfeito.

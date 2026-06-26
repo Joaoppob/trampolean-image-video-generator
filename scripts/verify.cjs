@@ -579,6 +579,73 @@ function checkRoundtripE1E2() {
   }
 }
 
+// v0.5 Etapa 1 — Fase 2: o agente folha story-writer existe, e folha (sem
+// Bash/Task/MCP/Skill), o roteiro de exemplo valida contra roteiro.schema.json,
+// o rbac documenta o story-writer, e o roteiro de exemplo e narrativamente
+// coerente com o storyboard de exemplo (mesmo tema/beats). checkRbacContracts ja
+// varre todos os .claude/agents/*.md; aqui damos a checagem nominal da Fase 2.
+function checkStoryWriterFase2() {
+  // 1. existe e e folha SEM Bash/Task/MCP/Skill (espelha 'leaf agent restricted tools').
+  const swPath = path.join(ROOT, '.claude', 'agents', 'story-writer.md');
+  if (!fs.existsSync(swPath)) {
+    fail('story-writer.md existe', '.claude/agents/story-writer.md ausente');
+  } else {
+    const fm = parseFrontmatter(swPath);
+    const tools = toolList(fm.tools);
+    const forbidden = tools.filter(
+      (t) => t === 'Bash' || t === 'Task' || t === 'Skill' || t.startsWith('mcp__') || /^Bash\(/.test(t)
+    );
+    if (forbidden.length === 0 && tools.length > 0) pass('story-writer e folha sem Bash/Task/MCP/Skill');
+    else fail('story-writer e folha sem Bash/Task/MCP/Skill', forbidden.length ? forbidden.join(', ') : 'tools vazio no frontmatter');
+  }
+
+  // 2. roteiro de exemplo valida contra roteiro.schema.json.
+  let roteiro = null;
+  const roteiroSchemaPath = path.join(ROOT, 'schemas', 'roteiro.schema.json');
+  const roteiroExamplePath = path.join(ROOT, 'RAG', 'prompts', 'exemplo-roteiro-mago.json');
+  try {
+    const schema = JSON.parse(fs.readFileSync(roteiroSchemaPath, 'utf8'));
+    roteiro = JSON.parse(fs.readFileSync(roteiroExamplePath, 'utf8'));
+    const res = validateSchema(schema, roteiro);
+    if (res.valid) pass('fase2 roteiro de exemplo valida contra roteiro.schema.json');
+    else fail('fase2 roteiro de exemplo valida contra roteiro.schema.json', res.errors.join('; '));
+  } catch (e) {
+    fail('fase2 roteiro de exemplo valida contra roteiro.schema.json', e.message);
+  }
+
+  // 3. rbac.md documenta o story-writer (folha de roteirizacao, sem acao).
+  try {
+    const rbac = fs.readFileSync(path.join(ROOT, '.claude', 'rbac.md'), 'utf8');
+    const documentado =
+      /story-writer/.test(rbac) &&
+      /SEM Bash, SEM MCP, SEM Task, SEM Skill/.test(rbac) &&
+      /story-writer`? ⊆ Jotaro/.test(rbac);
+    if (documentado) pass('rbac documenta story-writer (folha, sem acao, narrowing)');
+    else fail('rbac documenta story-writer (folha, sem acao, narrowing)', 'secao story-writer ausente ou incompleta em rbac.md');
+  } catch (e) {
+    fail('rbac documenta story-writer (folha, sem acao, narrowing)', e.message);
+  }
+
+  // 4. coerencia: o roteiro de exemplo e o storyboard de exemplo falam do mesmo
+  // tema/beats. Mesmo cliente/tema (mago/trace) e o arco do roteiro reaparece nas
+  // descricoes visuais do storyboard (village->aparicao->magia->disparo->cta).
+  try {
+    const sb = JSON.parse(fs.readFileSync(path.join(ROOT, 'RAG', 'prompts', 'exemplo-storyboard-mago.json'), 'utf8'));
+    if (!roteiro) roteiro = JSON.parse(fs.readFileSync(roteiroExamplePath, 'utf8'));
+    const sbText = JSON.stringify(sb).toLowerCase();
+    const rtText = JSON.stringify(roteiro).toLowerCase();
+    // ancoras tematicas compartilhadas pelos dois artefatos do mesmo reel.
+    const temas = ['mago', 'vila', 'cristal', 'monstros'];
+    const ambos = temas.filter((t) => sbText.includes(t) && rtText.includes(t));
+    // o storyboard cobre o tema TraceDefense (cliente trace-defense).
+    const mesmoCliente = String(sb.cliente || '').toLowerCase().includes('trace');
+    if (ambos.length >= 3 && mesmoCliente) pass('fase2 roteiro e storyboard de exemplo sao coerentes (mesmo tema/beats)');
+    else fail('fase2 roteiro e storyboard de exemplo sao coerentes (mesmo tema/beats)', `temas comuns=${ambos.join(',')} cliente_trace=${mesmoCliente}`);
+  } catch (e) {
+    fail('fase2 roteiro e storyboard de exemplo sao coerentes (mesmo tema/beats)', e.message);
+  }
+}
+
 function parseTempo(value) {
   const m = String(value || '').match(/^(\d+)-(\d+)$/);
   if (!m) return null;
@@ -1405,6 +1472,7 @@ checkRbacContracts();
 checkSchemas();
 checkFase0Schemas();
 checkRoundtripE1E2();
+checkStoryWriterFase2();
 checkCustosCanonicos();
 checkShotlists();
 checkPromptLint();

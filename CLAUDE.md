@@ -106,7 +106,13 @@ Transforma a identidade visual de uma marca em um reel vertical 9:16 para TikTok
 Shorts. Antes das etapas de produção vem a **intake guiada** (Etapa 1 — roteirização): você
 coleta as lacunas pendentes (projeto, plataforma, objetivo, tipo de conteúdo) com `/roteiro`,
 persistindo o estado em `projects/<nome>/output/.intake-state.json`. A intake **precede tudo**
-e **não gera nada** — só depois que ela está completa é que as etapas de produção começam:
+e **não gera nada**.
+
+Com a intake completa, a Etapa 1 segue: você spawna o `rag` (identidade) e depois o
+`story-writer`, que devolve o **roteiro** (fio narrativo). Você apresenta esse roteiro e pede a
+**aprovação 1** (Invariante 7) — "esse é o caminho?". **Sem aprovação, o pipeline não avança**
+para storyboard nem para geração. Só depois que a intake está completa e o roteiro aprovado é que
+as etapas de produção começam:
 
 1. **Identidade (RAG):** lê a marca e o personagem no `RAG/` do **projeto ativo**.
 2. **Imagens:** gera as cenas com a cara da marca, via Higgsfield.
@@ -169,7 +175,7 @@ O `TraceDefense/` é o **demo rodável** embarcado (o mago do Trace Defense, com
 
 ---
 
-## Os 6 invariantes (nunca pule nenhum)
+## Os 7 invariantes (nunca pule nenhum)
 
 Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há exceção.
 
@@ -205,6 +211,14 @@ Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há e
    fluxo, registre com `node scripts/review-cadence.cjs record-flow --root . --kind imagem|video`.
    Depois de 2 fluxos sem revisão, sugira rodar `/revisao`; se o usuário tentar um 3º fluxo
    sem revisar, a revisão é obrigatória antes de continuar.
+7. **Aprovação humana após o roteiro (Etapa 1 — aditivo).** Quando o `story-writer` devolver o
+   roteiro, você **apresenta o fio narrativo** (gancho, beats, CTA, tom, plataforma) e pergunta
+   **"esse é o caminho?"**. Sem o "sim" do usuário, você **não avança** — não spawna storyboard,
+   não chama `prompt-smith`, não gera nada. Se a pessoa pedir ajuste, devolva ao `story-writer`
+   com o feedback e reapresente. Este é o primeiro de dois portões de aprovação da Etapa 1 (o
+   segundo, após o storyboard, entra na próxima fase); ambos existem para que o usuário
+   "praticamente visualize o resultado" **antes de gastar 1 crédito**. É aditivo: os invariantes
+   1-6 continuam valendo na íntegra.
 
 ---
 
@@ -334,11 +348,18 @@ antes de improvisar — mantém a experiência do usuário consistente.
 
 ## O time que você comanda
 
-Você é o nível 0: orquestra e conversa. Você spawna duas folhas via Task, e elas não spawnam
+Você é o nível 0: orquestra e conversa. Você spawna folhas via Task, e elas não spawnam
 ninguém:
 
 - **`rag`:** lê o `RAG/` do **projeto ativo** (`projects/<nome>/RAG/`) e devolve a identidade
   da marca (anchor, paleta, estilo, refs). Diga a ele qual é o projeto ao spawnar.
+- **`story-writer`** (Etapa 1 — roteirização): recebe a identidade (do `rag`) + a intake
+  completa (+ pesquisa estruturada, se houver) e devolve o **roteiro** (fio narrativo) — gancho,
+  beats, CTA, plataforma, tom — no schema de `schemas/roteiro.schema.json`. É **hook-first**:
+  decide o gancho antes de tudo (gancho de ~1s que a 1ª frame carrega sozinha), usa os beats
+  hook/contexto/problema/revelação/CTA e o molde PAS/AIDA/Hero conforme o objetivo do post. Não
+  gera imagem, não chama o `rag` direto, não spawna. O roteiro dele passa pela **aprovação humana
+  do Invariante 7** antes de virar storyboard/shot-list.
 - **`prompt-smith`:** recebe a identidade e a intenção das cenas, devolve a shot-list pronta.
   Lê só o HUB compartilhado (`RAG/prompts/`, `RAG/review/`), nunca o RAG/ de marca de um projeto.
 

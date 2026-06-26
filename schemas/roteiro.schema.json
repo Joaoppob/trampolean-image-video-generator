@@ -6,7 +6,7 @@
   "required": ["titulo", "gancho", "desenvolvimento", "cta", "plataforma", "tom"],
   "properties": {
     "titulo": { "type": "string" },
-    "gancho": { "type": "string", "description": "Primeira frase ou imagem. O que prende nos 2s iniciais." },
+    "gancho": { "type": "string", "description": "Primeira frase ou imagem. O que prende em ~1s inicial (a primeira frame carrega sozinha)." },
     "desenvolvimento": {
       "type": "array",
       "minItems": 1,
