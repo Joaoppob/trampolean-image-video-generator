@@ -727,8 +727,9 @@ function checkStoryboardDirectorFase3() {
 }
 
 // v0.5 Etapa 1 — Fase 4: a skill pesquisa-web (vetor de MAIOR risco). Checa:
-//   (a) a skill declara allowed-tools e ele e RESTRITO (so leitura/download; sem
-//       Skill/Task/MCP largo; nenhuma folha ganha web — narrowing preservado);
+//   (a) a skill declara allowed-tools e ele e RESTRITO (web por tools nativas do
+//       harness — WebSearch/WebFetch — + Read; SEM curl/Bash, SEM Skill/Task/MCP
+//       largo; nenhuma folha ganha web — narrowing preservado);
 //   (b) pesquisa.schema.json e valido (JSON + $schema/title) — coberto tambem por
 //       checkSchemas; aqui confirmamos que e USAVEL pelo validador (so keywords suportadas);
 //   (c) TESTE ADVERSARIAL: alimenta o sanitizador com um fixture contendo instrucao
@@ -745,7 +746,9 @@ function checkPesquisaWebFase4() {
     const fm = parseFrontmatter(skillPath);
     const tools = toolList(fm['allowed-tools']);
     const declara = tools.length > 0;
-    // restrito: nenhum tool de orquestracao/acao larga. So leitura/download.
+    // DECISAO DE JB: o backend e tools nativas de web (WebSearch/WebFetch) + fallback, NAO
+    // curl. A skill nao executa shell: sem nenhuma forma de Bash. Restrito: nenhum tool de
+    // orquestracao/acao larga, nenhum Bash (nem curl), nenhuma escrita.
     const proibidos = tools.filter(
       (t) =>
         t === 'Skill' ||
@@ -753,18 +756,21 @@ function checkPesquisaWebFase4() {
         t.startsWith('mcp__') ||
         t === 'Write' ||
         /^Write\(/.test(t) ||
-        t === 'Bash' || // Bash cru (sem narrowing) e largo demais para a skill da web
-        /^Bash\(node/.test(t) // execucao node arbitraria reabriria superficie de escrita
+        t === 'Bash' ||
+        /^Bash\(/.test(t) // QUALQUER forma de Bash (inclui curl) saiu: a web e nativa do harness
     );
-    // a forma de curl tem que ser a narrowed ja autorizada (download -L), nao curl aberto.
-    const temCurlNarrowed = tools.includes('Bash(curl -L:*)');
-    const temCurlAberto = tools.includes('Bash(curl:*)');
-    if (declara && proibidos.length === 0 && temCurlNarrowed && !temCurlAberto) {
-      pass('pesquisa-web declara allowed-tools restrito (Bash(curl -L:*), Read; sem Skill/Task/MCP)');
+    // as web-tools nativas tem que estar presentes; Read para ler material local/colado.
+    const temWebSearch = tools.includes('WebSearch');
+    const temWebFetch = tools.includes('WebFetch');
+    const temRead = tools.includes('Read');
+    // curl NAO pode ser o backend desta skill (saiu do allowed-tools).
+    const temCurl = tools.some((t) => /^Bash\(curl/.test(t));
+    if (declara && proibidos.length === 0 && temWebSearch && temWebFetch && temRead && !temCurl) {
+      pass('pesquisa-web declara allowed-tools restrito (WebSearch, WebFetch, Read; sem curl/Bash/Skill/Task/MCP)');
     } else {
       fail(
-        'pesquisa-web declara allowed-tools restrito (Bash(curl -L:*), Read; sem Skill/Task/MCP)',
-        `tools=${JSON.stringify(tools)} proibidos=${proibidos.join(',')} curlNarrowed=${temCurlNarrowed} curlAberto=${temCurlAberto}`
+        'pesquisa-web declara allowed-tools restrito (WebSearch, WebFetch, Read; sem curl/Bash/Skill/Task/MCP)',
+        `tools=${JSON.stringify(tools)} proibidos=${proibidos.join(',')} webSearch=${temWebSearch} webFetch=${temWebFetch} read=${temRead} curl=${temCurl}`
       );
     }
   }
