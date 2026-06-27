@@ -8,6 +8,81 @@ e só então produz o reel montado.
 > Geração de imagem e vídeo via **Higgsfield**. Montagem via **FFmpeg**.
 > `[uso de IA]` Este produto usa IA para gerar imagens e vídeos.
 
+## Modelos e custos
+
+Há **dois tipos de modelo** aqui, e dois tipos de custo — não confunda:
+
+- O **modelo Claude** que roda o Jotaro (a conversa/orquestração) → custo em **tokens do Claude**.
+- O **modelo Higgsfield** que gera a imagem/vídeo → custo em **créditos do Higgsfield**.
+
+### 1. Modelo Claude recomendado (roda o Jotaro)
+
+| Modelo Claude | Esforço (reasoning) | Roda o Jotaro? |
+|---------------|---------------------|----------------|
+| **Opus** | médio ou superior | ✅ recomendado |
+| **Sonnet** | alto ou superior | ✅ funciona |
+| **Haiku** | — | ❌ sem capacidade de rodar |
+
+A orquestração é pesada (10 gates de qualidade, 4 subagentes, travas mecânicas, controle de
+escopo, retomada de checkpoint). Abaixo do esforço recomendado, o modelo perde o fio, pula etapa
+ou alucina — por isso o Haiku não dá conta e o Sonnet precisa de esforço alto.
+
+### 2. Uso de Claude por fluxo completo (estimativa)
+
+> **Estimativa, não medida.** Varia bastante com o tamanho da conversa, o número de cenas e as
+> retentativas. Base: o system prompt do Jotaro tem ~12k tokens (carregado a cada turno), e um
+> fluxo completo leva ~30–50 turnos + 4 subagentes. A **contagem de tokens é ~igual entre Opus e
+> Sonnet**; o que muda é o preço por token (Opus > Sonnet) e a qualidade da condução. Confira o
+> preço atual na tabela da Anthropic.
+
+| Cenário | Tokens de entrada | Tokens de saída |
+|---------|-------------------|-----------------|
+| **Do absoluto 0** (montar a marca + gerar tudo) | ~1,0–1,5 M | ~60–100 k |
+| **Com as referências prontas** (modo biblioteca) | ~0,7–1,2 M | ~50–80 k |
+
+### 3. Créditos Higgsfield por modelo de geração
+
+Custos **reais** consultados via `higgsfield generate cost` (2026-06-26; são custo-base, podem
+variar com resolução/params e mudar com o tempo — reconfirme com o comando). Exemplo: **reel de 6
+cenas**. "Do absoluto 0" = você gera as 6 imagens (modo geração); "com referências" = imagem 0
+(modo biblioteca, é seleção), só o vídeo conta.
+
+**Modelos de imagem** (custo por imagem · reel de 6, modo geração):
+
+| Modelo | cr/imagem | 6 imagens (do 0) |
+|--------|-----------|------------------|
+| `nano_banana_2` (Nano Banana Pro, **default**) | 2 | 12 |
+| `cinematic_studio_2_5` | 2 | 12 |
+| `nano_banana_flash` | 1,5 | 9 |
+| `nano_banana` | 1 | 6 |
+| `flux_2` | 1 | 6 |
+| `seedream_v4_5` | 1 | 6 |
+| `ms_image` | 0,5 | 3 |
+| `soul_cinematic` | 0,12 | 0,72 |
+| `text2image_soul_v2` (Higgsfield Soul V2) | 0,12 | 0,72 |
+
+**Modelos de vídeo** (custo por clipe 4s · reel de 6 = 6 clipes):
+
+| Modelo | cr/clipe (4s) | 6 clipes |
+|--------|---------------|----------|
+| `veo3_1_lite` (Veo 3.1 Lite, **default free**) | 4 | 24 |
+| `kling3_0` | 8 | 48 |
+| `veo3_1` | 11 | 66 |
+| `seedance_2_0` | 18 | 108 |
+| `cinematic_studio_3_0` | 20 | 120 |
+| `marketing_studio_video` | 20 | 120 |
+
+**Total do fluxo no caminho default** (`nano_banana_2` + `veo3_1_lite`):
+
+| Cenário | Imagem | Vídeo | **Total** |
+|---------|--------|-------|-----------|
+| **Do absoluto 0** (modo geração) | 12 | 24 | **36 créditos** |
+| **Com as referências** (modo biblioteca) | 0 | 24 | **24 créditos** |
+
+> Em modo biblioteca o custo de imagem é **0 com qualquer modelo** (é seleção de asset), então só o
+> modelo de **vídeo** muda o total. No plano free são 10 créditos/dia, então um reel completo sai
+> aos poucos ou num plano pago.
+
 ## Pré-requisitos
 
 1. **Claude Code** instalado, num computador com tela e navegador (o login do Higgsfield abre
