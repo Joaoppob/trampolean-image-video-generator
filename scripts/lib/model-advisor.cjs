@@ -3,6 +3,7 @@
 
 const custos = require('./custos.cjs');
 const parseArgs = require('./parse-args.cjs');
+const catalog = require('./catalog.cjs');
 
 // Data do snapshot do catalogo abaixo (confirmado via `higgsfield model list`).
 // O catalogo e ESTATICO; a verificacao viva e feita por idsObsoletos() alimentado
@@ -211,7 +212,15 @@ function recommendModels(input = {}) {
   const credits = input.credits === undefined || input.credits === null || input.credits === ''
     ? null
     : Number(input.credits);
-  const options = sortOptions(MODELS.filter((model) => model.kind === kind), objective);
+  // Catalogo VIVO: a disponibilidade vem do cache do `higgsfield model list` (nao do
+  // array). O array hardcoded e so a camada EDITORIAL (tradeoffs/custo). Aqui anotamos
+  // cada opcao com `disponivel_no_higgsfield` segundo o catalogo vivo.
+  const repoRoot = input.repoRoot || process.cwd();
+  const cache = catalog.readCache(repoRoot);
+  const live = cache && Array.isArray(cache.models) ? new Set(cache.models.map((m) => String(m.slug).toLowerCase())) : null;
+  const annotate = (m) => Object.assign({ disponivel_no_higgsfield: live ? live.has(String(m.id).toLowerCase()) : null }, m);
+
+  const options = sortOptions(MODELS.filter((model) => model.kind === kind), objective).map(annotate);
   const current = options.find((model) => model.executable_now) || null;
   let recommended = options[0] || null;
   if (plan === 'free' && /free|barat|budget|volume|hook|teste|rapido/.test(String(objective).toLowerCase())) {
@@ -227,7 +236,11 @@ function recommendModels(input = {}) {
   }
   warnings.push('Custos de modelos nao-default sao AC: confirme com higgsfield generate cost antes de prometer preco.');
   warnings.push('Execucao automatica desta versao continua via CLI; modelos nao-default sao decisao informada do usuario antes de integrar rota propria.');
-  warnings.push(`Catalogo abaixo e snapshot de ${CATALOGO_DATA}; rode \`higgsfield model list\` e cruze com idsObsoletos() antes de recomendar um teto pago (ids podem mudar).`);
+  if (live) {
+    warnings.push(`Catalogo VIVO (consultado em ${cache.fetched_at}): disponibilidade vem do Higgsfield real; o array so fornece tradeoff/custo. Opcoes fora do catalogo vivo aparecem com disponivel_no_higgsfield:false.`);
+  } else {
+    warnings.push('Catalogo NAO atualizado nesta sessao (sem cache vivo) — rode `node scripts/refresh-catalog.cjs` para puxar a lista real do Higgsfield. A geracao fica bloqueada ate consultar.');
+  }
 
   const cenas = input.cenas === undefined || input.cenas === null || input.cenas === '' ? null : Number(input.cenas);
   const custo_cenario = cenas !== null
@@ -247,6 +260,8 @@ function recommendModels(input = {}) {
     plan,
     credits,
     catalogo_data: CATALOGO_DATA,
+    catalogo_fonte: live ? 'vivo' : 'hardcoded-fallback',
+    catalogo_fetched_at: cache ? cache.fetched_at : null,
     current_executable_model: current,
     recommended,
     options: options.slice(0, 5),

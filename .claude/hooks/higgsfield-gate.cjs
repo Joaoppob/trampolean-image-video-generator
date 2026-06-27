@@ -48,13 +48,24 @@ function deny(reason) {
 }
 
 // Nucleo puro e testavel: decide allow|deny dado o comando e a raiz do repo.
-// Retorna { decision:'allow'|'deny', reason }.
+// Retorna { decision:'allow'|'deny', reason, stampCatalog?:true }.
 function decide(toolName, command, repoRoot, nowMs) {
   if (toolName !== 'Bash') return { decision: 'allow', reason: 'nao-Bash' };
   const cmd = String(command || '');
+
+  let catalog = null;
+  try { catalog = require(path.join(repoRoot, 'scripts', 'lib', 'catalog.cjs')); } catch (_) { catalog = null; }
+
+  // Consulta de catalogo (`higgsfield model list` / refresh-catalog): carimba o token
+  // "catalogo consultado" e libera. E o passo que destrava a geracao.
+  if (catalog && catalog.CATALOG_QUERY_RE.test(cmd)) {
+    return { decision: 'allow', reason: 'consulta de catalogo', stampCatalog: true };
+  }
+
   if (!SPEND_RE.test(cmd)) return { decision: 'allow', reason: 'nao gasta credito' };
 
-  // Comando de gasto: exige token de gate valido.
+  // Comando de gasto (`higgsfield generate create`): exige (1) gate de qualidade armado
+  // E (2) catalogo consultado nesta sessao. Os dois sao trava mecanica, nao honra.
   let gate;
   try {
     gate = require(path.join(repoRoot, 'scripts', 'preflight-gate.cjs'));
@@ -63,11 +74,22 @@ function decide(toolName, command, repoRoot, nowMs) {
     return { decision: 'allow', reason: `hook degradado: ${e && e.message}` };
   }
   const v = gate.tokenValid(repoRoot, nowMs);
-  if (v.valid) return { decision: 'allow', reason: 'gate armado' };
-  return {
-    decision: 'deny',
-    reason: `Geracao bloqueada pelo gate de qualidade: ${v.reason}. Rode \`node scripts/preflight-gate.cjs --root projects/<nome>\` e passe TODOS os criterios antes de gerar. Isso protege seu credito.`,
-  };
+  if (!v.valid) {
+    return {
+      decision: 'deny',
+      reason: `Geracao bloqueada pelo gate de qualidade: ${v.reason}. Rode \`node scripts/preflight-gate.cjs --root projects/<nome>\` e passe TODOS os criterios antes de gerar.`,
+    };
+  }
+  if (catalog) {
+    const c = catalog.seenFresh(repoRoot, nowMs);
+    if (!c.fresh) {
+      return {
+        decision: 'deny',
+        reason: `Geracao bloqueada: ${c.reason}. Rode \`node scripts/refresh-catalog.cjs\` (consulta os modelos VIVOS do Higgsfield + custo) e APRESENTE as opcoes ao usuario antes de gerar.`,
+      };
+    }
+  }
+  return { decision: 'allow', reason: 'gate armado + catalogo consultado' };
 }
 
 function readStdin() {
@@ -95,6 +117,9 @@ async function main() {
     var command = payload.tool_input && (payload.tool_input.command || payload.tool_input.cmd);
     var repoRoot = process.env.CLAUDE_PROJECT_DIR || payload.cwd || process.cwd();
     var r = decide(toolName, command, repoRoot);
+    if (r.stampCatalog) {
+      try { require(path.join(repoRoot, 'scripts', 'lib', 'catalog.cjs')).stampSeen(repoRoot); } catch (_) { /* noop */ }
+    }
     if (r.decision === 'deny') { deny(r.reason); return; }
     allow();
   } catch (_) {

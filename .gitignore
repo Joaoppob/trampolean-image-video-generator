@@ -35,6 +35,8 @@ tmp/
 .claude/state/.review-cadence.json
 .claude/state/.jotaro-profile.json
 .claude/state/.gate-pass.json
+.claude/state/.catalog-cache.json
+.claude/state/.catalog-seen.json
 .claude/state/*.corrupt-*
 **/*.tmp
 

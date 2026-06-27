@@ -2247,9 +2247,16 @@ function checkHiggsfieldGateHook() {
 
     const goldenAbs = path.join(ROOT, 'RAG', 'prompts', 'exemplo-shotlist-nivel100.json');
     gate.armToken(ROOT, 'projects/x', goldenAbs, gate.sha256File(goldenAbs), ['critique'], new Date().toISOString());
+    // a geracao agora exige TAMBEM o catalogo consultado — carimba o seen para o caso "libera".
+    const catalog = require(path.join(ROOT, 'scripts', 'lib', 'catalog.cjs'));
+    const sp = catalog.seenPath(ROOT);
+    let savedSeen = null;
+    try { if (fs.existsSync(sp)) savedSeen = fs.readFileSync(sp); } catch (_) {}
+    catalog.stampSeen(ROOT, new Date().toISOString());
     const allowed = hook.decide('Bash', 'higgsfield generate create nano_banana_2 --prompt x', ROOT);
     if (allowed.decision === 'allow') pass('hook LIBERA generate create com gate armado');
     else fail('hook libera generate create com gate armado', JSON.stringify(allowed));
+    try { if (savedSeen !== null) fs.writeFileSync(sp, savedSeen); else if (fs.existsSync(sp)) fs.unlinkSync(sp); } catch (_) {}
   } finally {
     try {
       if (saved !== null) fs.writeFileSync(tp, saved);
@@ -3784,7 +3791,7 @@ function checkOnboardingManual() {
     try {
       const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
       const apresenta = /APRESENTE OS MODELOS|apresentar os modelos/i.test(text);
-      const vivo = /higgsfield model list/i.test(text);
+      const vivo = /higgsfield model list|refresh-catalog/i.test(text);
       const custoCenario = /--cenas/.test(text);
       if (apresenta && vivo && custoCenario) pass(`${label}: apresenta modelos na geracao (lista viva + custo por cenario)`);
       else fail(`${label}: apresenta modelos na geracao`, `apresenta=${apresenta} list=${vivo} cenas=${custoCenario}`);
@@ -3907,6 +3914,116 @@ function checkModelAdvisor() {
   const vazio = mod.idsObsoletos('');
   if (vazio.ok === false) pass('model-advisor: idsObsoletos rejeita lista vazia');
   else fail('model-advisor: idsObsoletos rejeita lista vazia', JSON.stringify(vazio));
+}
+
+function checkLiveCatalogEnforcement() {
+  const os = require('os');
+  let catalog;
+  try {
+    catalog = require(path.join(ROOT, 'scripts', 'lib', 'catalog.cjs'));
+  } catch (e) {
+    fail('catalog.cjs loads', e.message);
+    return;
+  }
+  for (const fn of ['parseModelList', 'writeCache', 'readCache', 'stampSeen', 'seenFresh', 'liveSlugs']) {
+    if (typeof catalog[fn] !== 'function') { fail(`catalog exports ${fn}`, typeof catalog[fn]); return; }
+  }
+
+  // 1. parseModelList: linha do CLI -> {slug, display, type}; header e ignorado.
+  const sample = 'JOB SET TYPE                    NAME                            TYPE\n' +
+    'nano_banana_2                   Nano Banana Pro                 image\n' +
+    'veo3_1_lite                     Veo 3.1 Lite                    video\n';
+  const parsed = catalog.parseModelList(sample);
+  if (parsed.length === 2 && parsed[0].slug === 'nano_banana_2' && parsed[0].display === 'Nano Banana Pro' && parsed[1].type === 'video') {
+    pass('catalog.parseModelList parseia a lista do CLI (ignora header)');
+  } else {
+    fail('catalog.parseModelList parseia a lista', JSON.stringify(parsed));
+  }
+
+  // 2-3. cache + seen em repoRoot TEMPORARIO.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cat-test-'));
+  try {
+    catalog.writeCache(tmp, [{ slug: 'nano_banana_2', display: 'Nano Banana Pro', type: 'image' }], new Date().toISOString());
+    const slugs = catalog.liveSlugs(tmp);
+    if (slugs && slugs.has('nano_banana_2')) pass('catalog cache write/read expoe slugs vivos');
+    else fail('catalog cache write/read', JSON.stringify(catalog.readCache(tmp)));
+
+    catalog.stampSeen(tmp, new Date().toISOString());
+    if (catalog.seenFresh(tmp, Date.now()).fresh) pass('catalog seen recem-carimbado e fresco');
+    else fail('catalog seen fresco', JSON.stringify(catalog.seenFresh(tmp, Date.now())));
+
+    const old = new Date(Date.now() - (catalog.SEEN_MAX_AGE_MS + 60000)).toISOString();
+    catalog.stampSeen(tmp, old);
+    if (!catalog.seenFresh(tmp, Date.now()).fresh) pass('catalog seen expira apos a janela');
+    else fail('catalog seen expira', 'deveria expirar');
+
+    // 4. advisor le o catalogo vivo (catalogo_fonte) e anota disponibilidade.
+    const adv = require(path.join(ROOT, 'scripts', 'lib', 'model-advisor.cjs'));
+    catalog.writeCache(tmp, [{ slug: 'nano_banana_2', display: 'Nano Banana Pro', type: 'image' }], new Date().toISOString());
+    const live = adv.recommendModels({ kind: 'image', objetivo: 'reel', repoRoot: tmp });
+    const nb = live.options.find((o) => o.id === 'nano_banana_2');
+    if (live.catalogo_fonte === 'vivo' && nb && nb.disponivel_no_higgsfield === true) {
+      pass('model-advisor le o catalogo VIVO (fonte=vivo + disponibilidade anotada)');
+    } else {
+      fail('model-advisor le o catalogo vivo', JSON.stringify({ fonte: live.catalogo_fonte, nb: nb && nb.disponivel_no_higgsfield }));
+    }
+    const fallback = adv.recommendModels({ kind: 'image', objetivo: 'reel', repoRoot: path.join(tmp, 'sem-cache') });
+    if (fallback.catalogo_fonte === 'hardcoded-fallback') pass('model-advisor avisa fallback hardcoded sem cache vivo');
+    else fail('model-advisor avisa fallback', fallback.catalogo_fonte);
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) { /* noop */ }
+  }
+
+  // 5. Hook: generate create exige gate ARMADO **e** catalogo consultado.
+  let hook;
+  try { hook = require(path.join(ROOT, '.claude', 'hooks', 'higgsfield-gate.cjs')); }
+  catch (e) { fail('higgsfield-gate carrega para teste de catalogo', e.message); return; }
+  const gate = require(path.join(ROOT, 'scripts', 'preflight-gate.cjs'));
+  const gp = gate.tokenPath(ROOT);
+  const sp = catalog.seenPath(ROOT);
+  let savedGate = null; let savedSeen = null;
+  try { if (fs.existsSync(gp)) savedGate = fs.readFileSync(gp); } catch (_) {}
+  try { if (fs.existsSync(sp)) savedSeen = fs.readFileSync(sp); } catch (_) {}
+  try {
+    // detecta consulta de catalogo (carimba)
+    const q = hook.decide('Bash', 'higgsfield model list --image', ROOT);
+    if (q.decision === 'allow' && q.stampCatalog === true) pass('hook reconhece consulta de catalogo (carimba seen)');
+    else fail('hook reconhece consulta de catalogo', JSON.stringify(q));
+
+    // gate armado + catalogo NAO consultado => deny
+    const goldenAbs = path.join(ROOT, 'RAG', 'prompts', 'exemplo-shotlist-nivel100.json');
+    gate.armToken(ROOT, 'projects/x', goldenAbs, gate.sha256File(goldenAbs), ['critique'], new Date().toISOString());
+    try { fs.unlinkSync(sp); } catch (_) {}
+    const d1 = hook.decide('Bash', 'higgsfield generate create veo3_1_lite', ROOT);
+    if (d1.decision === 'deny' && /catalogo/i.test(d1.reason)) pass('hook BLOQUEIA generate sem catalogo consultado (mesmo com gate armado)');
+    else fail('hook bloqueia generate sem catalogo', JSON.stringify(d1));
+
+    // gate armado + catalogo consultado => allow
+    catalog.stampSeen(ROOT, new Date().toISOString());
+    const d2 = hook.decide('Bash', 'higgsfield generate create veo3_1_lite', ROOT);
+    if (d2.decision === 'allow') pass('hook LIBERA generate com gate armado + catalogo consultado');
+    else fail('hook libera generate com gate + catalogo', JSON.stringify(d2));
+  } finally {
+    try { if (savedGate !== null) fs.writeFileSync(gp, savedGate); else gate.clearToken(ROOT); } catch (_) {}
+    try { if (savedSeen !== null) fs.writeFileSync(sp, savedSeen); else { if (fs.existsSync(sp)) fs.unlinkSync(sp); } } catch (_) {}
+  }
+
+  // 6. refresh-catalog.cjs carrega.
+  try {
+    require(path.join(ROOT, 'scripts', 'refresh-catalog.cjs'));
+    pass('refresh-catalog.cjs carrega');
+  } catch (e) {
+    fail('refresh-catalog.cjs carrega', e.message);
+  }
+
+  // 7. Docs wired.
+  for (const [label, rel] of [['gerarvideo', '.claude/commands/gerarvideo.md'], ['gerarimagem', '.claude/commands/gerarimagem.md']]) {
+    try {
+      const t = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      if (/refresh-catalog\.cjs/.test(t)) pass(`${label} usa refresh-catalog (catalogo vivo)`);
+      else fail(`${label} usa refresh-catalog`, 'ausente');
+    } catch (e) { fail(`${label} refresh-catalog`, e.message); }
+  }
 }
 
 function checkRawSymlinkHardening() {
@@ -4573,6 +4690,7 @@ checkRoteiroCommand();
 checkRawIngest();
 checkRawSymlinkHardening();
 checkModelAdvisor();
+checkLiveCatalogEnforcement();
 checkRawIngestRecursive();
 checkImportaCommand();
 checkRawSkeletonAndScope();

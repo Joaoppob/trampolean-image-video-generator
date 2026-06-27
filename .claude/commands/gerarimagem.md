@@ -51,17 +51,24 @@ verdade. A moldura: *"Show, agora que vamos gerar a imagem mesmo, essas são as 
 Higgsfield — **X créditos** nessa, **Y** naquela — qual você prefere?"* Passo **obrigatório e
 explícito**: mostre as opções e o custo de cada uma ANTES de escolher; não decida por ele.
 
-1. **Catálogo vivo** (o que está REALMENTE disponível na conta agora):
+1. **Catálogo VIVO** (consulta o Higgsfield real + destrava a geração). **Obrigatório por
+   trava**: o hook bloqueia `higgsfield generate create` enquanto o catálogo não tiver sido
+   consultado nesta sessão. Rode:
 
    ```bash
-   higgsfield model list --image
+   node scripts/refresh-catalog.cjs
    ```
 
-2. **Parecer + custo por cenário** (real pro default; AC pros pagos) — passe o nº de imagens:
+   Puxa a lista real, atualiza o cache (sem hardcode) e carimba o token de consulta.
+
+2. **Parecer + custo por cenário** (lê o catálogo vivo; real pro default, AC pros pagos):
 
    ```bash
    node scripts/lib/model-advisor.cjs image --objetivo "<resumo-da-imagem>" --plano "<plano>" --saldo "<creditos>" --cenas <N> --modo <biblioteca|geracao>
    ```
+
+   Traz `catalogo_fonte: "vivo"` e marca cada opção com `disponivel_no_higgsfield`. Não ofereça
+   opção que não esteja no catálogo vivo.
 
 Apresente a tabela com o tradeoff honesto: `nano_banana_2` ("Nano Banana Pro") é o executável
 agora via CLI, custo fixo; opções como `soul_cinematic`, `cinematic_studio_2_5`,

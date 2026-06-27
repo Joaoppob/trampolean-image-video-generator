@@ -222,11 +222,16 @@ Com `--cenas N` ele dá o **custo por cenario** (reel de N cenas): real e fixo p
 (imagem geracao = N×2, biblioteca = 0, video = N×4), e `AC × N` pros pagos — **nunca inventa
 preco**: confirme com `higgsfield generate cost` antes de prometer.
 
-**Catalogo é snapshot datado (`catalogo_data`), nao vivo em runtime.** Antes de recomendar um
-teto pago, cruze com o catalogo real: rode `higgsfield model list --image > /tmp/live.txt` e
-`node scripts/lib/model-advisor.cjs --verificar-catalogo /tmp/live.txt` — ele lista ids do
-catalogo que sumiram do Higgsfield (obsolescencia). Confirmado 2026-06-26: o slug **`nano_banana_2`
-= "Nano Banana Pro"** (NAO confunda com `nano_banana_flash`, cujo display é o enganoso "Nano Banana 2").
+**Catálogo VIVO + trava de consulta (não hardcoded, e obrigatório antes de gerar).** O catálogo
+apresentado vem do Higgsfield REAL: rode `node scripts/refresh-catalog.cjs` — ele puxa
+`higgsfield model list --image/--video`, atualiza o cache (`.claude/state/.catalog-cache.json`)
+que o advisor lê, e **carimba o token de consulta**. O array no `model-advisor.cjs` é só a camada
+editorial (tradeoff/custo); a **disponibilidade** vem do catálogo vivo (`disponivel_no_higgsfield`).
+**Isto não é honra: é trava.** O hook `higgsfield-gate.cjs` BLOQUEIA `higgsfield generate create`
+enquanto o catálogo não tiver sido consultado nesta sessão — assim como já exige o gate de
+qualidade armado. Confirmado 2026-06-26: o slug **`nano_banana_2` = "Nano Banana Pro"** (NÃO
+confunda com `nano_banana_flash`, cujo display é o enganoso "Nano Banana 2"). Para auditar
+obsolescência: `node scripts/lib/model-advisor.cjs --verificar-catalogo <saida-do-model-list>`.
 
 ### Estrutura do prompt (Wave G)
 ### Consistencia de estilo entre cenas (Wave F)
