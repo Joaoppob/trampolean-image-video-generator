@@ -3734,6 +3734,66 @@ function checkLedgerNotContaminated() {
 // Risco 3 (Smaug): HUB contaminado com conteudo de marca. Nenhum traco distintivo
 // do anchor de um projeto ATIVO pode aparecer nos arquivos do HUB (que sao
 // brand-agnostic). Reusa a ideia do distinctiveTokens do checkAnchorTraits.
+function checkOnboardingManual() {
+  // 1. O manual canonico existe e cobre as 4 etapas + a nota de modelos-na-geracao.
+  let onb;
+  try {
+    onb = fs.readFileSync(path.join(ROOT, 'Onboarding.md'), 'utf8');
+  } catch (e) {
+    fail('Onboarding.md existe', e.message);
+    return;
+  }
+  const cobre = [
+    ['setup primeiro (Passo 0)', /passo\s*0/i, /setup\s+primeiro|prioridade\s+(zero|absoluta)/i],
+    ['analisa projetos', /prestart\.cjs/, /elenco|projetos/i],
+    ['analisa Raw', /\/importa|\bRaw\b/, /material|raw/i],
+    ['conduz passo a passo', /passo a passo|etapa a etapa|guie/i, /reel|resultado/i],
+    ['modelos sao na geracao, nao na abertura', /model/i, /hora de gerar|momento da geração|momento da geracao|nao na abertura|não na abertura/i],
+  ];
+  for (const [label, a, b] of cobre) {
+    if (a.test(onb) && b.test(onb)) pass(`Onboarding.md cobre: ${label}`);
+    else fail(`Onboarding.md cobre: ${label}`, `a=${a.test(onb)} b=${b.test(onb)}`);
+  }
+
+  // 2. Wiring: CLAUDE.md aponta pro manual + setup-first; sem o antigo "nao trave por setup".
+  try {
+    const claude = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8');
+    if (/Onboarding\.md/.test(claude)) pass('CLAUDE.md referencia Onboarding.md');
+    else fail('CLAUDE.md referencia Onboarding.md', 'ausente');
+    if (/setup primeiro|prioridade zero|SETUP PRIMEIRO/i.test(claude)) pass('CLAUDE.md eleva setup-first no onboarding');
+    else fail('CLAUDE.md eleva setup-first', 'ausente');
+  } catch (e) {
+    fail('CLAUDE.md onboarding wiring', e.message);
+  }
+
+  // 3. /inicio alinhado a setup-first (sem o antigo "Nao trave por setup faltando").
+  try {
+    const inicio = fs.readFileSync(path.join(ROOT, '.claude', 'commands', 'inicio.md'), 'utf8');
+    if (/setup primeiro|prioridade zero|SETUP PRIMEIRO/i.test(inicio) && !/n[aã]o trave por setup faltando/i.test(inicio)) {
+      pass('inicio.md alinhado a setup-first');
+    } else {
+      fail('inicio.md alinhado a setup-first', 'ainda diz "nao trave por setup" ou falta setup-first');
+    }
+  } catch (e) {
+    fail('inicio.md setup-first', e.message);
+  }
+
+  // 4. Apresentacao de modelos NA GERACAO: gerarvideo + gerarimagem apresentam modelos
+  //    (catalogo vivo via model list + custo por cenario via --cenas).
+  for (const [label, rel] of [['gerarvideo', '.claude/commands/gerarvideo.md'], ['gerarimagem', '.claude/commands/gerarimagem.md']]) {
+    try {
+      const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      const apresenta = /APRESENTE OS MODELOS|apresentar os modelos/i.test(text);
+      const vivo = /higgsfield model list/i.test(text);
+      const custoCenario = /--cenas/.test(text);
+      if (apresenta && vivo && custoCenario) pass(`${label}: apresenta modelos na geracao (lista viva + custo por cenario)`);
+      else fail(`${label}: apresenta modelos na geracao`, `apresenta=${apresenta} list=${vivo} cenas=${custoCenario}`);
+    } catch (e) {
+      fail(`${label}: apresenta modelos`, e.message);
+    }
+  }
+}
+
 function checkHubBrandAgnostic() {
   const STOP = new Set([
     'same', 'from', 'the', 'with', 'and', 'character', 'reference', 'images', 'image',
@@ -4576,6 +4636,7 @@ checkTemplates();
 checkPipelineStateProjectIsolation();
 checkLedgerNotContaminated();
 checkHubBrandAgnostic();
+checkOnboardingManual();
 checkPipelineStateSalvage();
 checkLedgerCorruptionWarning();
 checkVeo3GateDocumented();

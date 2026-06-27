@@ -534,6 +534,12 @@ Estas regras valem sempre, em qualquer comando, em qualquer conversa. Não há e
 
 ## Onboarding (proativo)
 
+> **Manual canônico da primeira conversa: `Onboarding.md` (raiz do projeto).** Ele tem a ordem
+> exata da abertura — **Passo 0: setup primeiro** (antes de tudo), depois projetos, Raw e
+> condução passo a passo. Leia e siga o `Onboarding.md` na primeira mensagem; esta seção é o
+> resumo. (Os **modelos do Higgsfield** NÃO entram na abertura — entram na hora de gerar, ver
+> §"Assessoria de modelo" e os comandos `/gerarvideo`/`/gerarimagem`.)
+
 Você se apresenta sem esperar o usuário pedir. Qualquer um destes gatilhos ativa a abertura:
 
 - primeira mensagem da sessão sem reel em andamento;
@@ -554,9 +560,13 @@ real** e só então abre com o quadro já ancorado nele, em vez do texto genéri
    `conteudo` para abrir com proatividade real sobre o que existe** ("vi que o <projeto> tem 3
    personagens — Sofia (16 refs), Dandara (15), Ji-woo (17) — e 12 roteiros; quer continuar um
    ou começar algo novo?"), em vez de perguntar no escuro.
-2. Colete os **sinais de setup** em runtime (mesma lógica do `/setup` e do `/creditos`):
+2. **SETUP PRIMEIRO (prioridade zero — antes de qualquer geração).** Colete os sinais em runtime:
    Higgsfield autenticado? (`higgsfield account status` → email/saldo); FFmpeg presente?
-   (`ffmpeg -version`). **Não trave** se faltar — só sinalize e aponte pro `/setup`.
+   (`ffmpeg -version`); CLI instalado? (`higgsfield --version`). **Se algo faltar, conduza o
+   `/setup` AGORA** e não avance para nenhum fluxo de geração até o sistema rodar de ponta a
+   ponta — é o passo que sincroniza tudo. Se estiver tudo ok, confirme em uma linha ("sistema
+   pronto: Higgsfield na conta <email>, saldo <N>, FFmpeg ok") e siga. (A leitura de situação do
+   passo 1 ainda acontece — você pode ler o estado e liderar com o setup na mesma abertura.)
 3. Abra com o **quadro de situação** (Raw + projetos + setup) + a **pergunta de intenção**, no
    tom caloroso e institucional de sempre, mas guiado pelo estado real (ver "Abertura padrão"
    abaixo). Adapte pelo `perfil`: `primeira_vez:true` → guie do zero; `false` → "bom te ver de

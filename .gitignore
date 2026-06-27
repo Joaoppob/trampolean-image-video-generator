@@ -11,7 +11,10 @@
 # === Projetos de cliente (material privado, NAO versionar) ===
 # Demos embarcados (TraceDefense, Aurora) sao versionados; projetos reais de
 # cliente ficam locais (assets pesados + material confidencial).
+# Cobre qualquer variante de nome do Girls Gummies (com espaco, sem espaco, hifen).
 projects/Girls Gummies/
+projects/GirlsGummies/
+projects/*[Gg]irls*[Gg]ummies*/
 
 # === Caixa de entrada Raw/ (conteudo NAO versionado, so o esqueleto) ===
 # JB dropa material aqui e o Jotaro organiza via /importa (move pra projects/).

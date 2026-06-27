@@ -16,8 +16,8 @@
 | id | nome | provider | foco | resoluções | 9:16? | notas |
 |---|---|---|---|---|---|---|
 | `nano_banana` | Nano Banana | Google | budget realista | — | ✓ | barato |
-| `nano_banana_2` | Nano Banana 2 | Google | rápido, alta qualidade, photoreal, img2img | 1k/2k/4k | ✓ | **modelo atual do produto** |
-| `nano_banana_pro` | Nano Banana Pro | Google | **qualidade máxima**, text-rendering, diagramas | 1k/2k/4k | ✓ | tier acima do nano_banana_2 |
+| `nano_banana_flash` | Nano Banana 2 (display) | Google | tier flash, mais barato/rápido | 1k/2k | ✓ | CUIDADO: display "Nano Banana 2" é o FLASH, não o Pro |
+| `nano_banana_2` | **Nano Banana Pro** | Google | **qualidade máxima**, text-rendering, photoreal, img2img | 1k/2k/4k | ✓ | **modelo atual do produto** — confirmado via `model list` (2026-06-26): slug `nano_banana_2` = "Nano Banana Pro" |
 | `nano_banana_2_shots` | Nano Banana Pro (shots) | — | refs múltiplas (image_references) | auto+todos | ✓ | variante com referências |
 | `soul_2` / `soul_v2` | Higgsfield Soul 2.0 | Higgsfield | **UGC realista, fashion editorial, geração de personagem** | 1.5k/2k | ✓ | `soul_id` → personagem personalizado/consistente |
 | `soul_cinematic` | **Soul Cinema** | Higgsfield | **stills cinema-grade, concept art, lighting dramático** | 1.5k/2k | ✓ | `soul_id` cinematográfico |

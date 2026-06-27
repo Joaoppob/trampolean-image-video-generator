@@ -10,9 +10,10 @@ no genérico, você primeiro **olha o estado real** — o que tem no `Raw/`, qua
 se o setup está pronto — e só então monta um **quadro de situação** e pergunta a intenção da
 sessão. É orientação pura: **nada de geração, nada de custo aqui**.
 
-Esta é a mesma leitura que roda **automática na primeira mensagem da sessão** (ver a seção
-"Onboarding (proativo)" do CLAUDE.md); o `/inicio` existe pra **re-rodar** isso quando a pessoa
-quiser um novo panorama.
+Esta é a mesma leitura que roda **automática na primeira mensagem da sessão** (ver o manual
+canônico `Onboarding.md` na raiz + a seção "Onboarding (proativo)" do CLAUDE.md); o `/inicio`
+existe pra **re-rodar** isso quando a pessoa quiser um novo panorama. **O Passo 0 do onboarding
+é o `/setup`** (prioridade zero — ver abaixo).
 
 ## Fluxo
 
@@ -58,16 +59,20 @@ um deles ou começar algo novo?". É o exemplo canônico da proatividade que a m
 
 Este script é **puro** (só filesystem, sem rede). Os sinais de **setup** vêm no passo 2.
 
-### 2. Sinais de setup (runtime — não trava se faltar)
+### 2. SETUP PRIMEIRO (prioridade zero — antes de qualquer geração)
 
 Colete os sinais que dependem de ambiente/rede, com a mesma lógica do `/setup` e do `/creditos`.
-**Não bloqueie** se algo faltar — só sinalize no quadro e aponte pro `/setup`:
+Este é o **Passo 0 do onboarding**: garantir que o sistema roda de ponta a ponta antes de gerar.
 
 - **Higgsfield autenticado?** Rode `higgsfield account status`. Se vier email/plano/créditos, a
   auth está ok e você já sabe o **saldo** (a conta que vai pagar). Se vier "Not authenticated"
-  ou erro, marque o setup como **pendente** e aponte pro `/setup` (passo 1: `higgsfield auth login`).
+  ou erro, **conduza o `/setup` AGORA** (passo 1: `higgsfield auth login`).
 - **FFmpeg presente?** Rode `ffmpeg -version` (no Windows também serve `where ffmpeg`). Se
-  responder, ok; se não, marque como **pendente** e aponte pro `/setup` (passo 2).
+  responder, ok; se não, **conduza o `/setup`** (passo 2).
+
+**Regra:** se algo do setup faltar, resolva-o (via `/setup`) **antes de avançar para qualquer
+fluxo de geração** — não gere no escuro. A leitura de situação (passo 1) sempre acontece, mas o
+setup lidera. Se estiver tudo ok, confirme numa linha ("sistema pronto: <email>, saldo <N>, FFmpeg ok").
 
 Estes sinais **não** entram no `prestart.cjs` de propósito (ele é puro/testável sem rede). O
 quadro final é a soma do JSON do passo 1 com o que você coletou aqui.
@@ -114,8 +119,10 @@ de custo) no caminho.
 
 ## Regras
 
+- **Setup primeiro.** O `/setup` é a prioridade zero do onboarding: garanta o sistema pronto
+  (Higgsfield + FFmpeg) antes de qualquer fluxo de geração. A leitura de situação sempre acontece,
+  mas o setup lidera.
 - **Estado primeiro, pergunta depois.** Leia (`prestart.cjs` + sinais de setup) antes de oferecer.
-- **Nada de geração nem custo aqui.** `/inicio` é orientação; quem gera são os comandos de produção.
-- **Não trave por setup faltando.** Sinalize e aponte pro `/setup`; a leitura de situação sempre
-  acontece.
+- **Nada de geração nem custo aqui.** `/inicio` é orientação; quem gera são os comandos de produção
+  (e é lá, na hora de gerar, que os **modelos do Higgsfield** são apresentados — não aqui).
 - **Sempre feche com uma pergunta.** A regra de ouro do Jotaro vale aqui também.

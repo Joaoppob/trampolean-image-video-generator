@@ -66,19 +66,41 @@ legenda no fim), faça **até 3 perguntas específicas** antes de gerar:
 
 > "Eu entendi que você quer [o que entendeu], mas preciso de mais clareza: [perguntas]"
 
-## Passo 4: preflight do custo total
+## Passo 4: APRESENTE OS MODELOS e faça o preflight de custo
 
-Antes do preflight, rode a assessoria de modelo e mostre a tabela de modelos/opcoes ao usuario:
+**Este é o momento de apresentar os modelos ao usuário** — não na abertura, e sim agora, que
+o roteiro e o storyboard já estão aprovados e a gente vai gastar crédito de verdade. A moldura
+é exatamente essa: *"Show, agora que vamos gerar o vídeo mesmo, essas são as opções disponíveis
+no Higgsfield pra imagem e pra vídeo — **X créditos** nessa, **Y** naquela — qual você prefere?"*
 
-```bash
-node scripts/lib/model-advisor.cjs video --objetivo "<resumo-do-reel>" --plano "<plano-do-account-status>" --saldo "<creditos-do-account-status>"
-```
+É um passo **obrigatório e explícito**: o usuário precisa ver as opções e o custo de cada uma
+ANTES de escolher. Não pule, não decida por ele.
 
-Explique o tradeoff: `veo3_1_lite` e o modelo executavel agora no CLI/free; `veo3_1`,
-`cinematic_studio_3_0`, `seedance_2_0`, `kling3_0` e `marketing_studio_video` elevam teto ou
-controle conforme o objetivo, mas custo/plano sao AC e precisam de `higgsfield generate cost`
-antes de prometer preco. Se o usuario quiser seguir agora no fluxo atual, o preflight abaixo
-continua calculando o default CLI.
+1. **Catálogo vivo** (o que está REALMENTE disponível na conta agora) — imagem e vídeo:
+
+   ```bash
+   higgsfield model list --image
+   higgsfield model list --video
+   ```
+
+2. **Parecer + custo por cenário** (real pro default; AC pros pagos) — passe o nº de cenas:
+
+   ```bash
+   node scripts/lib/model-advisor.cjs image --objetivo "<resumo-do-reel>" --plano "<plano>" --saldo "<creditos>" --cenas <N> --modo <biblioteca|geracao>
+   node scripts/lib/model-advisor.cjs video --objetivo "<resumo-do-reel>" --plano "<plano>" --saldo "<creditos>" --cenas <N>
+   ```
+
+Apresente a tabela ao usuário com o tradeoff honesto: `nano_banana_2` ("Nano Banana Pro",
+imagem) e `veo3_1_lite` ("Veo 3.1 Lite", vídeo) são os executáveis agora no CLI/free, com
+custo fixo; `veo3_1`, `cinematic_studio_3_0`, `seedance_2_0`, `kling3_0`,
+`marketing_studio_video` (e os tetos de imagem como `soul_cinematic`/`cinematic_studio_2_5`)
+elevam qualidade/controle, mas custo/plano são **AC** — **nunca invente preço: confirme com
+`higgsfield generate cost <modelo> ...` antes de prometer**. Diga o **custo por cenário** de
+cada opção viável e **deixe o usuário escolher**. Se ele seguir no default, o preflight abaixo
+calcula o custo do fluxo atual.
+
+> Cruze sempre com o catálogo vivo: se um id do parecer não aparecer no `model list`, ele pode
+> ter mudado — confira com `node scripts/lib/model-advisor.cjs --verificar-catalogo <saida-do-list>`.
 
 Rode `higgsfield-preflight` para o número de cenas do reel. Ele calcula o custo total:
 cada cena = 1 imagem (2 créditos) + 1 vídeo (4 créditos) = 6 créditos por cena. Um reel de 6

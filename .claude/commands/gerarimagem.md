@@ -44,18 +44,31 @@ Se a descrição da cena não deixa claro o que mostrar (personagem, ação, cen
 
 Não gere no escuro. Espere as respostas.
 
-## Passo 3: preflight de custo
+## Passo 3: APRESENTE OS MODELOS e faça o preflight de custo
 
-Antes do preflight, rode a assessoria de modelo e mostre a tabela de modelos/opcoes ao usuario:
+**Este é o momento de apresentar os modelos ao usuário** — agora que a gente vai gerar de
+verdade. A moldura: *"Show, agora que vamos gerar a imagem mesmo, essas são as opções no
+Higgsfield — **X créditos** nessa, **Y** naquela — qual você prefere?"* Passo **obrigatório e
+explícito**: mostre as opções e o custo de cada uma ANTES de escolher; não decida por ele.
 
-```bash
-node scripts/lib/model-advisor.cjs image --objetivo "<resumo-da-imagem>" --plano "<plano-do-account-status>" --saldo "<creditos-do-account-status>"
-```
+1. **Catálogo vivo** (o que está REALMENTE disponível na conta agora):
 
-Explique o tradeoff: `nano_banana_2` e o modelo executavel agora via CLI; opcoes como
-`nano_banana_pro`, `soul_cinematic`, `cinematic_studio_2_5` ou `ms_image` podem elevar o teto,
-mas custo/plano sao AC e precisam de `higgsfield generate cost` antes de prometer preco. Se o
-usuario quiser seguir agora no fluxo atual, o preflight abaixo continua calculando o default CLI.
+   ```bash
+   higgsfield model list --image
+   ```
+
+2. **Parecer + custo por cenário** (real pro default; AC pros pagos) — passe o nº de imagens:
+
+   ```bash
+   node scripts/lib/model-advisor.cjs image --objetivo "<resumo-da-imagem>" --plano "<plano>" --saldo "<creditos>" --cenas <N> --modo <biblioteca|geracao>
+   ```
+
+Apresente a tabela com o tradeoff honesto: `nano_banana_2` ("Nano Banana Pro") é o executável
+agora via CLI, custo fixo; opções como `soul_cinematic`, `cinematic_studio_2_5`,
+`text2image_soul_v2` ou `ms_image` podem elevar o teto, mas custo/plano são **AC** — **nunca
+invente preço: confirme com `higgsfield generate cost <modelo> ...`**. Diga o **custo por
+cenário** de cada opção e **deixe o usuário escolher**. Em modo biblioteca a imagem custa 0
+(seleção de asset). Se ele seguir no default, o preflight abaixo calcula o custo do fluxo atual.
 
 Rode `higgsfield-preflight` para o número de imagens que vai gerar, **com `--com-video false`**
 (cada imagem = 2 créditos; não inclua custo de vídeo neste comando).
