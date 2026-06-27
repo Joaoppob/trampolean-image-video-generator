@@ -27,18 +27,29 @@ A orquestração é pesada (10 gates de qualidade, 4 subagentes, travas mecânic
 escopo, retomada de checkpoint). Abaixo do esforço recomendado, o modelo perde o fio, pula etapa
 ou alucina — por isso o Haiku não dá conta e o Sonnet precisa de esforço alto.
 
-### 2. Uso de Claude por fluxo completo (estimativa)
+### 2. Uso de Claude por escopo de tarefa (estimativa)
 
-> **Estimativa, não medida.** Varia bastante com o tamanho da conversa, o número de cenas e as
-> retentativas. Base: o system prompt do Jotaro tem ~12k tokens (carregado a cada turno), e um
-> fluxo completo leva ~30–50 turnos + 4 subagentes. A **contagem de tokens é ~igual entre Opus e
-> Sonnet**; o que muda é o preço por token (Opus > Sonnet) e a qualidade da condução. Confira o
-> preço atual na tabela da Anthropic.
+> **Estimativa, não medida.** O número de turnos — e portanto de tokens — varia MUITO com o
+> escopo: uma imagem única com a marca pronta sai em poucos turnos; um reel completo do zero, com
+> enredo elaborado e vários personagens, é outra ordem de grandeza. Base: o system prompt do
+> Jotaro tem ~12k tokens (carregado a cada turno) e cada etapa de roteiro/storyboard spawna um
+> subagente. A **contagem é ~igual entre Opus e Sonnet**; muda o preço por token (Opus > Sonnet) e
+> a qualidade da condução. Confira o preço atual na tabela da Anthropic.
 
-| Cenário | Tokens de entrada | Tokens de saída |
-|---------|-------------------|-----------------|
-| **Do absoluto 0** (montar a marca + gerar tudo) | ~1,0–1,5 M | ~60–100 k |
-| **Com as referências prontas** (modo biblioteca) | ~0,7–1,2 M | ~50–80 k |
+| Cenário | Turnos (~) | Tokens entrada (~) | Tokens saída (~) |
+|---------|-----------|--------------------|-------------------|
+| **Imagem única** — marca pronta, sem roteiro (`/gerarimagem`) | 5–10 | ~120–300 k | ~8–20 k |
+| **Clipe de vídeo único** — marca pronta (imagem → animação) | 8–15 | ~200–450 k | ~12–30 k |
+| **Reel curto (3 cenas)** — com refs, modo biblioteca | 15–25 | ~0,4–0,8 M | ~30–55 k |
+| **Reel completo (6 cenas)** — com refs, modo biblioteca | 25–40 | ~0,7–1,2 M | ~50–80 k |
+| **Reel completo (6 cenas)** — do absoluto 0 (montar marca + gerar) | 35–55 | ~1,0–1,5 M | ~60–100 k |
+
+**O que move o número** (some/multiplique conforme o seu caso): quanto de **enredo/storytelling**
+e quantas idas-e-voltas no roteiro e no storyboard (cada revisão = mais turnos); **quantos
+personagens** (mais identidade/persona pra carregar); **quantas cenas**; **retentativas** de
+geração quando um gate reprova ou você quer regerar; e se é **do zero** (montar a marca, autorar o
+RAG) ou **com tudo pronto**. Um pedido enxuto ("gera essa imagem") fica na ponta de baixo; uma
+campanha caprichada com vários personagens e muito ajuste de roteiro, na ponta de cima — ou acima.
 
 ### 3. Créditos Higgsfield por modelo de geração
 
