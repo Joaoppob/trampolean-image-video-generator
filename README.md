@@ -83,6 +83,38 @@ sistema.
 
 Só com os dois "sim" a produção começa.
 
+## Travas antes do crédito (não é honra, é trava)
+
+Além dos dois portões humanos, a produção passa por **gates mecânicos** que protegem o seu
+crédito e a qualidade. Eles não são sugestão: um **hook** do Claude Code bloqueia de verdade a
+geração se algum não passar.
+
+- **Gate de qualidade nível-100 (10 verificações).** Antes de gastar 1 crédito, a shot-list passa
+  por 10 gates determinísticos — identidade por personagem, cinematografia, consistência de estilo,
+  estrutura do prompt, narrativa (hook/clímax/ritmo), variedade de ângulos, traços do anchor,
+  fidelidade de persona, disciplina de negative prompt e a crítica anti-IA. Só se **todos** passam
+  é que a geração é liberada (o `scripts/preflight-gate.cjs` "arma" a liberação; o hook
+  `higgsfield-gate.cjs` bloqueia `higgsfield generate create` sem isso). Editou a shot-list depois?
+  A liberação cai e é preciso rearmar. A referência de uma shot-list que passa tudo é
+  `RAG/prompts/exemplo-shotlist-nivel100.json`.
+- **Catálogo de modelos VIVO, consultado antes de gerar.** Na hora de gerar, o Jotaro consulta o
+  catálogo **real** do Higgsfield (`scripts/refresh-catalog.cjs` → `higgsfield model list`), te
+  apresenta as opções de imagem e vídeo **com o custo de cada uma** ("essas são as opções, X
+  créditos nessa, Y naquela"), e você escolhe. O hook também **bloqueia a geração** se o catálogo
+  não foi consultado nesta sessão — assim você nunca gera às cegas sobre os modelos disponíveis.
+- **Pós-produção automática (Wave K).** O reel final passa por color grading, grão de filme sutil e
+  re-crop deliberado no FFmpeg — o acabamento que tira a "cara de barato" da IA.
+- **Crítica pós-render.** Depois de gerar, o still/clipe real é pontuado nos eixos anti-IA (física,
+  textura, estabilidade, continuidade); se houver um tell forte, o Jotaro propõe regerar a cena.
+
+## Primeira conversa (o Jotaro é proativo)
+
+Na primeira mensagem, o Jotaro segue um manual de abertura (`Onboarding.md`): **Passo 0 é o
+`/setup`** (garantir Higgsfield + FFmpeg prontos, de ponta a ponta, antes de qualquer coisa);
+depois ele **analisa os projetos** e te diz o que existe (elenco com contagem de refs, roteiros
+salvos), **analisa o Raw** e sugere o `/importa`, e te conduz passo a passo até o reel. Ele não
+pergunta no escuro: lê o estado real e abre já ancorado nele.
+
 ## Onde colocar suas imagens
 
 Cada marca ou campanha vive numa pasta própria em `projects/<nome>/`. Para começar, copie um
@@ -92,15 +124,29 @@ para `projects/<seu-projeto>/`:
 ```
 projects/<seu-projeto>/
   RAG/
-    identidade-visual/   ← coloque aqui 1 a 4 imagens do seu personagem/produto
+    identidade-visual/   ← as imagens de referência (ver os dois modos abaixo)
+    personas/            ← (opcional) dossiê de persona por personagem: nome.md
     marca.md             ← descreva sua marca (nome, anchor, estilo, paleta)
     narrativa.md         ← a história e o tom
-  project.json           ← { nome, tipo_marca, status: "ativo" }
+  project.json           ← { nome, tipo_marca, modo_visual, status: "ativo" }
 ```
 
-As imagens de referência são o que mantém a cara igual em todas as cenas. Há um projeto demo
-pronto em `projects/TraceDefense/` (o mago do jogo Trace Defense) pra você ver como fica.
-Detalhes em `templates/README.md` e `projects/README.md`.
+As imagens de referência são o que mantém a cara igual em todas as cenas. O gerador trabalha em
+**dois modos**, e detecta sozinho em qual está:
+
+- **Modo geração** (sujeito único, ex.: o mago): você coloca as imagens soltas em
+  `identidade-visual/`. Cada cena é **gerada** via Higgsfield, condicionada por essas refs.
+- **Modo biblioteca** (asset-first, marca com elenco recorrente): você cria uma **subpasta por
+  personagem** — `identidade-visual/sofia/`, `identidade-visual/dandara/`, ... — com a biblioteca
+  de cada um (quantas refs quiser, não há teto). Aí cada cena **seleciona** o melhor asset
+  existente da personagem certa em vez de gerar: **consistência perfeita e custo de imagem zero**.
+  Quando a marca tem persona declarada (`RAG/personas/<personagem>.md` com personalidade, mundo,
+  voz), o gerador também cobra que cada cena de geração carregue os traços de **personalidade**,
+  não só o rosto.
+
+Há **dois demos rodáveis** embarcados: `projects/TraceDefense/` (o mago, sujeito único, modo
+geração) e `projects/Aurora/` (um trio de personagens, modo biblioteca, com dossiês de persona)
+pra você ver os dois caminhos. Detalhes em `templates/README.md` e `projects/README.md`.
 
 ### Importar material solto (`/importa`)
 
@@ -254,9 +300,9 @@ flowchart TD
 |-------|--------|-------|
 | `pesquisa-web` | Busca referências externas na web (opcional, Etapa 1). Devolve saída estruturada e inerte (`schemas/pesquisa.schema.json`), tratada como dado, nunca como instrução. | 0 |
 | `higgsfield-preflight` | Lê saldo/plano via `higgsfield account status` e calcula se o run cabe no crédito antes de gerar. | 0 |
-| `gera-imagem` | Gera imagens 9:16 com referências da marca usando `nano_banana_2` (CLI). | 2 cr |
+| `gera-imagem` | **Modo biblioteca:** seleciona e copia o asset existente da personagem (asset-first). **Modo geração:** gera a imagem 9:16 com as refs da marca usando `nano_banana_2` ("Nano Banana Pro", CLI). | 0 (biblioteca) ou 2 cr (geração) |
 | `gera-video` | Anima cada imagem em clipe curto usando `veo3_1_lite --duration 4` no free tier (CLI). | 4 cr |
-| `editor-video` | Junta os clipes em um reel 1080×1920 com FFmpeg e legenda opcional. | 0 |
+| `editor-video` | Junta os clipes em um reel 1080×1920 com FFmpeg, aplica a pós-produção (Wave K: grade + grão + crop) e legenda opcional. | 0 |
 
 ### Guardrails operacionais
 
@@ -274,6 +320,14 @@ flowchart TD
   da raiz é o HUB compartilhado de prompts, revisão e troubleshooting.
 - **Dois portões de aprovação:** a Etapa 1 não avança para a produção sem o "sim" depois do roteiro
   e o "sim" depois das cenas. O usuário praticamente visualiza o resultado antes de gastar 1 crédito.
+- **Interlock de qualidade (mecânico):** o hook `higgsfield-gate.cjs` (PreToolUse) bloqueia
+  `higgsfield generate create` a menos que (a) os 10 gates de qualidade nível-100 tenham passado na
+  shot-list atual (`preflight-gate.cjs` "arma" um token assinado com o hash da shot-list) **e** (b)
+  o catálogo de modelos vivo tenha sido consultado nesta sessão. Não é honra: é trava.
+- **Catálogo de modelos vivo:** `refresh-catalog.cjs` puxa a lista real do Higgsfield
+  (`higgsfield model list`) e o `model-advisor.cjs` lê esse catálogo vivo (o array interno é só a
+  camada editorial de tradeoff/custo; a disponibilidade vem do Higgsfield). Custos de modelo pago
+  são sempre confirmados com `higgsfield generate cost` — nunca inventados.
 - **Memória do progresso:** o gerador lembra quais cenas já foram criadas para não gastar crédito duas vezes refazendo a mesma etapa.
 - **Cadência de revisão:** o gerador conta quantos fluxos foram concluídos. Após 2 fluxos, Jotaro sugere `/revisao`; antes do 3º sem revisão, ele roda a revisão obrigatoriamente.
 - **Modo expert:** Jotaro lembra se o usuário já concluiu um run e se prefere menos explicações nos próximos fluxos.
@@ -340,11 +394,14 @@ sistema para entregar esse resultado.
 ## Custos (honesto)
 
 A geração consome créditos do Higgsfield. A Etapa 1 (intake, roteiro, storyboard) não consome
-nada. O crédito só começa a contar na produção:
+nada. O crédito só começa a contar na produção, e na hora de gerar o Jotaro te apresenta os
+modelos disponíveis com o custo de cada um (do catálogo vivo) e o **custo total do cenário**
+(reel de N cenas) antes de você confirmar:
 
-- **Imagem:** 2 créditos.
+- **Imagem (modo geração):** 2 créditos. **Modo biblioteca:** 0 (é seleção de asset existente).
 - **Vídeo** (clipe de 4 segundos com `--duration 4`, mudo no free): 4 créditos.
-- **Reel de 6 cenas:** 6 imagens × 2 + 6 vídeos × 4 = **36 créditos**.
+- **Reel de 6 cenas (modo geração):** 6 imagens × 2 + 6 vídeos × 4 = **36 créditos**.
+- **Reel de 6 cenas (modo biblioteca):** 0 de imagem + 6 vídeos × 4 = **24 créditos**.
 
 > WARNING: O `veo3_1_lite` custa **8 créditos no default** (`duration=8`). A skill `gera-video`
 > sempre passa `--duration 4` pra ficar em 4 créditos. Não gere vídeo sem isso.
@@ -382,10 +439,12 @@ RAG/         HUB compartilhado, brand-agnostic (moldes de prompt, revisão, trou
 ```
 
 Projetos não se misturam: o crédito e o output de um nunca caem em outro. O gerador já roda com
-mais de um projeto na pasta `projects/`. O `TraceDefense/` é o **demo rodável** embarcado (o
-mago, com refs reais) que acompanha o produto pra você experimentar do zero. Para uma marca
-nova, copie um molde de `templates/` (ver `templates/README.md` e `projects/README.md`) ou
-importe material do `Raw/` com `/importa`.
+mais de um projeto na pasta `projects/`. Há **dois demos rodáveis** embarcados: `TraceDefense/`
+(o mago, sujeito único, modo geração) e `Aurora/` (um trio de personagens com biblioteca própria
+e dossiês de persona, modo biblioteca) — pra você experimentar os dois caminhos do zero. Para uma
+marca nova, copie um molde de `templates/` (ver `templates/README.md` e `projects/README.md`) ou
+importe material do `Raw/` com `/importa`. Projetos reais de cliente (com assets pesados ou
+material confidencial) ficam locais, fora do controle de versão.
 
 ## Onde ficam os resultados
 
@@ -402,6 +461,10 @@ Arquivos de estado local (não versionados, ficam na sua máquina):
 
 - `.claude/state/.review-cadence.json`: contador de revisão (global, do produto).
 - `.claude/state/.jotaro-profile.json`: lembra se você já completou um run e prefere modo expert (global).
+- `.claude/state/.gate-pass.json`: token que "arma" a liberação de geração quando os 10 gates de
+  qualidade passam na shot-list atual (o hook exige ele fresco antes de gerar).
+- `.claude/state/.catalog-cache.json` e `.catalog-seen.json`: o catálogo vivo de modelos puxado do
+  Higgsfield e o carimbo de "catálogo consultado nesta sessão" (o hook exige ele antes de gerar).
 - `projects/<projeto>/output/.intake-state.json`: estado da roteirização (Etapa 1) por projeto: as respostas da intake já coletadas e as lacunas que ainda faltam. Você pode pausar e voltar; o Jotaro retoma sem reperguntar.
 - `projects/<projeto>/output/.pipeline-state.json`: checkpoint por projeto: salva cada cena gerada. Se o run cair no meio, o Jotaro retoma de onde parou sem regastar crédito.
 - `projects/<projeto>/output/.credit-ledger.jsonl`: trilha de auditoria do crédito por projeto: uma linha por geração (append-only, imutável). Responde "quanto este projeto gastou, quando, em quê". O `/creditos` cruza o saldo real da conta (via `higgsfield account status`) com o ledger do projeto para dar o panorama completo.
@@ -418,18 +481,31 @@ prova de que funciona, antes de você gastar o primeiro crédito.
 ## O que a revisão verifica
 
 A cada 2 fluxos gerados o Jotaro sugere rodar `/revisao`. O verificador (`scripts/verify.cjs`)
-confere **245 checks** de uma vez (a contagem cresce conforme o projeto):
+confere **mais de 450 checks** de uma vez (a contagem cresce conforme o projeto):
 
 - **Scripts:** syntax check de todos os `.cjs` do projeto.
+- **Gates de qualidade nível-100 (Waves A–L):** crítica anti-IA, identidade por personagem,
+  cinematografia, consistência de estilo entre cenas, estrutura do prompt (7 camadas), qualidade
+  narrativa (hook/clímax/ritmo), variedade de ângulos, carry de traços do anchor, fidelidade de
+  persona, disciplina de negative prompt e crítica pós-render. Cada gate tem testes RED/GREEN.
+- **Interlock mecânico:** que o `preflight-gate.cjs` arma a liberação só com os 10 gates verdes,
+  e que o hook `higgsfield-gate.cjs` bloqueia a geração sem a liberação armada **e** sem o catálogo
+  vivo consultado.
+- **Catálogo vivo:** que o `refresh-catalog.cjs` parseia a lista real do Higgsfield, que o
+  `model-advisor.cjs` lê o catálogo vivo e dá custo por cenário, e que o detector de obsolescência
+  cruza os ids contra a lista real.
+- **Onboarding:** que o manual `Onboarding.md` cobre setup-first, projetos, Raw e condução, e que a
+  apresentação de modelos está nos comandos de geração.
 - **Hook de escopo:** testa que `scope-guard.cjs` bloqueia jailbreak e programação, libera
   pedidos de imagem/vídeo, e está registrado em `.claude/settings.json`.
 - **Preflight e custos:** testa que a trava de crédito bloqueia saldo insuficiente e libera
   quando cabe, e ancora os custos canônicos (imagem 2, vídeo 4, teto 10/dia).
 - **Migração pro CLI:** confere que `.mcp.json` não declara mais o servidor MCP do Higgsfield
   (a geração é via CLI) e que os arquivos operacionais não referenciam os tools MCP antigos.
-- **Projetos e identidade:** valida cada projeto (`projects/*`): `identidade-visual/` tem 1-4
-  imagens, `marca.md` e `narrativa.md` têm as seções, anchor canônico. Projeto `ativo` bloqueia
-  se falhar; `rascunho` só avisa; `arquivado` é pulado. O HUB compartilhado é validado à parte.
+- **Projetos e identidade:** valida cada projeto (`projects/*`): `identidade-visual/` tem ao menos
+  uma referência (na pasta plana **ou** nas subpastas por personagem do modo biblioteca — sem teto
+  de quantidade no asset-first), `marca.md` e `narrativa.md` têm as seções, anchor canônico.
+  Projeto `ativo` bloqueia se falhar; `rascunho` só avisa; `arquivado` é pulado.
 - **Pipeline e cadência:** testa que o checkpoint é read-only, que a cadência bloqueia após 2
   fluxos e reseta com revisão.
 - **RBAC e permissões:** confere que os agentes folha não têm Bash/Task/MCP, que o
